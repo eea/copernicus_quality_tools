@@ -1,0 +1,173 @@
+{
+  "description": "EU Hydro Hydro-NET v1.9",
+  "steps": [
+    {
+      "check_ident": "qc_tool.vector.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2026",
+        "formats": [
+          ".gpkg"
+        ],
+        "layer_names": {
+          "NODES": "clms_euhydro_net_nodes_v10m_(?P<aoi_code>[a-zA-Z\\-]+)",
+          "STREAMS": "clms_euhydro_net_streams_v10m_(?P<aoi_code>[a-zA-Z\\-]+)"
+        },
+        "gpkg_filename_regex": "^clms_euhydro_net_(?P<aoi_code>[0-9a-zA-Z\\-]+)_v[0-9]{2}",
+        "aoi_codes": [
+          "iceland",
+          "scandinavia",
+          "finland",
+          "east-baltic",
+          "british-isles",
+          "west-europe",
+          "central-plain",
+          "danube",
+          "atlantic-isles",
+          "iberia",
+          "italy-adriatic",
+          "balkans",
+          "anatolia",
+          "kura",
+          "mesopotamia"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "NODES"
+        ],
+        "required": {
+          "NODE_ID": "integer",
+          "NODE_ID_UP": "string",
+          "NODE_ID_DOWN": "integer"
+        },
+        "ignored": ["OBJECTID"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "STREAMS"
+        ],
+        "required": {
+          "STRM_ID": "integer",
+          "STRM_DN": "integer",
+          "STRM_UP": "string",
+          "GRID_CODE": "integer",
+          "HYBAS_ID": "integer",
+          "MAIN_BAS": "integer",
+          "NODE_ID_UP": "integer",
+          "NODE_ID_DOWN": "integer",
+          "LENGTH_KM": "real",
+          "UP_CELLS": "real",
+          "UPSTREAM_KM": "real",
+          "UPLAND_SKM": "real",
+          "DIST_UP_KM": "real",
+          "DIST_DN_KM": "real",
+          "ORD_STRA": "integer",
+          "ORD_SHRE": "integer",
+          "ORD_HACK": "integer",
+          "ORD_HACK_ID": "integer"
+        },
+        "ignored": ["OBJECTID"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry_type",
+      "required": true,
+      "parameters": {
+        "layers": ["NODES"],
+        "geometry_type": "POINT"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry_type",
+      "required": true,
+      "parameters": {
+        "layers": ["STREAMS"],
+        "geometry_type": ["LINESTRING", "MULTILINESTRING"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "NODES", "STREAMS"
+        ],
+        "epsg": 3035,
+        "auto_identify_epsg": false
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "NODES"
+        ],
+        "unique_keys": ["NODE_ID"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.unique",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "STREAMS"
+        ],
+        "unique_keys": ["STRM_ID"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.condition",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "NODES"
+        ],
+        "conditions": ["(NODE_ID_DOWN >= -1)"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.condition",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "STREAMS"
+        ],
+        "conditions": ["(ORD_STRA >= 1)", "(ORD_SHRE >= 1)", "(ORD_HACK >= 1)"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["STREAMS", "NODES"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mml",
+      "required": false,
+      "parameters": {
+        "layers": ["STREAMS"],
+        "mml": 5.0,
+        "line_geometry": true
+      }
+    }
+  ]
+}
