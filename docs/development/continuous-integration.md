@@ -44,7 +44,7 @@ browser matrices run independently after the frontend build; failures do not
 cancel the other matrix legs. The worker builds and tests on one runner because
 its image is substantially larger than the frontend.
 
-Application PostgreSQL is major 14, matching the frontend's native backup
+Application PostgreSQL is major 17, matching the frontend's native backup
 clients. The worker's embedded PostgreSQL 17/PostGIS is separate QC scratch
 infrastructure. Neither represents an upgrade of the application database.
 Models-only source/schema guards remain required for v3.0.0; no CI command

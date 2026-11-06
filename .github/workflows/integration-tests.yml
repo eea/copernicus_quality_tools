@@ -147,9 +147,9 @@ jobs:
       matrix:
         database: [sqlite, postgres]
     services:
-      # Application database and native backup clients share PostgreSQL major 14.
+      # Application database runs PostgreSQL 17; native backup clients are major 17.
       postgres:
-        image: postgres:14
+        image: postgres:17
         env:
           POSTGRES_DB: qc_tool_schema_ci
           POSTGRES_USER: qc_tool_ci

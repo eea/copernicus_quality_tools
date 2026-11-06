@@ -7,9 +7,7 @@ LABEL description="QC Tool frontend debug service"
 
 ARG VERSION
 ARG SOURCE_REVISION=unknown
-# Match the supported application database major; update both pins together.
 ARG POSTGRES_CLIENT_MAJOR=17
-ARG POSTGRES_CLIENT_VERSION=17.24-1.pgdg13+2
 LABEL org.opencontainers.image.source="https://github.com/eea/copernicus_quality_tools" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${SOURCE_REVISION}"
@@ -28,18 +26,7 @@ RUN test -n "$VERSION" \
     && apt-get install --yes --no-install-recommends \
         ca-certificates \
         tzdata \
-    && install -d /usr/share/postgresql-common/pgdg \
-    && python3 -c 'import hashlib, pathlib, urllib.request; key = urllib.request.urlopen("https://www.postgresql.org/media/keys/ACCC4CF8.asc", timeout=30).read(); assert hashlib.sha256(key).hexdigest() == "0144068502a1eddd2a0280ede10ef607d1ec592ce819940991203941564e8e76", "Unexpected PGDG signing key"; pathlib.Path("/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc").write_bytes(key)' \
-    && printf '%s\n' \
-        'Types: deb' \
-        'URIs: https://apt.postgresql.org/pub/repos/apt' \
-        'Suites: trixie-pgdg' \
-        'Components: main' \
-        'Signed-By: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc' \
-        > /etc/apt/sources.list.d/pgdg.sources \
-    && apt-get update \
-    && apt-get install --yes --no-install-recommends \
-        "postgresql-client-${POSTGRES_CLIENT_MAJOR}=${POSTGRES_CLIENT_VERSION}" \
+        "postgresql-client-${POSTGRES_CLIENT_MAJOR}" \
     && pg_dump --version && pg_restore --version \
     && rm -rf /var/lib/apt/lists/*
 

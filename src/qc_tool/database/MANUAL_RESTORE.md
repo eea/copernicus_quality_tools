@@ -86,7 +86,7 @@ for credentials. The example service must point to the **new empty database**;
 replace its identity deliberately. Use compatible PostgreSQL client/server
 versions and review the source archive's validation manifest. Native Admin
 operations require matching client/server major versions; the frontend packages
-client 14 for the current PostgreSQL 14 deployment. Upgrade that contract through
+client 17 for the current PostgreSQL 17 deployment. Upgrade that contract through
 a reviewed change when changing server major versions.
 
 ```sh

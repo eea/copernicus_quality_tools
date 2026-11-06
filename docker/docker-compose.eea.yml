@@ -1,6 +1,6 @@
 services:
   userdb:
-    image: postgres:14
+    image: postgres:17
     restart: always
     environment:
       POSTGRES_DB: qc_tool

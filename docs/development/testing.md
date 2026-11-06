@@ -22,11 +22,11 @@ smoke coverage, reusable commands and the required **CI** result.
 
 ## Native PostgreSQL backup and restore
 
-Both frontend images package the reviewed PostgreSQL 14 client tools. CI checks
+Both frontend images package the PostgreSQL 17 client tools from the Debian repository. CI checks
 `pg_dump --version` and `pg_restore --version` inside the packaged frontend;
-installing `psycopg2-binary` does not satisfy this requirement. The signed PGDG
-repository/key and exact client package are pinned in each frontend Dockerfile.
-The selected package is available for both AMD64 and ARM64. A native operation
+installing `psycopg2-binary` does not satisfy this requirement. The client major is
+selected by the `POSTGRES_CLIENT_MAJOR` build argument in each frontend Dockerfile.
+A native operation
 requires its client major to match the source/target PostgreSQL server major.
 
 Run native integration checks only against disposable PostgreSQL databases.
@@ -307,7 +307,7 @@ Production may initialize an entirely empty database using the same explicit
 command. `plan` and `check` inspect schema read-only; `apply` refuses partial or foreign schemas and
 detected model drift and leaves a complete current schema unchanged.
 
-The workflow uses SQLite and PostgreSQL 14. PostgreSQL tests additionally
+The workflow uses SQLite and PostgreSQL 17. PostgreSQL tests additionally
 exercise serialization between concurrent initialization jobs and restoration
 of timeout settings. Do not use `--keepdb` across model schema changes.
 

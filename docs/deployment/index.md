@@ -30,8 +30,8 @@ persistent storage. For application updates, follow [Operations](operations.md#u
 | Profile | Frontend database | Shared storage | Appropriate for |
 | --- | --- | --- | --- |
 | `docker-compose.service_provider.yml` | SQLite on one named volume | one `qc_tool_volume` | one frontend, simple self-hosted installation |
-| `docker-compose.eea.yml` | PostgreSQL 14 | separate DB/boundary/incoming/work/submission volumes | managed installation with external user DB lifecycle |
-| EEA + `compose.eea-storage.yaml` | PostgreSQL 14 on a private persistent path | one mounted application tree plus separate private frontend/database folders | Linux Azure VM with operator-managed persistent storage |
+| `docker-compose.eea.yml` | PostgreSQL 17 | separate DB/boundary/incoming/work/submission volumes | managed installation with external user DB lifecycle |
+| EEA + `compose.eea-storage.yaml` | PostgreSQL 17 on a private persistent path | one mounted application tree plus separate private frontend/database folders | Linux Azure VM with operator-managed persistent storage |
 
 For Azure production, follow [EEA persistent storage](eea-storage.md) to mount
 and verify the filesystem, configure startup identity checks and expose its real

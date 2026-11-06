@@ -108,14 +108,11 @@ use a distinct value when rehearsing a separate target beside a retained source.
 The EEA Compose profile maps its `QC_TOOL_POSTGRES_PASSWORD` substitution into
 `POSTGRES_PASSWORD` for both database and frontend.
 
-Frontend image build arguments `POSTGRES_CLIENT_MAJOR` (default `14`) and
-`POSTGRES_CLIENT_VERSION` (default `14.24-1.pgdg13+2`) select the reviewed PGDG
-client package for both AMD64 and ARM64. These are build arguments, not runtime
-environment switches. Update both together after reviewing compatibility;
-native operations require the client/server major to match. Both frontend
-Dockerfiles verify the official PGDG signing key checksum and use APT signature
-validation over HTTPS. `psycopg2-binary` alone does not supply `pg_dump` or
-`pg_restore`.
+The frontend image build argument `POSTGRES_CLIENT_MAJOR` (default `17`) selects
+the `postgresql-client-<major>` package installed from the Debian repository by
+both frontend Dockerfiles. It is a build argument, not a runtime environment
+switch. Review compatibility before changing it. `psycopg2-binary` alone does
+not supply `pg_dump` or `pg_restore`.
 
 ## Frontend behavior
 

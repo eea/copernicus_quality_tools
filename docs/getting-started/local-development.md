@@ -15,7 +15,7 @@ conveniences.
 
 | Service | Local implementation | Persistent data |
 | --- | --- | --- |
-| `userdb` | PostgreSQL 14 | `postgres_data` volume |
+| `userdb` | PostgreSQL 17 | `postgres_data` volume |
 | `frontend` | Current checkout, Python 3.12, Django 5.2 | shared volumes and PostgreSQL |
 | `worker` | Current checkout, locally built Python 3.12/geospatial runtime | shared volumes plus worker-local services |
 
