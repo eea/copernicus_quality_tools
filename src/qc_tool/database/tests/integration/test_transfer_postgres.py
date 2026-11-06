@@ -223,7 +223,7 @@ class NativePostgresSafetyTests(SimpleTestCase):
         self.assertEqual(postgres.restore_database_name(str(operation)), "qc_restore_" + operation.hex)
         with self.assertRaises(TransferError):
             postgres.restore_database_name("postgresql://untrusted/target")
-        self.assertEqual(postgres._archive_locale(metadata()["source"])["locale_provider"], "libc")
+        self.assertEqual(postgres._archive_locale({**metadata()["source"], "server_major": 14})["locale_provider"], "libc")
         with self.assertRaisesMessage(TransferError, "locale provider"):
             postgres._archive_locale({**metadata()["source"], "server_major": 15})
 
