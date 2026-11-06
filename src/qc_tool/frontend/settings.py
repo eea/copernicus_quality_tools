@@ -19,6 +19,9 @@ from os import environ
 from django.core.exceptions import ImproperlyConfigured
 
 from qc_tool.common import CONFIG
+from qc_tool.storage.layout import runtime_paths
+
+RUNTIME_PATHS = runtime_paths(CONFIG)
 from qc_tool.database.policy import migration_modules
 from qc_tool.frontend.delivery_filename_rules import DEFAULT_DELIVERY_FILENAME_RULES
 from qc_tool.frontend.dashboard.services.boundaries.configuration import (
@@ -292,7 +295,7 @@ USE_TZ = False
 STATIC_URL = '/static/'
 STATIC_ROOT = environ.get(
     "DJANGO_STATIC_ROOT",
-    (
+    str(RUNTIME_PATHS.static_dir) if RUNTIME_PATHS.canonical else (
         "/var/lib/qc_tool/static"
         if IS_SECURE_ENVIRONMENT
         else str(CONFIG["work_dir"].joinpath("frontend-static"))
@@ -330,7 +333,7 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o750
 # Large multipart bodies are spooled before the transfer service validates its
 # own archive limits. Operators can put this temporary storage on a sized,
 # private volume instead of the container writable layer.
-FILE_UPLOAD_TEMP_DIR = environ.get("QC_TOOL_UPLOAD_TEMP_DIR") or None
+FILE_UPLOAD_TEMP_DIR = str(RUNTIME_PATHS.upload_temp_dir) if RUNTIME_PATHS.upload_temp_dir else None
 
 # One deployment policy covers boundary ZIP copying, metadata checks and
 # extraction. Invalid environment values refuse startup; callers pass the
@@ -363,7 +366,7 @@ QC_TOOL_STORAGE_SFTP_ROOT = environ.get("QC_TOOL_STORAGE_SFTP_ROOT", "/files").s
 
 # Bounded administrator data packages. Journals and private staging share the
 # persistent WORK_DIR with the maintenance locks across every frontend.
-QC_TOOL_TRANSFER_DIR = environ.get("QC_TOOL_TRANSFER_DIR", str(CONFIG["work_dir"] / "data-transfer"))
+QC_TOOL_TRANSFER_DIR = str(RUNTIME_PATHS.transfer_dir)
 QC_TOOL_TRANSFER_MAX_RECORDS = _environment_integer(
     "QC_TOOL_TRANSFER_MAX_RECORDS", 250_000, minimum=1, maximum=1_000_000,
 )
@@ -400,7 +403,13 @@ S3_ALLOWED_ENDPOINTS = tuple(_environment_list("S3_ALLOWED_ENDPOINTS"))
 # Persist and back up this private directory with the deployment's work data.
 # Workers receive credentials through their authenticated pull endpoint only.
 S3_CREDENTIALS_DIR = environ.get(
-    "S3_CREDENTIALS_DIR", str(CONFIG["work_dir"] / "s3_credentials")
+    "S3_CREDENTIALS_DIR", str(RUNTIME_PATHS.frontend_state_dir / "s3_credentials" if RUNTIME_PATHS.canonical else CONFIG["work_dir"] / "s3_credentials")
+)
+if RUNTIME_PATHS.canonical or environ.get("QC_TOOL_MAINTENANCE_DIR"):
+    QC_TOOL_MAINTENANCE_DIR = environ.get("QC_TOOL_MAINTENANCE_DIR", str(RUNTIME_PATHS.maintenance_dir))
+QC_TOOL_BACKUPS_DIR = (
+    str(RUNTIME_PATHS.backups_dir)
+    if RUNTIME_PATHS.canonical or environ.get("QC_TOOL_BACKUPS_DIR") else ""
 )
 S3_CONNECT_TIMEOUT_SECONDS = _environment_float(
     "S3_CONNECT_TIMEOUT_SECONDS",
@@ -437,7 +446,7 @@ AUTHENTICATION_BACKENDS = [
     ),
 ]
 
-CONFIG["work_dir"].mkdir(parents=True, exist_ok=True)
+RUNTIME_PATHS.logs_dir.mkdir(parents=True, exist_ok=True)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -460,7 +469,7 @@ LOGGING = {
             'level': 'DEBUG',
             'class': 'logging.handlers.TimedRotatingFileHandler',
             'formatter': 'verbose',
-            'filename': CONFIG["work_dir"].joinpath("frontend.log"),
+            'filename': RUNTIME_PATHS.logs_dir.joinpath("frontend.log"),
             'when': 'D',
             'backupCount': 14,
         },

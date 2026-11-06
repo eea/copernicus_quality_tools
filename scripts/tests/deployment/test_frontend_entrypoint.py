@@ -28,7 +28,7 @@ class FrontendEntrypointTests(unittest.TestCase):
         stub = (
             '#!/bin/sh\n'
             'printf "%s\\n" "$*" >> "$QC_FRONTEND_TEST_LOG"\n'
-            'if [ "$*" = "-m qc_tool.storage check" ]; then\n'
+            'if [ "$*" = "-m qc_tool.storage check" ] || [ "$*" = "-m qc_tool.storage check-layout" ]; then\n'
             '    exit "${QC_FRONTEND_TEST_STORAGE_FAILURE:-0}"\n'
             'fi\n'
             'if [ "$*" = "-m qc_tool.frontend.manage database check --allow-maintenance-recovery" ]; then\n'
@@ -61,6 +61,7 @@ class FrontendEntrypointTests(unittest.TestCase):
         }
         self.environment.pop("QC_TOOL_MIGRATE_ON_STARTUP", None)
         self.environment.pop("GUNICORN_CMD_ARGS", None)
+        self.environment.pop("QC_TOOL_DATA_ROOT", None)
         self.environment.pop("QC_TOOL_PERSISTENT_STORAGE_ROOT", None)
         self.environment.pop("QC_TOOL_PERSISTENT_STORAGE_ID", None)
 
@@ -114,6 +115,19 @@ class FrontendEntrypointTests(unittest.TestCase):
             "-m qc_tool.frontend.manage database check --allow-maintenance-recovery",
             "-m qc_tool.frontend.manage collectstatic --noinput",
         ])
+
+    def test_canonical_layout_is_checked_before_django_without_identity_contract(self):
+        result, commands = self.startup(QC_TOOL_DATA_ROOT="/mnt/qc-tool/data")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(commands[0], "-m qc_tool.storage check-layout")
+        self.assertEqual(commands[1], "-m qc_tool.storage prepare-frontend")
+        self.assertIn("database check", commands[2])
+
+    def test_missing_canonical_mount_stops_before_prepare_and_django(self):
+        result, commands = self.startup(QC_TOOL_DATA_ROOT="/mnt/qc-tool/data",
+                                        QC_FRONTEND_TEST_STORAGE_FAILURE="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(commands, ["-m qc_tool.storage check-layout"])
 
     def test_storage_failure_and_partial_configuration_stop_before_django(self):
         for configuration in (

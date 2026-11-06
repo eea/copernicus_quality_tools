@@ -35,7 +35,7 @@ from qc_tool.worker.product_units import merge_result_metadata, merge_step_produ
 from qc_tool.worker.status import CheckStatus
 from qc_tool.worker.manager import create_connection_manager
 from qc_tool.worker.manager import create_jobdir_manager
-from qc_tool.frontend.dashboard.services.boundaries import resolve_boundary_generation
+from qc_tool.boundaries import resolve_boundary_generation
 
 
 log = logging.getLogger(__name__)

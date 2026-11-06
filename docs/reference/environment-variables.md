@@ -11,39 +11,55 @@ same shared data through compatible container paths.
 
 ## Paths and shared data
 
-| Variable | Default | Services | Purpose |
-| --- | --- | --- | --- |
-| `PRODUCT_DIRS` | packaged `product_definitions` | frontend, worker | Colon-separated recipe directories for explicitly imported products; does not populate the catalog |
-| `BOUNDARY_DIR` | `/mnt/qc_tool_boundary/boundaries` | frontend, worker | Immutable boundary generations |
-| `INCOMING_DIR` | test-data fallback | frontend, worker | Uploaded/materialized deliveries |
-| `WORK_DIR` | `/mnt/qc_tool_volume/work` | frontend, worker | Results, logs, job files, worker token |
-| `SUBMISSION_DIR` | empty/disabled | frontend | Successful submission copies |
-| `FRONTEND_DB_PATH` | `/var/lib/qc_tool/frontend.sqlite3` | frontend | SQLite database path when `DB_ENGINE=sqlite` |
-| `DJANGO_STATIC_ROOT` | `/var/lib/qc_tool/static` in secure environments | frontend | Collected WhiteNoise static files |
+The maintained Compose profiles explicitly set `QC_TOOL_DATA_ROOT` to select
+the canonical layout below. Source integrations that omit it retain legacy
+path defaults; they do not automatically move existing files. The typed storage
+layout owns path resolution; original specifications are never rewritten.
 
-`WORK_DIR`, `BOUNDARY_DIR`, and `INCOMING_DIR` are shared contracts. Do not map
-the same setting to unrelated storage in frontend and worker.
+| Variable | Canonical value/default | Services | Purpose |
+| --- | --- | --- | --- |
+| `QC_TOOL_DATA_ROOT` | `/mnt/qc-tool/data` in Compose | frontend, worker | Opt in to separated durable data roots |
+| `QC_TOOL_REQUIRE_MOUNTS` | `yes` in maintained Compose | frontend, worker | Refuse startup when any required role root is not an actual mountpoint |
+| `QC_TOOL_STORAGE_ROLE` | `frontend` or `worker` | frontend, worker | Role-specific startup/mount validation; entrypoints fix their own role |
+| `PRODUCT_DIRS` | packaged `product_definitions` | frontend, worker | Colon-separated bundled recipe sources; does not populate catalog |
+| `BOUNDARY_DIR` | `DATA_ROOT/boundaries` | frontend, worker | Immutable boundary generations; worker read-only |
+| `INCOMING_DIR` | `DATA_ROOT/incoming` | frontend, worker | Delivery ZIPs/chunks; worker read-only |
+| `WORK_DIR` | `DATA_ROOT/jobs` | frontend, worker | Compatibility alias for retained job artifacts |
+| `SUBMISSION_DIR` | `DATA_ROOT/submissions`; explicitly empty disables | frontend | Retained publications; absent in worker |
+| `QC_TOOL_SHARED_STATE_DIR` | `/mnt/qc-tool/state/shared` | frontend, worker | Worker token and maintenance coordination |
+| `QC_TOOL_FRONTEND_STATE_DIR` | `/var/lib/qc_tool` | frontend | Credentials, transfer/backup state, staging and frontend files |
+| `QC_TOOL_SCRATCH_DIR` | `/var/tmp/qc-tool/jobs` | worker | Disposable per-job extraction and intermediate data |
+| `QC_TOOL_LOG_DIR` | `/var/log/qc-tool` | frontend, worker | Distinct per-service mounted sources |
+| `FRONTEND_DB_PATH` | `/var/lib/qc_tool/frontend.sqlite3` | frontend | SQLite database only when `DB_ENGINE=sqlite` |
+| `DJANGO_STATIC_ROOT` | `/var/lib/qc_tool/static` | frontend | Collected static assets |
+
+Shared data paths identify the same files in both roles. Workers receive
+read-only incoming, boundary and specification mounts, plus writable jobs and
+shared state. Submissions and frontend-private state are never worker-mounted.
+Legacy source defaults without `QC_TOOL_DATA_ROOT` remain boundary
+`/mnt/qc_tool_boundary/boundaries`, incoming test-data fallback, work
+`/mnt/qc_tool_volume/work`, specifications `WORK_DIR/product_definitions`, and
+submissions disabled unless explicitly configured.
 
 ### Optional EEA persistent filesystem
 
-These values belong to the opt-in `compose.eea-storage.yaml` profile. Existing
-named-volume deployments need no new storage identity. See
-[EEA persistent storage](../deployment/eea-storage.md) before selecting the
-override; it does not copy existing data.
+See [EEA persistent storage](../deployment/eea-storage.md) before selecting
+`compose.eea-storage.yaml` as the one standalone deployment file. It requires a
+fresh reviewed host layout and does not copy existing volumes. Do not combine
+it with the named-volume EEA profile.
 
 | Variable | Default | Services | Purpose |
 | --- | --- | --- | --- |
-| `QC_TOOL_PERSISTENT_ROOT` | required by the override | Compose host substitution | Absolute host mount, for example `/srv/qc-tool`; its `data` and private subdirectories must already exist on verified persistent storage. |
-| `QC_TOOL_PERSISTENT_STORAGE_ROOT` | unset; guard disabled | frontend, worker | Absolute container root checked before application startup. The EEA override sets `/mnt` and mounts the host's `data` tree there. |
-| `QC_TOOL_PERSISTENT_STORAGE_ID` | required when the guard is enabled | frontend, worker | Expected stable, non-secret identity in `QC_TOOL_PERSISTENT_STORAGE_ROOT/.qc-tool-storage-id`; provision the marker explicitly on the intended filesystem. |
+| `QC_TOOL_PERSISTENT_ROOT` | required by host-storage profile | Compose host substitution | Verified absolute host mount containing separate data/state/private/scratch/log roots |
+| `QC_TOOL_PERSISTENT_STORAGE_ROOT` | unset in named-volume profiles; `/mnt/qc-tool/data` in host-storage profile | frontend, worker | Browser root; canonical guard checks all role-specific mounted roots |
+| `QC_TOOL_PERSISTENT_STORAGE_ID` | required by host-storage profile | frontend, worker | Expected stable non-secret identity in `.qc-tool-storage-id` at **each role-visible mount root** |
 
-The marker is never created or corrected automatically. Missing/mismatched
-storage blocks startup before application directories can be created on an
-empty fallback. Use `python3 -m qc_tool.storage check` for identity validation
-and `python3 -m qc_tool.storage probe` for an explicit temporary-files capability
-test. Configure real host mount dependencies too: a Docker bind mount alone
-does not prove that Azure storage is mounted. Probe success is local evidence,
-not a guarantee of cross-host locking or crash durability.
+Markers are never created or corrected automatically. Missing or mismatched
+roots block startup before application writes. `python3 -m qc_tool.storage check`
+validates identities; `probe` tests filesystem capabilities using temporary
+files on writable roots. Base canonical named-volume startup uses `check-layout`
+without identity markers. Configure real host mount dependencies too; local
+probe success does not certify Azure recovery or cross-host durability.
 
 ## Admin storage browser and desktop access
 
@@ -108,14 +124,13 @@ use a distinct value when rehearsing a separate target beside a retained source.
 The EEA Compose profile maps its `QC_TOOL_POSTGRES_PASSWORD` substitution into
 `POSTGRES_PASSWORD` for both database and frontend.
 
-Frontend image build arguments `POSTGRES_CLIENT_MAJOR` (default `14`) and
-`POSTGRES_CLIENT_VERSION` (default `14.24-1.pgdg13+2`) select the reviewed PGDG
-client package for both AMD64 and ARM64. These are build arguments, not runtime
-environment switches. Update both together after reviewing compatibility;
-native operations require the client/server major to match. Both frontend
-Dockerfiles verify the official PGDG signing key checksum and use APT signature
-validation over HTTPS. `psycopg2-binary` alone does not supply `pg_dump` or
-`pg_restore`.
+The supported application server, frontend native backup clients and CI use
+PostgreSQL major **17**. `POSTGRES_CLIENT_MAJOR` defaults to `17` in both frontend
+Dockerfiles. It is an image build argument, not a runtime switch. Native
+operations require matching client/server majors; `psycopg2-binary` does not
+supply `pg_dump` or `pg_restore`. New Compose storage names intentionally avoid
+opening a former PostgreSQL 14 cluster. Use a separate verified logical restore
+rather than upgrading an existing volume in place.
 
 ## Frontend behavior
 
@@ -159,14 +174,15 @@ not change those infrastructure limits.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `QC_TOOL_TRANSFER_DIR` | `WORK_DIR/data-transfer` | Private 0700 persistent staging, journals, packages and `database-selection.json`, shared by every frontend; never expose as media. Preserve it across restarts and deployments. |
+| `QC_TOOL_BACKUPS_DIR` | `FRONTEND_STATE_DIR/backups` in canonical mode | Private backup/import payload storage, separate from durable operation journals; never worker-mounted |
+| `QC_TOOL_TRANSFER_DIR` | `FRONTEND_STATE_DIR/data-transfer` in canonical mode; legacy `WORK_DIR/data-transfer` | Private 0700 persistent operation journals and `database-selection.json`, shared by every frontend; never expose as media. Preserve it across restarts and deployments. |
 | `QC_TOOL_TRANSFER_MAX_RECORDS` | `250000` | Combined source accounts/business rows in a portable package, configurable from 1 to 1,000,000; native PostgreSQL backups have no portable row cap |
 | `QC_TOOL_TRANSFER_MAX_ARCHIVE_BYTES` | `17179869184` (16 GiB) | Maximum actual uploaded/generated ZIP size, after any file compression |
 | `QC_TOOL_TRANSFER_MAX_MEMBER_BYTES` | Configured archive limit | Maximum original expanded size of a single member, including a native database dump; coordinate with archive and expanded limits |
 | `QC_TOOL_TRANSFER_MAX_EXPANDED_BYTES` | `68719476736` (64 GiB) | Maximum total expanded contents, including record and manifest metadata |
 | `QC_TOOL_TRANSFER_MIN_FREE_BYTES` | `536870912` (512 MiB) | Free-space reserve enforced during upload, archive creation and restore writes |
 | `QC_TOOL_POSTGRES_TOOL_TIMEOUT` | `3600` seconds | Native PostgreSQL tool timeout per invocation; integer from 1 to 86400. Timeouts retain maintenance and require recovery; they do not reset a destination. |
-| `QC_TOOL_UPLOAD_TEMP_DIR` | OS temporary directory | Optional preprovisioned private directory for Django multipart upload spooling, sized for the configured maximum uploads |
+| `QC_TOOL_UPLOAD_TEMP_DIR` | `FRONTEND_STATE_DIR/upload-staging` in canonical Compose; legacy OS temporary directory | Optional preprovisioned private directory for Django multipart upload spooling, sized for the configured maximum uploads |
 
 Fixed reader bounds also cap record JSON at
 128 MiB, manifest metadata at 16 MiB, ZIP members at 100,000, the central directory at
@@ -289,7 +305,7 @@ limit for a predictable production allocation.
 | Variable | Frontend default | Worker default | Constraint |
 | --- | ---: | ---: | --- |
 | `S3_ALLOWED_ENDPOINTS` | empty | empty | Comma-separated exact HTTPS origins; empty disables S3 |
-| `S3_CREDENTIALS_DIR` | `WORK_DIR/s3_credentials` | n/a | Persistent private credential directory, owned by the frontend runtime UID; directory `0700`, files `0600` |
+| `S3_CREDENTIALS_DIR` | `FRONTEND_STATE_DIR/s3_credentials` in canonical Compose; legacy `WORK_DIR/s3_credentials` | n/a | Persistent private credential directory, owned by the frontend runtime UID; directory `0700`, files `0600` |
 | `S3_CONNECT_TIMEOUT_SECONDS` | `3` | `3` | Positive finite seconds |
 | `S3_READ_TIMEOUT_SECONDS` | `10` | `30` | Positive finite seconds |
 | `S3_MAX_LISTED_OBJECTS` | `1000` | `1000` | 1–1000 |

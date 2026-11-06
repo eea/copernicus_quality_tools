@@ -11,8 +11,10 @@ from qc_tool.common import CONFIG
 from qc_tool.common import JOB_OUTPUT_DIRNAME
 from qc_tool.common import JOB_TMP_DIRNAME
 from qc_tool.common import compose_job_dir
+from qc_tool.storage.layout import runtime_paths
 from qc_tool.worker.jobs import job_schema_name
 from qc_tool.worker.jobs import normalize_job_uuid
+from qc_tool.worker.scratch import ScratchLease
 
 
 def create_connection_manager(job_uuid):
@@ -25,8 +27,14 @@ def create_connection_manager(job_uuid):
     return connection_manager
 
 def create_jobdir_manager(job_uuid):
-    job_dir = compose_job_dir(normalize_job_uuid(job_uuid))
-    jobdir_manager = JobdirManager(job_dir, CONFIG["leave_jobdir"])
+    job_uuid = normalize_job_uuid(job_uuid)
+    job_dir = compose_job_dir(job_uuid)
+    paths = runtime_paths(CONFIG)
+    jobdir_manager = JobdirManager(
+        job_dir, CONFIG["leave_jobdir"],
+        scratch_dir=paths.job_scratch_dir(job_uuid) if paths.scratch_dir is not None else None,
+        job_uuid=job_uuid,
+    )
     return jobdir_manager
 
 
@@ -108,29 +116,47 @@ class ConnectionManager():
 
 
 class JobdirManager():
-    def __init__(self, job_dir, leave_dir=False):
+    def __init__(self, job_dir, leave_dir=False, *, scratch_dir=None, job_uuid=None):
         self.job_dir = job_dir
         self.leave_dir = leave_dir
         self.tmp_dir = None
         self.output_dir = None
+        self.scratch_dir = scratch_dir
+        self.job_uuid = job_uuid
+        self.scratch_lease = None
 
     def __enter__(self):
-        self.create_dirs()
+        try:
+            self.create_dirs()
+        except BaseException:
+            if self.scratch_lease is not None:
+                self.scratch_lease.close()
+            raise
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.remove_tmp_dir()
+        try:
+            self.remove_tmp_dir()
+        finally:
+            if self.scratch_lease is not None:
+                self.scratch_lease.close()
 
     def create_dirs(self):
-        tmp_dir = self.job_dir.joinpath(JOB_TMP_DIRNAME)
-        tmp_dir.mkdir(parents=True)
-        self.tmp_dir = tmp_dir
-
         output_dir = self.job_dir.joinpath(JOB_OUTPUT_DIRNAME)
         output_dir.mkdir(parents=True)
         self.output_dir = output_dir
+        if self.scratch_dir is None:
+            tmp_dir = self.job_dir.joinpath(JOB_TMP_DIRNAME)
+            tmp_dir.mkdir(parents=True)
+            self.tmp_dir = tmp_dir
+        else:
+            self.scratch_lease = ScratchLease(self.scratch_dir, self.job_uuid, retain=self.leave_dir)
+            self.scratch_lease.__enter__()
+            self.tmp_dir = self.scratch_lease.directory / JOB_TMP_DIRNAME
+            self.tmp_dir.mkdir(mode=0o700)
 
     def remove_tmp_dir(self):
         if not self.leave_dir and self.tmp_dir is not None:
-            rmtree(str(self.tmp_dir))
+            directory = self.scratch_lease.directory if self.scratch_lease is not None else self.tmp_dir
+            rmtree(str(directory))
         self.tmp_dir = None

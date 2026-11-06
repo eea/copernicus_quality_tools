@@ -11,9 +11,10 @@ folder directly; the recorded collections remain available under **File history*
 
 For an EEA Azure installation, use the optional
 [persistent-storage profile](eea-storage.md). **Browse files → Persistent
-storage** then opens the real application filesystem at `/mnt`, with ordinary
+storage** then opens the real application filesystem at `/mnt/qc-tool/data`, with ordinary
 folder navigation and downloads. Shared frontend/worker paths remain the same;
-raw PostgreSQL and private frontend storage stay outside that browser root.
+raw PostgreSQL, shared control state, worker scratch, service logs and private
+frontend storage stay outside that browser root.
 The profile requires an operator-mounted filesystem and matching storage
 identity. The default local and EEA named-volume deployments remain available.
 

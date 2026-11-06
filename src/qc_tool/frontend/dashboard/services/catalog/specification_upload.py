@@ -98,7 +98,7 @@ def add_product_specification(upload, *, actor):
     ident = definition.product_ident
     coverage = declared_coverage(definition)
     try:
-        with staged_specification(common.CONFIG["work_dir"], upload.payload) as (directory, staged):
+        with staged_specification(common.CONFIG["work_dir"], upload.payload, specification_dir=common.uploaded_definition_root()) as (directory, staged):
             with transaction.atomic(durable=True):
                 lock_catalog_sync(wait=False)
                 latest = _editable_release(ident)
@@ -145,7 +145,7 @@ def remove_product_specification(ident, *, actor):
     if ident is None:
         raise CatalogError("unknown_product", "Product not found.")
     try:
-        with staged_specification(common.CONFIG["work_dir"]) as (directory, _staged):
+        with staged_specification(common.CONFIG["work_dir"], specification_dir=common.uploaded_definition_root()) as (directory, _staged):
             with transaction.atomic(durable=True):
                 lock_catalog_sync(wait=False)
                 _editable_release(ident)

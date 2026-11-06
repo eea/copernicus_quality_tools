@@ -17,9 +17,10 @@ filename create its next dated immutable revision. The first upload of an import
 recipe creates an upload-managed release; repeating its current uploaded file
 does not duplicate that revision. The product and draft or unknown product unit scope are
 stored in PostgreSQL, while original bytes are retained under
-`WORK_DIR/product_definitions/.versions/<ident>/<digest>.json`. The active version
+`QC_TOOL_DATA_ROOT/specifications/.versions/<ident>/<digest>.json`
+(legacy layouts use `WORK_DIR/product_definitions/.versions/...`). The active version
 is selected by `.state/<ident>.json`. The maintained local Compose setup shares
-this persistent work volume between frontend and worker, so activation needs no
+the specification volume with workers read-only, so activation needs no
 service restart.
 
 Only administrators can upload or remove specifications. **Remove specification**
@@ -42,7 +43,7 @@ Inactive state prevents archived products from falling back to a
 bundled recipe. Drain jobs before directly replacing deployed files, deploy
 matching recipes to both runtimes, and perform the explicit import. A database
 snapshot does not automatically become the worker's execution source. Back up
-the database and the whole `WORK_DIR/product_definitions/` directory together,
+the database and the whole specification root together,
 including hidden `.versions` and `.state`, and exclude it from scratch cleanup.
 If activation fails after the database commit, restore storage access and retry
 the same original JSON. If removal cannot publish its inactive marker, restore

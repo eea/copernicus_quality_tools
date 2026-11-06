@@ -363,7 +363,7 @@ def _export_capacity(byte_count):
     if byte_count > _limits().max_archive_bytes:
         blockers.append("The selected package contents exceed the configured package size limit. Deselect optional file sections, or increase the transfer limit with sufficient backup capacity.")
     try:
-        _require_space(store._directory_path(), byte_count)
+        _require_space(store._package_root_path(), byte_count)
     except TransferError:
         blockers.append("Backup storage has insufficient free space for the selected package and its reserve. Deselect optional file sections, release completed export packages, or provide more backup storage.")
     except OSError:
@@ -402,7 +402,7 @@ def _capacity_review(manifest, records, entries, *, directories=(), storage=None
         blockers.append("A selected file exceeds the configured member size limit. Deselect that file section or increase QC_TOOL_TRANSFER_MAX_MEMBER_BYTES with sufficient storage.")
     if len(entries) + 2 > limits.max_members or sizes["central_directory_bytes"] > limits.max_central_directory_bytes:
         blockers.append("The package inventory exceeds its configured member or ZIP directory limit.")
-    path = Path(store._directory_path())
+    path = Path(store._package_root_path())
     while not path.exists():
         path = path.parent
     try:
@@ -506,13 +506,16 @@ def export_preview(selection, actor):
 
 
 def _new(kind, actor, **values):
+    store.package_directory()
     operation_id = str(uuid4())
     store.operation_dir(operation_id, create=True)
     value = {"version": 1, "id": operation_id, "kind": kind, **_actor_identity(actor),
-             "status": "staged", "created_at": store.now(),
+             "status": "staged", "package_storage": store.package_storage_identity(), "created_at": store.now(),
              "updated_at": store.now(), "message": "", "error": "", "result": {}, "plan": None,
              **values}
-    return store.save_operation(value)
+    store.save_operation(value)
+    store.package_dir(operation_id, create=True)
+    return value
 
 
 def _launch(operation):
@@ -570,7 +573,7 @@ def stage_import(upload, actor, *, include_files=None):
         raise TransferError("Choose whether to import the package's files.")
     with store.execution_lock():
         operation = _new("import", actor)
-        path = store.operation_dir(operation["id"]) / "package.zip"
+        path = store.package_path(operation["id"])
         try:
             size = 0
             with open(path, "xb", opener=lambda name, flags: os.open(name, flags | os.O_NOFOLLOW, 0o600)) as handle:
@@ -621,7 +624,7 @@ def stage_import_path(path, actor, *, include_files=None):
         size = os.fstat(source.fileno()).st_size
         if size > _limits().max_archive_bytes:
             raise TransferError("The supplied package exceeds the configured transfer limit.")
-        _require_space(store._directory_path(), size)
+        _require_space(store._package_root_path(), size)
 
         class LocalPackage:
             def chunks(self):
@@ -656,7 +659,7 @@ def _validate_manifest(verified, *, validate_payload=True):
 
 
 def _verified(operation):
-    verified = inspect_archive(store.operation_dir(operation["id"]) / "package.zip", limits=_limits())
+    verified = inspect_archive(store.package_path(operation["id"]), limits=_limits())
     _validate_manifest(verified)
     if verified.package_sha256 != operation["package_sha256"] or verified.manifest["package_id"] != operation["package_id"]:
         raise TransferError("The staged package changed. Upload the original package again.")
@@ -890,7 +893,7 @@ def _public(operation, *, pin=_UNSET, execution_busy=None):
             recoverable = (datetime.now(timezone.utc) - queued_at).total_seconds() >= RUNNER_START_GRACE_SECONDS
         except (KeyError, TypeError, ValueError):
             recoverable = False
-    public = {key: value for key, value in operation.items() if key not in {"core_plan", "version", "actor_id"}}
+    public = {key: value for key, value in operation.items() if key not in {"core_plan", "version", "actor_id", "package_storage"}}
     public["result"] = public_result(public.get("result"))
     public["progress"] = progress.read(operation)
     return public | {
@@ -930,7 +933,7 @@ def list_operations(actor, *, limit=50, include_storage=False):
                 operation = _public(store.read_operation(path.name), pin=pin, execution_busy=execution_busy)
                 if include_storage:
                     try:
-                        package = (store.operation_dir(operation["id"]) / "package.zip").lstat()
+                        package = (store.package_path(operation["id"])).lstat()
                         if stat.S_ISREG(package.st_mode):
                             operation["stored_package_bytes"] = package.st_size
                         else:
@@ -939,6 +942,8 @@ def list_operations(actor, *, limit=50, include_storage=False):
                         operation["stored_package_bytes"] = 0
                     except OSError:
                         operation.update(stored_package_bytes=None, storage_issue="Saved ZIP size is unavailable.")
+                    except TransferError:
+                        operation.update(stored_package_bytes=None, storage_issue="Saved ZIP storage configuration requires operator recovery.")
                 values.append(operation)
             except TransferError:
                 continue
@@ -953,7 +958,7 @@ def backup_storage_capacity(actor):
     if type(reserve) is not int or reserve < 0:
         raise TransferError("QC_TOOL_TRANSFER_MIN_FREE_BYTES must be a nonnegative integer.")
     try:
-        capacity = shutil.disk_usage(store.directory())
+        capacity = shutil.disk_usage(store.package_directory())
     except OSError as error:
         raise TransferError("Backup volume capacity is unavailable.") from error
     return {"free_bytes": capacity.free, "total_bytes": capacity.total, "reserve_bytes": reserve}
@@ -967,7 +972,7 @@ def download_operation(operation_id, actor):
     original_import = operation["kind"] == "import" and operation.get("package_sha256") and operation["status"] != "cancelled"
     if not original_import and (operation["kind"] != "export" or operation["status"] != "completed"):
         raise TransferError("This export is not ready to download.")
-    path = store.operation_dir(operation_id) / "package.zip"
+    path = store.package_path(operation_id)
     with open_regular(path) as source:
         handle = os.fdopen(os.dup(source.fileno()), "rb")
     return handle, {"filename": "qc-tool-{}-{}.zip".format(operation["profile"], operation["id"]),
@@ -1215,7 +1220,7 @@ def _run_database_export(operation):
     report = progress.Reporter(operation["id"])
     report("validating")
     _discard_export_scratch(operation["id"])
-    directory = store.operation_dir(operation["id"])
+    directory = store.package_dir(operation["id"])
     temporary = directory / "package.partial"
     temporary.unlink(missing_ok=True)
     from .compatibility import producer_metadata
@@ -1290,7 +1295,7 @@ def _run_export(operation):
         # namespace; retaining both copies doubles memory for large catalogs.
         del payload, inventory, files
         payload, inventory, _review_hash, byte_count, files = _snapshot(operation["selection"])
-    path = store.operation_dir(operation["id"]) / "package.zip"
+    path = store.package_path(operation["id"])
     temporary = path.with_suffix(".partial")
     temporary.unlink(missing_ok=True)
     _require_space(path.parent, _compressed_file_bytes(files, inventory.sources))
@@ -1312,13 +1317,13 @@ def _run_export(operation):
 def _discard_export_scratch(operation_id):
     """Reclaim killed writers' private scratch under the execution lock.
 
-    These files are confined to one export's 0700 journal directory. Never
+    These files are confined to one export's 0700 payload directory. Never
     sweep shared artifact roots, imports, or another operation's recovery data.
     """
     operation = store.read_operation(operation_id)
     if operation["kind"] != "export":
         return
-    directory = store.operation_dir(operation_id)
+    directory = store.package_dir(operation_id)
     try:
         paths = [*directory.glob(".transfer-*.pending"), directory / "database.dump"]
         for path in paths:
@@ -1340,11 +1345,22 @@ def _discard_package(operation_id):
     Audit/recovery journals remain available. Persist the unlink before marking
     cancellation or releasing a maintenance pin; a failed sync remains retryable.
     """
-    directory = store.operation_dir(operation_id)
+    directory = store.package_dir(operation_id)
     try:
         _discard_export_scratch(operation_id)
+        payloads = []
         for name in ("package.zip", "package.partial", "database.dump"):
-            (directory / name).unlink(missing_ok=True)
+            path = directory / name
+            try:
+                status = path.lstat()
+            except FileNotFoundError:
+                continue
+            if getattr(settings, "QC_TOOL_BACKUPS_DIR", "") and (
+                    not stat.S_ISREG(status.st_mode) or status.st_nlink != 1 or status.st_mode & 0o077):
+                raise TransferError("Transfer package storage is unsafe. Preserve its payload and journals for operator recovery.")
+            payloads.append(path)
+        for path in payloads:
+            path.unlink()
         store.sync_directory(directory)
     except OSError as error:
         raise TransferError("The private package could not be discarded durably. Audit journals were kept; retry Discard before releasing maintenance.") from error

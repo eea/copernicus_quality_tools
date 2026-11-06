@@ -15,6 +15,8 @@ import subprocess
 import sys
 from uuid import uuid4
 
+from .layout import layout_config, runtime_paths
+
 
 MARKER_NAME = ".qc-tool-storage-id"
 MAX_MARKER_BYTES = 129
@@ -114,9 +116,125 @@ def _checked_storage(environment):
         yield root, root_descriptor
 
 
+def layout_roots(environment):
+    """Return the exact mounts owned by one separated-layout service role."""
+    role = environment.get("QC_TOOL_STORAGE_ROLE")
+    if role not in {"frontend", "worker"}:
+        raise StorageConfigurationError("QC_TOOL_STORAGE_ROLE must be frontend or worker.")
+    config = layout_config(environment)
+    paths = runtime_paths(config)
+    data = _absolute_path(str(paths.data_root or ""), "QC_TOOL_DATA_ROOT")
+    roots = {
+        "incoming": (paths.incoming_dir, role == "frontend"),
+        "boundaries": (paths.boundaries_dir, role == "frontend"),
+        "specifications": (paths.specifications_dir, role == "frontend"),
+        "jobs": (paths.jobs_dir, True),
+        "shared-state": (paths.shared_state_dir, True),
+        "logs": (paths.logs_dir, True),
+    }
+    if role == "frontend":
+        if paths.submissions_dir is not None:
+            roots["submissions"] = (paths.submissions_dir, True)
+        roots["frontend-state"] = (paths.frontend_state_dir, True)
+    else:
+        roots["scratch"] = (paths.scratch_dir, True)
+    for name, (configured, _writable) in roots.items():
+        path = _absolute_path(str(configured or ""), name)
+        if path == Path("/"):
+            raise StorageConfigurationError(f"{name} cannot use the filesystem root.")
+        if name in {"incoming", "boundaries", "specifications", "jobs", "submissions"} and data not in path.parents:
+            raise StorageConfigurationError(f"{name} must be below QC_TOOL_DATA_ROOT.")
+        for other, (other_path, _) in roots.items():
+            if other != name and other_path is not None and (path == other_path or path in other_path.parents or other_path in path.parents):
+                raise StorageConfigurationError(f"Storage mounts {name} and {other} must not overlap.")
+    return data, roots
+
+
+def check_layout(environment=None, *, require_identity=False):
+    """Validate provisioned role mounts before any Django or worker writes."""
+    environment = os.environ if environment is None else environment
+    root, roots = layout_roots(environment)
+    _validate_private_paths(environment)
+    identity = environment.get("QC_TOOL_PERSISTENT_STORAGE_ID", "")
+    if require_identity and not _IDENTITY.fullmatch(identity):
+        raise StorageConfigurationError("QC_TOOL_PERSISTENT_STORAGE_ID requires a valid storage identity.")
+    require_mounts = environment.get("QC_TOOL_REQUIRE_MOUNTS", "no")
+    if require_mounts not in {"yes", "no"}:
+        raise StorageConfigurationError("QC_TOOL_REQUIRE_MOUNTS must be yes or no.")
+    try:
+        for name, (path, _writable) in roots.items():
+            with _directory(path.parts[1:]) as descriptor:
+                if require_mounts == "yes" and not os.path.ismount(path):
+                    raise StorageConfigurationError(f"{name} is not mounted at its configured root: {path}")
+                if require_identity:
+                    _check_marker(descriptor, identity)
+    except OSError as error:
+        raise StorageConfigurationError("A required storage mount is missing, inaccessible or contains a symbolic link; no fallback was created.") from error
+    return root
+
+
+def _validate_private_paths(environment):
+    paths = runtime_paths(layout_config(environment))
+    if environment.get("QC_TOOL_STORAGE_ROLE") == "frontend":
+        private = paths.frontend_state_dir
+        children = {"transfer": paths.transfer_dir, "backups": paths.backups_dir,
+                    "upload spool": paths.upload_temp_dir, "static": paths.static_dir,
+                    "credentials": Path(environment.get("S3_CREDENTIALS_DIR") or private / "s3_credentials")}
+        for name, path in children.items():
+            if path is None or not path.is_absolute() or ".." in path.parts or private not in path.parents:
+                raise StorageConfigurationError(f"The {name} path must be a strict descendant of frontend-private storage.")
+            for other, other_path in children.items():
+                if other != name and other_path is not None and (path == other_path or path in other_path.parents or other_path in path.parents):
+                    raise StorageConfigurationError(f"Private {name} and {other} storage must not overlap.")
+        sqlite = Path(environment.get("FRONTEND_DB_PATH") or private / "frontend.sqlite3")
+        if not sqlite.is_absolute() or ".." in sqlite.parts or private not in sqlite.parents:
+            raise StorageConfigurationError("Frontend SQLite storage must be below frontend-private storage.")
+        if any(sqlite == path or path in sqlite.parents or sqlite in path.parents for path in children.values()):
+            raise StorageConfigurationError("Frontend SQLite storage must not overlap static files or other private service directories.")
+    maintenance = Path(environment.get("QC_TOOL_MAINTENANCE_DIR") or paths.maintenance_dir)
+    if not maintenance.is_absolute() or ".." in maintenance.parts or paths.shared_state_dir not in maintenance.parents:
+        raise StorageConfigurationError("Maintenance storage must be below the shared-state mount.")
+
+
+def prepare_frontend(environment=None):
+    """Provision only private children of an already validated frontend mount."""
+    environment = os.environ if environment is None else environment
+    if environment.get("QC_TOOL_STORAGE_ROLE") != "frontend":
+        raise StorageConfigurationError("Private frontend preparation requires the frontend storage role.")
+    check_layout(environment, require_identity=bool(environment.get("QC_TOOL_PERSISTENT_STORAGE_ID")))
+    paths = runtime_paths(layout_config(environment))
+    children = (paths.upload_temp_dir, paths.transfer_dir, paths.backups_dir, paths.static_dir,
+                Path(environment.get("S3_CREDENTIALS_DIR") or paths.frontend_state_dir / "s3_credentials"))
+    with _directory(paths.frontend_state_dir.parts[1:]) as root:
+        for path in children:
+            descriptor = os.dup(root)
+            try:
+                for part in path.relative_to(paths.frontend_state_dir).parts:
+                    try:
+                        os.mkdir(part, 0o700, dir_fd=descriptor)
+                        os.fsync(descriptor)
+                    except FileExistsError:
+                        pass
+                    following = os.open(part, _DIRECTORY_FLAGS, dir_fd=descriptor)
+                    os.close(descriptor)
+                    descriptor = following
+                if path != paths.static_dir and os.fstat(descriptor).st_mode & 0o077:
+                    raise StorageConfigurationError("Frontend-private directories must have mode 0700.")
+            except OSError as error:
+                raise StorageConfigurationError("Frontend-private storage contains an unsafe or unavailable directory.") from error
+            finally:
+                os.close(descriptor)
+    return paths.frontend_state_dir
+
+
 def check_storage(environ=None):
     """Validate existing deployment storage without importing or writing app state."""
-    with _checked_storage(os.environ if environ is None else environ) as (root, _descriptor):
+    environment = os.environ if environ is None else environ
+    if environment.get("QC_TOOL_DATA_ROOT"):
+        if environment.get("QC_TOOL_PERSISTENT_STORAGE_ROOT") != environment["QC_TOOL_DATA_ROOT"]:
+            raise StorageConfigurationError("The persistent browser root must match QC_TOOL_DATA_ROOT.")
+        return check_layout(environment, require_identity=True)
+    with _checked_storage(environment) as (root, _descriptor):
         return root
 
 
@@ -202,33 +320,46 @@ def probe_storage(environment=None):
     This does not certify network filesystem behavior between different clients,
     power-loss durability, persistence across redeployment or free-space capacity.
     """
-    with _checked_storage(os.environ if environment is None else environment) as (root, root_descriptor):
-        name = ".qc-tool-probe-" + uuid4().hex
-        temporary_path = root / name
-        try:
-            os.mkdir(name, 0o700, dir_fd=root_descriptor)
-        except OSError as error:
-            raise StorageConfigurationError("Cannot create the private temporary filesystem probe directory.") from error
-        try:
-            with _directory((name,), parent=root_descriptor) as directory_descriptor:
-                try:
-                    _probe(directory_descriptor)
-                except OSError as error:
-                    raise StorageConfigurationError("The filesystem probe failed: file/directory fsync, "
-                                            "hard links, symbolic links, atomic replacement, private "
-                                            "permissions and POSIX flock are required.") from error
-                finally:
-                    for child in ("pointer", "current", "retained", "staged"):
-                        try:
-                            os.unlink(child, dir_fd=directory_descriptor)
-                        except FileNotFoundError:
-                            pass
-        except OSError as error:
-            raise StorageConfigurationError("The temporary filesystem probe could not complete or "
-                                            f"clean up. Check its private directory: {temporary_path}") from error
-        finally:
+    environment = os.environ if environment is None else environment
+    if environment.get("QC_TOOL_DATA_ROOT"):
+        check_storage(environment)
+        _root, roots = layout_roots(environment)
+        for path, writable in roots.values():
+            if writable:
+                with _directory(path.parts[1:]) as descriptor:
+                    _probe_at(path, descriptor)
+        return
+    with _checked_storage(environment) as (root, descriptor):
+        _probe_at(root, descriptor)
+
+
+def _probe_at(root, root_descriptor):
+    name = ".qc-tool-probe-" + uuid4().hex
+    temporary_path = root / name
+    try:
+        os.mkdir(name, 0o700, dir_fd=root_descriptor)
+    except OSError as error:
+        raise StorageConfigurationError("Cannot create the private temporary filesystem probe directory.") from error
+    try:
+        with _directory((name,), parent=root_descriptor) as directory_descriptor:
             try:
-                os.rmdir(name, dir_fd=root_descriptor)
+                _probe(directory_descriptor)
             except OSError as error:
-                raise StorageConfigurationError("The filesystem probe could not remove its private "
-                                                f"temporary directory: {temporary_path}") from error
+                raise StorageConfigurationError("The filesystem probe failed: file/directory fsync, "
+                                        "hard links, symbolic links, atomic replacement, private "
+                                        "permissions and POSIX flock are required.") from error
+            finally:
+                for child in ("pointer", "current", "retained", "staged"):
+                    try:
+                        os.unlink(child, dir_fd=directory_descriptor)
+                    except FileNotFoundError:
+                        pass
+    except OSError as error:
+        raise StorageConfigurationError("The temporary filesystem probe could not complete or "
+                                        f"clean up. Check its private directory: {temporary_path}") from error
+    finally:
+        try:
+            os.rmdir(name, dir_fd=root_descriptor)
+        except OSError as error:
+            raise StorageConfigurationError("The filesystem probe could not remove its private "
+                                            f"temporary directory: {temporary_path}") from error

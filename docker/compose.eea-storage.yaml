@@ -1,44 +1,214 @@
-# Optional Azure/EEA host-mounted persistent storage. Requires Compose 2.24.4+
-# for !override: child named volumes must not hide the shared data tree.
-# Read docs/deployment/storage-access.md before opting in. This configuration
-# neither creates the host directories nor copies existing application data.
-# Preserve the existing project name when combining with docker-compose.eea.yml.
+# Standalone EEA/Azure deployment with provisioned host storage. Import this file alone.
+# Host paths and identity markers must already exist; no other Compose file is required.
 services:
   userdb:
-    volumes: !override
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_DB: qc_tool
+      POSTGRES_USER: qc_user
+      POSTGRES_PASSWORD: ${QC_TOOL_POSTGRES_PASSWORD:?Set QC_TOOL_POSTGRES_PASSWORD}
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - qc_tool_network
+    volumes:
       - type: bind
-        source: "${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT to the existing persistent host mount}/private/postgresql"
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/private/postgresql17
         target: /var/lib/postgresql/data
-        bind:
-          create_host_path: false
-
   frontend:
+    image: ${QC_TOOL_FRONTEND_IMAGE:?Set QC_TOOL_FRONTEND_IMAGE to the reviewed frontend digest}
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 60s
+    depends_on:
+      userdb:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:${QC_TOOL_PORT:-8000}:8000
     environment:
-      QC_TOOL_PERSISTENT_STORAGE_ROOT: /mnt
-      QC_TOOL_PERSISTENT_STORAGE_ID: "${QC_TOOL_PERSISTENT_STORAGE_ID:?Set QC_TOOL_PERSISTENT_STORAGE_ID to the provisioned storage identity}"
-      S3_CREDENTIALS_DIR: "${S3_CREDENTIALS_DIR:-/mnt/qc_tool_work/work/s3_credentials}"
-      QC_TOOL_UPLOAD_TEMP_DIR: "${QC_TOOL_UPLOAD_TEMP_DIR:-/mnt/qc_tool_work/work/upload-staging}"
-      QC_TOOL_MAINTENANCE_DIR: "${QC_TOOL_MAINTENANCE_DIR:-/mnt/qc_tool_work/work/maintenance}"
-    volumes: !override
+      S3_ALLOWED_ENDPOINTS:
+      S3_CONNECT_TIMEOUT_SECONDS:
+      S3_READ_TIMEOUT_SECONDS:
+      S3_MAX_LISTED_OBJECTS:
+      QC_TOOL_DATA_ROOT: /mnt/qc-tool/data
+      QC_TOOL_REQUIRE_MOUNTS: 'yes'
+      QC_TOOL_STORAGE_ROLE: frontend
+      DB_ENGINE: postgres
+      POSTGRES_HOST: userdb
+      POSTGRES_PORT: '5432'
+      POSTGRES_DB: qc_tool
+      POSTGRES_USER: qc_user
+      PRODUCT_DIRS:
+      QC_TOOL_RESTORE_DATABASE:
+      QC_TOOL_STORAGE_ROOTS:
+      QC_TOOL_STORAGE_SFTP_HOST:
+      QC_TOOL_STORAGE_SFTP_PORT:
+      QC_TOOL_STORAGE_SFTP_USERNAME:
+      QC_TOOL_STORAGE_SFTP_ROOT:
+      QC_TOOL_TRANSFER_DIR:
+      QC_TOOL_BACKUPS_DIR:
+      QC_TOOL_UPLOAD_TEMP_DIR:
+      S3_CREDENTIALS_DIR: ${S3_CREDENTIALS_DIR:-/var/lib/qc_tool/s3_credentials}
+      QC_TOOL_TRANSFER_MAX_RECORDS:
+      QC_TOOL_TRANSFER_MAX_ARCHIVE_BYTES:
+      QC_TOOL_TRANSFER_MAX_EXPANDED_BYTES:
+      QC_TOOL_TRANSFER_MAX_MEMBER_BYTES:
+      QC_TOOL_TRANSFER_MIN_FREE_BYTES:
+      QC_TOOL_POSTGRES_TOOL_TIMEOUT:
+      QC_TOOL_ENVIRONMENT: production
+      POSTGRES_PASSWORD: ${QC_TOOL_POSTGRES_PASSWORD:?Set QC_TOOL_POSTGRES_PASSWORD}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-qc-copernicus.eea.europa.eu}
+      API_URL: ${API_URL:-https://qc-copernicus.eea.europa.eu/api}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1}
+      CASE_INSENSITIVE_USERNAMES: 'yes'
+      WORKER_ALIVE_TIMEOUT: ${WORKER_ALIVE_TIMEOUT:-5}
+      DJANGO_TRUST_PROXY_SSL_HEADER: ${DJANGO_TRUST_PROXY_SSL_HEADER:-no}
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-no}
+      DJANGO_SECURE_HSTS_SECONDS: '31536000'
+      DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS: 'yes'
+      QC_TOOL_PERSISTENT_STORAGE_ROOT: /mnt/qc-tool/data
+      QC_TOOL_PERSISTENT_STORAGE_ID: ${QC_TOOL_PERSISTENT_STORAGE_ID:?Set QC_TOOL_PERSISTENT_STORAGE_ID to the provisioned
+        storage identity}
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - >-
+          import os, urllib.request; request = urllib.request.Request('http://127.0.0.1:8000/health', headers={'Host':
+          os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost').split(',')[0], 'X-Forwarded-Proto': 'https'}); urllib.request.urlopen(request,
+          timeout=3).close()
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - qc_tool_network
+    volumes:
       - type: bind
-        source: "${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT to the existing persistent host mount}/data"
-        target: /mnt
         bind:
           create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/data/boundaries
+        target: /mnt/qc-tool/data/boundaries
       - type: bind
-        source: "${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT to the existing persistent host mount}/private/frontend"
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/data/incoming
+        target: /mnt/qc-tool/data/incoming
+      - type: bind
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/data/specifications
+        target: /mnt/qc-tool/data/specifications
+      - type: bind
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/data/jobs
+        target: /mnt/qc-tool/data/jobs
+      - type: bind
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/data/submissions
+        target: /mnt/qc-tool/data/submissions
+      - type: bind
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/state/shared
+        target: /mnt/qc-tool/state/shared
+      - type: bind
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/logs/frontend
+        target: /var/log/qc-tool
+      - type: bind
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/private/frontend
         target: /var/lib/qc_tool
-        bind:
-          create_host_path: false
-
   worker:
+    image: ${QC_TOOL_WORKER_IMAGE:?Set QC_TOOL_WORKER_IMAGE to the matching reviewed worker digest}
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 60s
+    depends_on:
+      frontend:
+        condition: service_healthy
+    shm_size: 1gb
     environment:
-      QC_TOOL_PERSISTENT_STORAGE_ROOT: /mnt
-      QC_TOOL_PERSISTENT_STORAGE_ID: "${QC_TOOL_PERSISTENT_STORAGE_ID:?Set QC_TOOL_PERSISTENT_STORAGE_ID to the provisioned storage identity}"
-      QC_TOOL_MAINTENANCE_DIR: "${QC_TOOL_MAINTENANCE_DIR:-/mnt/qc_tool_work/work/maintenance}"
-    volumes: !override
+      S3_ALLOWED_ENDPOINTS:
+      S3_CONNECT_TIMEOUT_SECONDS:
+      S3_READ_TIMEOUT_SECONDS:
+      S3_MAX_LISTED_OBJECTS:
+      QC_TOOL_DATA_ROOT: /mnt/qc-tool/data
+      QC_TOOL_REQUIRE_MOUNTS: 'yes'
+      QC_TOOL_STORAGE_ROLE: worker
+      PULL_JOB_URL: http://frontend:8000/pull_job
+      RUN_INSPIRE_VALIDATOR: 'yes'
+      USE_LIGHTWEIGHT_VALIDATOR: 'no'
+      RUN_POSTGRES: 'yes'
+      JAVA_MAX_MEM: '1536'
+      PRODUCT_DIRS:
+      S3_MAX_DOWNLOAD_BYTES:
+      LEAVE_SCHEMA:
+      LEAVE_JOBDIR:
+      QC_TOOL_ENVIRONMENT: production
+      QC_TOOL_PERSISTENT_STORAGE_ROOT: /mnt/qc-tool/data
+      QC_TOOL_PERSISTENT_STORAGE_ID: ${QC_TOOL_PERSISTENT_STORAGE_ID:?Set QC_TOOL_PERSISTENT_STORAGE_ID to the provisioned
+        storage identity}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --show-error, --max-time, '3', 'http://127.0.0.1:8000/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
+    networks:
+      - qc_tool_network
+    volumes:
       - type: bind
-        source: "${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT to the existing persistent host mount}/data"
-        target: /mnt
         bind:
           create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/data/boundaries
+        target: /mnt/qc-tool/data/boundaries
+        read_only: true
+      - type: bind
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/data/incoming
+        target: /mnt/qc-tool/data/incoming
+        read_only: true
+      - type: bind
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/data/specifications
+        target: /mnt/qc-tool/data/specifications
+        read_only: true
+      - type: bind
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/data/jobs
+        target: /mnt/qc-tool/data/jobs
+      - type: bind
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/state/shared
+        target: /mnt/qc-tool/state/shared
+      - type: bind
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/logs/worker
+        target: /var/log/qc-tool
+      - type: bind
+        bind:
+          create_host_path: false
+        source: ${QC_TOOL_PERSISTENT_ROOT:?Set QC_TOOL_PERSISTENT_ROOT}/scratch/worker
+        target: /var/tmp/qc-tool/jobs
+networks:
+  qc_tool_network:

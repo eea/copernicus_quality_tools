@@ -23,6 +23,8 @@ from urllib.request import build_opener
 import bottle
 
 from qc_tool.common import CONFIG
+from qc_tool.common import compose_job_stdout_filepath
+from qc_tool.storage.layout import runtime_paths
 from qc_tool.common import auth_worker
 from qc_tool.common import get_worker_token
 from qc_tool.maintenance.protocol import decode_message
@@ -505,7 +507,7 @@ class JobController():
                 job_uuid,
                 self.job_args["product_ident"],
             )
-            stdout_filepath = CONFIG["work_dir"].joinpath("job.{:s}.stdout".format(self.job_args["job_uuid"]))
+            stdout_filepath = compose_job_stdout_filepath(self.job_args["job_uuid"])
             log.debug("The job has stdout and stderr redirected to %s.".format(stdout_filepath))
             with open(stdout_filepath, "a") as stdout_f:
                 stdout_f.write("\n\n")
@@ -558,7 +560,7 @@ class JobController():
             log.info("Closing controller.")
 
 def init_logging():
-    log_dir = CONFIG["work_dir"]
+    log_dir = runtime_paths(CONFIG).logs_dir
     log_dir.mkdir(parents=True, exist_ok=True)
     log_filepath = log_dir.joinpath("scheduler.{:s}.log".format(gethostname()))
     console_handler = logging.StreamHandler()

@@ -76,6 +76,8 @@ jobs:
           qc_tool.test.test_worker_scheduler
           qc_tool.test.test_worker_service_auth
           qc_tool.test.test_storage_guard
+          qc_tool.test.test_storage_layout
+          qc_tool.test.test_storage_layout_guard
 
   tooling:
     name: Maintainer tools (offline)
@@ -147,9 +149,9 @@ jobs:
       matrix:
         database: [sqlite, postgres]
     services:
-      # Application database and native backup clients share PostgreSQL major 14.
+      # Application database and native backup clients share PostgreSQL major 17.
       postgres:
-        image: postgres:14
+        image: postgres:17
         env:
           POSTGRES_DB: qc_tool_schema_ci
           POSTGRES_USER: qc_tool_ci

@@ -3,12 +3,12 @@
 import argparse
 import sys
 
-from .guard import StorageConfigurationError, check_storage, probe_storage
+from .guard import StorageConfigurationError, check_storage, check_layout, prepare_frontend, probe_storage
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("check", "probe"))
+    parser.add_argument("action", choices=("check", "check-layout", "prepare-frontend", "probe"))
     options = parser.parse_args()
     try:
         if options.action == "probe":
@@ -16,7 +16,10 @@ def main():
             print("Persistent storage filesystem probe passed. This checks this client only; "
                   "it does not certify multi-host locking or crash durability.")
         else:
-            root = check_storage()
+            if options.action == "prepare-frontend":
+                root = prepare_frontend()
+            else:
+                root = check_layout() if options.action == "check-layout" else check_storage()
             print(f"Persistent storage is ready: {root}")
     except StorageConfigurationError as error:
         print(f"Persistent storage is not ready: {error}", file=sys.stderr)

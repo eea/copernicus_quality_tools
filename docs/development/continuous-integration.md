@@ -13,6 +13,13 @@ the tested image pair after an explicit operator-controlled transition from
 Docker Hub autobuild. Neither workflow deploys a server or changes an existing
 application database.
 
+Deployment checks validate each local, EEA, provider and Azure/EEA host-storage
+profile independently as a complete standalone file. Keep application defaults
+in Python and each file's mounts, connectivity and role access boundaries
+explicit. Host storage is selected alone rather than merged with the named-volume
+profile. These Docker Compose checks do not certify a particular Rancher importer
+or perform an Azure deployment.
+
 ## Events and required checks
 
 Integration runs for pushes to `master`, `dev` and `release/**`, pull requests targeting

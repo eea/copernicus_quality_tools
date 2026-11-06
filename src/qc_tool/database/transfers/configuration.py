@@ -18,7 +18,8 @@ import stat
 from django.conf import settings
 from django.db import connection
 
-from qc_tool.common import CONFIG, WORKER_TOKEN_FILENAME
+from qc_tool.common import CONFIG, uploaded_definition_root
+from qc_tool.storage.layout import runtime_paths
 from qc_tool.database import selection as database_selection
 from qc_tool.product_security import canonical_product_ident
 from .archive import canonical_json, open_regular, _json
@@ -39,6 +40,9 @@ _SETTINGS = ("SECRET_KEY", "SECRET_KEY_FALLBACKS", "TIME_ZONE", "USE_TZ", "ALLOW
              "CSRF_TRUSTED_ORIGINS", "S3_ALLOWED_ENDPOINTS", "S3_CREDENTIALS_DIR")
 _DATABASE = ("ENGINE", "NAME", "USER", "PASSWORD", "HOST", "PORT", "OPTIONS")
 _STORAGE = ("work_dir", "incoming_dir", "boundary_dir", "product_dirs", "submission_dir")
+_SEPARATED_STORAGE = (*_STORAGE, "data_root", "specifications_dir", "shared_state_dir",
+                      "frontend_state_dir", "scratch_dir", "log_dir", "transfer_dir",
+                      "backups_dir", "upload_temp_dir", "static_dir")
 
 
 @dataclass(frozen=True)
@@ -122,7 +126,7 @@ def _activation_snapshot():
                     raise TransferError("Boundary activation metadata changed during backup. Review it again.")
     specifications = {"state": "absent", "files": []}
     total = 0
-    with _activation_directory(Path(CONFIG["work_dir"]), "product_definitions", ".state") as descriptor:
+    with _activation_directory(uploaded_definition_root(), ".state") as descriptor:
         if descriptor is not None:
             specifications["state"] = "included"
             names = os.listdir(descriptor)
@@ -239,7 +243,7 @@ def snapshot():
         database = {name: _value(connection.settings_dict.get(name)) for name in _DATABASE}
         database["NAME"] = str(database_selection.current_database())
         auxiliary = []
-        candidates = [("credentials/worker.token", Path(CONFIG["work_dir"]) / WORKER_TOKEN_FILENAME, True, False)]
+        candidates = [("credentials/worker.token", runtime_paths(CONFIG).worker_token_path, True, False)]
         options = connection.settings_dict.get("OPTIONS") or {}
         for name in ("sslcert", "sslkey", "sslrootcert", "sslcrl"):
             if options.get(name):
@@ -259,10 +263,22 @@ def snapshot():
             sections[key] = raw
             total += len(raw)
             auxiliary.append({"key": key, "sha256": hashlib.sha256(raw).hexdigest(), "size": len(raw)})
-        document = {"format": FORMAT, "version": 1,
+        paths = runtime_paths(CONFIG)
+        storage = {name: _value(CONFIG.get(name)) for name in _STORAGE}
+        if paths.canonical:
+            storage.update({
+                "data_root": _value(paths.data_root),
+                "specifications_dir": _value(paths.specifications_dir),
+                "shared_state_dir": _value(paths.shared_state_dir),
+                "frontend_state_dir": _value(paths.frontend_state_dir),
+                "scratch_dir": _value(paths.scratch_dir), "log_dir": _value(paths.logs_dir),
+                "transfer_dir": _value(paths.transfer_dir), "backups_dir": _value(paths.backups_dir),
+                "upload_temp_dir": _value(paths.upload_temp_dir), "static_dir": _value(paths.static_dir),
+            })
+        document = {"format": FORMAT, "version": 2 if paths.canonical else 1,
                     "settings": {name: _value(getattr(settings, name, None)) for name in _SETTINGS},
                     "database": database,
-                    "storage": {name: _value(CONFIG.get(name)) for name in _STORAGE},
+                    "storage": storage,
                     "credential_store": {"state": "included" if metadata is not None else "absent", "files": credentials},
                     "auxiliary_files": auxiliary,
                     "activation": _activation_snapshot(),
@@ -293,11 +309,12 @@ def validate(archive):
         document = _json(stream.read(MAX_BYTES + 1))
     if (not isinstance(document, dict)
             or set(document) != {"format", "version", "settings", "database", "storage", "credential_store", "auxiliary_files", "activation", "restore"}
-            or document["format"] != FORMAT or type(document["version"]) is not int or document["version"] != 1
+            or document["format"] != FORMAT or type(document["version"]) is not int or document["version"] not in {1, 2}
             or document["restore"] != "operator_review_only"
             or not isinstance(document["settings"], dict) or set(document["settings"]) != set(_SETTINGS)
             or not isinstance(document["database"], dict) or set(document["database"]) != set(_DATABASE)
-            or not isinstance(document["storage"], dict) or set(document["storage"]) != set(_STORAGE)):
+            or not isinstance(document["storage"], dict)
+            or set(document["storage"]) != set(_STORAGE if document["version"] == 1 else _SEPARATED_STORAGE)):
         raise TransferError("The deployment recovery metadata is unsupported.")
     _validate_activation(document["activation"])
     store = document["credential_store"]

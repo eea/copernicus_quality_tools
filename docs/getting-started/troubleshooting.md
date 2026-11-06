@@ -6,6 +6,29 @@ nav_order: 2
 
 # Startup troubleshooting
 
+## Validate the selected standalone profile
+
+Each maintained profile contains its complete Compose definition. Select one
+file: local development uses `compose.local.yaml`, named-volume EEA uses
+`docker-compose.eea.yml`, and Azure/EEA host storage uses `compose.eea-storage.yaml`
+alone. Do not combine the named-volume and host-storage EEA profiles. Check local
+configuration without starting services:
+
+```bash
+docker compose -f docker/compose.local.yaml config --quiet
+```
+
+An operator `--env-file` supplies values only to the variables explicitly passed
+by each service. If an override is absent inside a container, inspect that role's
+environment passthrough in the selected file. Keep rendered
+configuration private because it can contain credentials.
+
+Use a current supported Docker Compose installation. For Rancher imports,
+verify the actual Rancher version, deployment type and importer prerequisites;
+Docker Compose validation alone does not certify that importer.
+
+## Inspect service state
+
 Start with service state and recent logs:
 
 ```bash
@@ -77,27 +100,22 @@ stack; the commands below use the local Compose configuration.
 
 ### Check the mount root and upload directory
 
-The local and EEA Compose files use this layout in both frontend and worker:
+The canonical local and EEA profiles mount the upload root directly:
 
 ```text
-/mnt/qc_tool_incoming/             # mounted volume root
-└── incoming/                     # INCOMING_DIR; Django MEDIA_ROOT
-    └── <username>/               # per-user delivery files and upload chunks
+/mnt/qc-tool/data/incoming/         # mounted root; INCOMING_DIR / MEDIA_ROOT
+└── <username>/                    # delivery ZIPs and upload chunks
 ```
 
-`qc_tool_incoming` is mounted at `/mnt/qc_tool_incoming`, while uploads go to
-`/mnt/qc_tool_incoming/incoming`. A bind mount at the same target has the same
-layout: its host source is the parent of `incoming/`. Mounting a host directory
-does not itself create this child or grant the container write access. If you
-instead mount directly at `/mnt/qc_tool_incoming/incoming`, the host source is
-already the upload root; do not add another `incoming/` inside it. Give frontend
-and worker the same persistent source and mount target. Confirm the effective
-Compose configuration:
+The frontend mounts this source read/write; workers mount the same source
+read-only. Do not add another `incoming/` child. Legacy deployments may use
+`/mnt/qc_tool_incoming/incoming`; inspect the resolved configuration before
+changing anything. Render only the needed mount fields privately because a
+complete `docker compose config` can contain environment secrets.
 
 ```bash
-docker compose -f docker/compose.local.yaml config
 docker compose -f docker/compose.local.yaml exec frontend \
-  sh -c 'ls -ldn /mnt/qc_tool_incoming "$INCOMING_DIR"'
+  sh -c 'ls -ldn "$INCOMING_DIR"'
 ```
 
 Current QC Tool creates an absent `incoming` leaf with mode `0750` on the first
@@ -135,9 +153,9 @@ override:
 docker compose -f docker/compose.local.yaml exec frontend id
 docker compose -f docker/compose.local.yaml exec worker id
 docker compose -f docker/compose.local.yaml exec frontend \
-  df -h /mnt/qc_tool_incoming /tmp
+  sh -c 'df -h "$INCOMING_DIR" "$QC_TOOL_UPLOAD_TEMP_DIR"'
 docker compose -f docker/compose.local.yaml exec frontend \
-  df -i /mnt/qc_tool_incoming /tmp
+  sh -c 'df -i "$INCOMING_DIR" "$QC_TOOL_UPLOAD_TEMP_DIR"'
 ```
 
 The frontend needs traversal access through the parent directories and write

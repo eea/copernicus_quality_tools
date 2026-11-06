@@ -11,9 +11,15 @@ desktop SFTP access, see [Storage browser and desktop connections](storage-acces
 For the Azure VM mount layout, startup identity guard, filesystem probe and
 deliberate move from existing volumes, see [EEA persistent storage](eea-storage.md).
 
+Use one complete standalone profile from the reviewed revision. Named-volume
+EEA selects `docker/docker-compose.eea.yml`; Azure/EEA host storage selects
+`docker/compose.eea-storage.yaml` alone. No shared definition, generated manifest
+or wrapper is required. Keep operator values in the same protected `--env-file`
+for all commands; only each role's explicitly passed settings reach its container.
+
 ## Deployment command setup
 
-Use the same Compose project name, env file, and Compose-file set for every
+Use the same Compose project name, env file, and standalone Compose file for every
 command. For the examples below, define a shell function for the selected
 profile:
 
@@ -32,10 +38,11 @@ qc_compose() {
 ```
 
 Adapt this once for the deployment; do not commit the secret env file.
-When using `compose.eea-storage.yaml`, add it as a second `-f` argument in this
-function and use that same file set for every operation. Its mount replacement
-requires Compose 2.24.4 or later. Adding the override to a running installation
-does not move its existing files or database.
+For host storage, set `QC_RELEASE_COMPOSE_FILE=docker/compose.eea-storage.yaml`
+instead. Keep the single `-f` argument and use that same profile for every
+operation. Selecting a different profile does not move existing files or the
+database. Verify Rancher importer/version prerequisites separately from Docker
+Compose validation when that is the deployment route.
 
 ## Health and logs
 
@@ -77,7 +84,7 @@ older validator process groups may still own database/file writes.
 Use the supplied `init: true` container setting, or an equivalent child-reaping
 init in another orchestrator. Administrative transfer runners are separate
 processes in the frontend container; they inherit its runtime UID, limits and
-persistent `WORK_DIR`, and keep maintenance pinned after a crash. Check the
+private persistent transfer state, and keep maintenance pinned after a crash. Check the
 owning transfer before restarting/replacing a frontend and use its recovery
 workflow afterwards. Restarting never grants permission to clear its pin.
 
@@ -112,16 +119,19 @@ bytes unless stated otherwise:
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
-| `QC_TOOL_TRANSFER_DIR` | `WORK_DIR/data-transfer` | Private persistent package and journal storage |
+| `QC_TOOL_BACKUPS_DIR` | `/var/lib/qc_tool/backups` | Private backup/import payloads |
+| `QC_TOOL_TRANSFER_DIR` | `/var/lib/qc_tool/data-transfer` in canonical Compose | Private persistent package and journal storage |
 | `QC_TOOL_TRANSFER_MAX_RECORDS` | 250,000 | Portable record graph limit |
 | `QC_TOOL_TRANSFER_MAX_ARCHIVE_BYTES` | 17,179,869,184 (16 GiB) | Complete ZIP limit |
 | `QC_TOOL_TRANSFER_MAX_MEMBER_BYTES` | Configured archive limit | One included file, including the native dump |
 | `QC_TOOL_TRANSFER_MAX_EXPANDED_BYTES` | 68,719,476,736 (64 GiB) | Total expanded package contents |
 | `QC_TOOL_TRANSFER_MIN_FREE_BYTES` | 536,870,912 (512 MiB) | Free-space reserve |
-| `QC_TOOL_UPLOAD_TEMP_DIR` | System temporary directory | Browser multipart spool storage |
+| `QC_TOOL_UPLOAD_TEMP_DIR` | `/var/lib/qc_tool/upload-staging` in canonical Compose | Browser multipart spool storage |
 | `QC_TOOL_POSTGRES_TOOL_TIMEOUT` | 3,600 seconds | Native tool deadline |
 
-Defaults keep transfer journals on the existing mounted work volume. A custom
+Canonical profiles keep transfer journals and payloads in frontend-private storage,
+physically outside worker mounts; legacy source configurations retain their prior
+work-directory defaults. A custom
 transfer or upload-temporary path must be a private container path backed by a
 sized mounted volume; a host pathname in an environment file does not create a
 mount. Preserve transfer storage across frontend replacements. Recreate the
@@ -239,7 +249,9 @@ At minimum, preserve:
 
 - frontend database;
 - `INCOMING_DIR`;
-- `WORK_DIR`;
+- retained jobs (`WORK_DIR`) and the separate specification root;
+- shared state, including worker authentication and maintenance coordination;
+- frontend-private transfer state, database-selection pointer, journals and storage pins;
 - `S3_CREDENTIALS_DIR` if stored outside `WORK_DIR`, in an encrypted, restricted backup;
 - `BOUNDARY_DIR` and current-generation pointer;
 - `SUBMISSION_DIR` when enabled;
@@ -257,7 +269,8 @@ alone does not prove that the verified deliverables were recovered. See the
 
 S3 source records contain location metadata and an opaque credential reference.
 The credentials themselves are in private files under `S3_CREDENTIALS_DIR`, which
-defaults to `WORK_DIR/s3_credentials`. They are plaintext operational secrets on
+defaults to `/var/lib/qc_tool/s3_credentials` in canonical profiles (legacy
+source configurations retain `WORK_DIR/s3_credentials`). They are plaintext operational secrets on
 that filesystem; restrict host and volume access and encrypt backups. A database
 dump alone cannot restore S3 access.
 
@@ -289,6 +302,13 @@ because they are old: check whether any retained source records reference them.
 There is no automatic credential rotation or garbage collection.
 
 ## Upgrades
+
+The canonical Compose profiles use fresh `qc_tool_v3_*` application volumes and
+`postgres17_data_v3` for PostgreSQL 17. Keep older volumes and recovery data.
+Selecting new mounts does not copy files, translate persisted paths, upgrade
+PostgreSQL 14 bytes or initialize production automatically. Rehearse a separate
+logical restore and coordinated file handoff using [EEA storage](eea-storage.md).
+
 
 The [database guide](../../src/qc_tool/database/README.md) owns models-only
 initialization and schema validation. Use the procedure from the same source
@@ -387,6 +407,19 @@ PostGIS, archive expansion, shared-storage throughput, and external S3 limits.
 Do not scale the frontend horizontally until background status refresh and
 static-file collection responsibilities are moved to dedicated processes and
 the database/storage profile supports it.
+
+## Scratch inventory and cleanup
+
+Worker scratch is mounted only in workers; the normal frontend cannot inspect
+or delete it. Run the `scratch_storage` inventory/cleanup command only in an
+operator-created maintenance container using the frontend image and the exact
+worker scratch mount, together with its reviewed database and shared-state
+configuration. Listing a different directory would not inspect worker files.
+Use the command's reviewed plan/apply workflow while maintenance is ready.
+Only terminal, unpinned jobs are eligible; running jobs, retained evidence,
+transfer recovery packages and journals are excluded. Keep this one-shot access
+outside the normal frontend service and verify its rendered mounts first.
+There is no automatic age-based scratch or backup purge.
 
 ## Session maintenance
 

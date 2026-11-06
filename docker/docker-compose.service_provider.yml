@@ -1,52 +1,49 @@
+# Self-contained SQLite/lightweight installation; suitable for a single-file import.
 services:
   frontend:
-    image: "${QC_TOOL_FRONTEND_IMAGE:?Set QC_TOOL_FRONTEND_IMAGE to the reviewed frontend digest}"
+    image: ${QC_TOOL_FRONTEND_IMAGE:?Set QC_TOOL_FRONTEND_IMAGE to the reviewed frontend digest}
     init: true
     restart: unless-stopped
     stop_grace_period: 60s
     ports:
       - "127.0.0.1:${QC_TOOL_PORT:-8000}:8000"
     environment:
-      - PRODUCT_DIRS
-      - BOUNDARY_DIR=/mnt/qc_tool_volume/boundaries
-      - INCOMING_DIR=/mnt/qc_tool_volume/incoming
-      - WORK_DIR=/mnt/qc_tool_volume/work
-      - SUBMISSION_DIR=
-      - FRONTEND_DB_PATH=/mnt/qc_tool_volume/frontend.sqlite3
-      - UPDATE_JOB_STATUSES=yes
-      - UPDATE_JOB_STATUSES_INTERVAL=30000
-      - WORKER_ALIVE_TIMEOUT=5
-      - REFRESH_JOB_STATUSES_BACKGROUND=yes
-      - REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL=60
-      - CSRF_TRUSTED_ORIGINS=https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1
-      - QC_TOOL_UPLOAD_TEMP_DIR
-      - RESUMABLE_SIMULTANEOUS_UPLOADS=4
-      - S3_ALLOWED_ENDPOINTS
-      - S3_CREDENTIALS_DIR
-      - S3_CONNECT_TIMEOUT_SECONDS
-      - S3_READ_TIMEOUT_SECONDS
-      - S3_MAX_LISTED_OBJECTS
-      - QC_TOOL_ENVIRONMENT=production
-      - QC_TOOL_RESTORE_DATABASE
-      - QC_TOOL_STORAGE_ROOTS
-      - QC_TOOL_STORAGE_SFTP_HOST
-      - QC_TOOL_STORAGE_SFTP_PORT
-      - QC_TOOL_STORAGE_SFTP_USERNAME
-      - QC_TOOL_STORAGE_SFTP_ROOT
-      # Custom paths must remain on private persistent mounted storage.
-      - QC_TOOL_TRANSFER_DIR=${QC_TOOL_TRANSFER_DIR:-/mnt/qc_tool_volume/work/data-transfer}
-      - QC_TOOL_TRANSFER_MAX_RECORDS
-      - QC_TOOL_TRANSFER_MAX_ARCHIVE_BYTES
-      - QC_TOOL_TRANSFER_MAX_EXPANDED_BYTES
-      - QC_TOOL_TRANSFER_MAX_MEMBER_BYTES
-      - QC_TOOL_TRANSFER_MIN_FREE_BYTES
-      - QC_TOOL_POSTGRES_TOOL_TIMEOUT
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}
-      - DJANGO_ALLOWED_HOSTS=qc-copernicus.eea.europa.eu
-      - DJANGO_TRUST_PROXY_SSL_HEADER=${DJANGO_TRUST_PROXY_SSL_HEADER:-no}
-      - DJANGO_SECURE_SSL_REDIRECT=${DJANGO_SECURE_SSL_REDIRECT:-no}
-      - DJANGO_SECURE_HSTS_SECONDS=31536000
-      - DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=yes
+      QC_TOOL_DATA_ROOT: /mnt/qc-tool/data
+      QC_TOOL_REQUIRE_MOUNTS: "yes"
+      QC_TOOL_STORAGE_ROLE: frontend
+      QC_TOOL_ENVIRONMENT: production
+      DB_ENGINE: sqlite
+      SUBMISSION_DIR: ""
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-qc-copernicus.eea.europa.eu}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-https://qc-copernicus.eea.europa.eu,http://localhost,http://127.0.0.1}
+      WORKER_ALIVE_TIMEOUT: "${WORKER_ALIVE_TIMEOUT:-5}"
+      DJANGO_TRUST_PROXY_SSL_HEADER: "${DJANGO_TRUST_PROXY_SSL_HEADER:-no}"
+      DJANGO_SECURE_SSL_REDIRECT: "${DJANGO_SECURE_SSL_REDIRECT:-no}"
+      DJANGO_SECURE_HSTS_SECONDS: "31536000"
+      DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS: "yes"
+      # Existing deployment overrides; absent values use application defaults.
+      PRODUCT_DIRS:
+      QC_TOOL_RESTORE_DATABASE:
+      QC_TOOL_STORAGE_ROOTS:
+      QC_TOOL_STORAGE_SFTP_HOST:
+      QC_TOOL_STORAGE_SFTP_PORT:
+      QC_TOOL_STORAGE_SFTP_USERNAME:
+      QC_TOOL_STORAGE_SFTP_ROOT:
+      QC_TOOL_TRANSFER_DIR:
+      QC_TOOL_BACKUPS_DIR:
+      QC_TOOL_UPLOAD_TEMP_DIR:
+      S3_CREDENTIALS_DIR: "${S3_CREDENTIALS_DIR:-/var/lib/qc_tool/s3_credentials}"
+      QC_TOOL_TRANSFER_MAX_RECORDS:
+      QC_TOOL_TRANSFER_MAX_ARCHIVE_BYTES:
+      QC_TOOL_TRANSFER_MAX_EXPANDED_BYTES:
+      QC_TOOL_TRANSFER_MAX_MEMBER_BYTES:
+      QC_TOOL_TRANSFER_MIN_FREE_BYTES:
+      QC_TOOL_POSTGRES_TOOL_TIMEOUT:
+      S3_ALLOWED_ENDPOINTS:
+      S3_CONNECT_TIMEOUT_SECONDS:
+      S3_READ_TIMEOUT_SECONDS:
+      S3_MAX_LISTED_OBJECTS:
     healthcheck:
       test:
         - CMD
@@ -54,58 +51,78 @@ services:
         - -c
         - >-
           import os, urllib.request;
-          request = urllib.request.Request('http://127.0.0.1:8000/health', headers={'Host': os.environ['DJANGO_ALLOWED_HOSTS'].split(',')[0], 'X-Forwarded-Proto': 'https'});
+          request = urllib.request.Request('http://127.0.0.1:8000/health', headers={'Host': os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost').split(',')[0], 'X-Forwarded-Proto': 'https'});
           urllib.request.urlopen(request, timeout=3).close()
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 60s
-    networks:
-      - qc_tool_network
+    networks: [qc_tool_network]
     volumes:
-      - qc_tool_volume:/mnt/qc_tool_volume
+      - qc_tool_v3_boundaries:/mnt/qc-tool/data/boundaries
+      - qc_tool_v3_incoming:/mnt/qc-tool/data/incoming
+      - qc_tool_v3_specifications:/mnt/qc-tool/data/specifications
+      - qc_tool_v3_jobs:/mnt/qc-tool/data/jobs
+      - qc_tool_v3_submissions:/mnt/qc-tool/data/submissions
+      - qc_tool_v3_shared_state:/mnt/qc-tool/state/shared
+      - qc_tool_v3_frontend_logs:/var/log/qc-tool
+      - qc_tool_v3_frontend_state:/var/lib/qc_tool
 
   worker:
-    image: "${QC_TOOL_WORKER_IMAGE:?Set QC_TOOL_WORKER_IMAGE to the matching reviewed worker digest}"
+    image: ${QC_TOOL_WORKER_IMAGE:?Set QC_TOOL_WORKER_IMAGE to the matching reviewed worker digest}
     init: true
     restart: unless-stopped
     stop_grace_period: 60s
+    shm_size: 1gb
     depends_on:
       frontend:
         condition: service_healthy
-    shm_size: 1gb
     environment:
-      - QC_TOOL_ENVIRONMENT=production
-      - PRODUCT_DIRS
-      - BOUNDARY_DIR=/mnt/qc_tool_volume/boundaries
-      - INCOMING_DIR=/mnt/qc_tool_volume/incoming
-      - PULL_JOB_URL=http://frontend:8000/pull_job
-      - WORK_DIR=/mnt/qc_tool_volume/work
-      - INSPIRE_SERVICE_URL=http://localhost:8080/validator/v2/
-      - JAVA_MAX_MEM=1536
-      - RUN_INSPIRE_VALIDATOR=no
-      - USE_LIGHTWEIGHT_VALIDATOR=yes
-      - RUN_POSTGRES=yes
-      - S3_ALLOWED_ENDPOINTS
-      - S3_CONNECT_TIMEOUT_SECONDS
-      - S3_READ_TIMEOUT_SECONDS
-      - S3_MAX_LISTED_OBJECTS
-      - S3_MAX_DOWNLOAD_BYTES
+      QC_TOOL_DATA_ROOT: /mnt/qc-tool/data
+      QC_TOOL_REQUIRE_MOUNTS: "yes"
+      QC_TOOL_STORAGE_ROLE: worker
+      QC_TOOL_ENVIRONMENT: production
+      PULL_JOB_URL: http://frontend:8000/pull_job
+      RUN_INSPIRE_VALIDATOR: "no"
+      USE_LIGHTWEIGHT_VALIDATOR: "yes"
+      RUN_POSTGRES: "yes"
+      JAVA_MAX_MEM: "1536"
+      # Existing worker overrides; no frontend secrets or private paths.
+      PRODUCT_DIRS:
+      S3_MAX_DOWNLOAD_BYTES:
+      LEAVE_SCHEMA:
+      LEAVE_JOBDIR:
+      S3_ALLOWED_ENDPOINTS:
+      S3_CONNECT_TIMEOUT_SECONDS:
+      S3_READ_TIMEOUT_SECONDS:
+      S3_MAX_LISTED_OBJECTS:
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--max-time", "3", "http://127.0.0.1:8000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 180s
-    networks:
-      - qc_tool_network
+    networks: [qc_tool_network]
     volumes:
-      - qc_tool_volume:/mnt/qc_tool_volume
+      - qc_tool_v3_boundaries:/mnt/qc-tool/data/boundaries:ro
+      - qc_tool_v3_incoming:/mnt/qc-tool/data/incoming:ro
+      - qc_tool_v3_specifications:/mnt/qc-tool/data/specifications:ro
+      - qc_tool_v3_jobs:/mnt/qc-tool/data/jobs
+      - qc_tool_v3_shared_state:/mnt/qc-tool/state/shared
+      - qc_tool_v3_worker_logs:/var/log/qc-tool
+      - qc_tool_v3_worker_scratch:/var/tmp/qc-tool/jobs
 
 volumes:
-  qc_tool_volume:
-    driver: local
+  qc_tool_v3_boundaries:
+  qc_tool_v3_incoming:
+  qc_tool_v3_specifications:
+  qc_tool_v3_jobs:
+  qc_tool_v3_submissions:
+  qc_tool_v3_shared_state:
+  qc_tool_v3_frontend_state:
+  qc_tool_v3_worker_scratch:
+  qc_tool_v3_frontend_logs:
+  qc_tool_v3_worker_logs:
 
 networks:
   qc_tool_network:
-    driver: bridge

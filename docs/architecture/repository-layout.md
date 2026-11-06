@@ -28,6 +28,9 @@ copernicus_quality_tools/
 │   │   ├── urls.py           # Root URL composition
 │   │   └── wsgi.py           # Gunicorn/Django entrypoint
 │   ├── worker/               # Queue polling and job execution adapters
+│   ├── jobs/                 # Framework-independent job IDs and pull contracts
+│   ├── boundaries/           # Shared boundary types, layout and pinned readers
+│   ├── storage/              # Runtime path ownership, mount guards, scratch retention
 │   ├── product_units.py      # Canonical product-unit identifiers and legacy adapters
 │   ├── aoi/                  # Legacy geographic identifier contract
 │   ├── worker_auth/          # Shared WorkerToken header contract
@@ -36,7 +39,7 @@ copernicus_quality_tools/
 │   ├── s3_security/          # Canonical S3 endpoint allowlisting
 │   ├── raster/               # Raster QC implementations
 │   ├── vector/               # Vector QC implementations
-│   ├── common.py             # Shared configuration and job artefact helpers
+│   ├── common.py             # Compatibility configuration and job artefact helpers
 │   └── test/                 # Worker and QC tests
 └── testing_data/              # Test fixtures
 ```
@@ -145,7 +148,7 @@ frontend/dashboard/
 │   ├── api/           # Stable JSON request handling
 │   ├── product_units/ # Product unit persistence, projection, artifact backfill
 │   ├── artifacts/     # Confined downloads and attachments
-│   ├── boundaries/    # Validated immutable boundary generations
+│   ├── boundaries/    # Admin boundary upload/activation; shared reader compatibility
 │   ├── configuration/ # Announcement/configuration use cases
 │   ├── exports/       # Spreadsheet generation
 │   ├── jobs/          # Job request parsing and serialization
@@ -212,6 +215,11 @@ outside raster/vector QC modules:
 - `product_security/` validates product identifiers and definition files;
 - `s3_security/` canonicalizes and allowlists exact HTTPS origins;
 - `worker_auth/` owns the Authorization header format;
+- `jobs/` owns safe UUID/path components and job-pull contracts without importing
+  worker execution or Django adapters;
+- `boundaries/` owns framework-independent immutable generation resolution;
+- `storage/layout.py` owns configured runtime roots and stable artifact paths;
+- `storage/scratch_retention.py` owns bounded, explicit abandoned-scratch removal;
 - `worker/aoi/` adapts generic naming captures to canonical result metadata;
 - `worker/s3_delivery/` separates client construction, transfer, storage,
   hashing, policy, and orchestration.
@@ -240,3 +248,12 @@ product recipe.
 
 Verify refactors with representative fixtures and the relevant domain tests.
 `test_worker_module_boundaries.py` enforces the static dependency direction.
+
+## Runtime files are outside source ownership
+
+The checkout is code and maintained fixtures, not an application data volume.
+The [runtime storage architecture](runtime-storage.md) describes the canonical
+`/mnt/qc-tool/data`, shared state, frontend-private state, logs and worker scratch
+mounts, plus the legacy configuration boundary. A configured path is not a
+portable artifact identity. Moving execution intermediates does not authorize
+moving retained evidence or rewriting original specifications.

@@ -265,7 +265,7 @@ exit status and stderr. PostgreSQL `pg_dump` already takes a consistent SQL
 snapshot without blocking ordinary writers; the maintenance fence additionally
 coordinates application files. It covers one database, while cluster globals
 such as roles require separate backup. See the official
-[PostgreSQL 14 pg_dump contract](https://www.postgresql.org/docs/14/app-pgdump.html).
+[PostgreSQL 17 pg_dump contract](https://www.postgresql.org/docs/17/app-pgdump.html).
 Use the supported SQLite backup API or a fully quiescent database snapshot for
 SQLite; do not copy a live DB file without its consistency requirements.
 

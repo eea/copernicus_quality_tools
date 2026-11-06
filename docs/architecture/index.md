@@ -99,6 +99,7 @@ either.
 Continue with:
 
 - [Repository layout](repository-layout.md)
+- [Runtime storage ownership and scratch retention](runtime-storage.md)
 - [Delivery and job flow](data-and-job-flow.md)
 - [Delivery filename identification](delivery-identification.md)
 - [Deliveries workspace](deliveries-workspace.md)

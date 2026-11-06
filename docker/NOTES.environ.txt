@@ -1,121 +1,70 @@
-Environment variables
-=====================
+Environment configuration
+=========================
 
-The paths are passed unmodified to applications running inside service containers.
-Therefore, all paths are must be formulated relative to container's inner filesystem.
-Default values and environment setup can be found in source code at src/qc_tool/common.py:setup_config().
+Use docs/reference/environment-variables.md for the maintained variable names,
+defaults and validation rules. Application defaults belong in Python:
+  * src/qc_tool/storage/layout.py owns configured runtime paths;
+  * src/qc_tool/common.py owns shared application configuration;
+  * src/qc_tool/frontend/settings.py adapts frontend settings and typed limits;
+  * worker/security packages own their validated execution limits.
+Do not copy advanced default lists into each Compose entrypoint.
 
-BEWARE!
-Services interchange data among themselves through filesystem.
-Interchange is realized by directory inside docker volume which is then shared by all services.
-Therefore, it must be ensured the directories are accessible by all services.
+Standalone Compose profiles
+---------------------------
 
-How the directory configuration of particular service is set depends on how volume mapping is defined for the service.
-In order to keep the configuration simple it is recommended to use the same volume mapping across all services.
-Then the directory configuration will be the same for every service.
-See the examples in source code at docker/docker-compose.*.yml.
+Each maintained profile is one complete Compose file containing its services,
+mounts, connectivity, health checks and role-specific environment passthrough.
+Choose exactly one for a deployment:
+  * docker/compose.local.yaml: local builds and source mounts;
+  * docker/docker-compose.eea.yml: production PostgreSQL with named volumes;
+  * docker/compose.eea-storage.yaml: complete Azure/EEA host-storage deployment;
+  * docker/docker-compose.service_provider.yml: SQLite/lightweight validator.
 
-For EEA on an Azure Linux VM, the optional docker/compose.eea-storage.yaml
-override mounts one real persistent application tree at /mnt in both services,
-preserving existing paths. It requires Compose 2.24.4 or later and explicit
-operator provisioning; it never copies existing named volumes automatically.
-See docs/deployment/eea-storage.md before selecting this profile.
+The host-storage file is selected alone, not merged with the named-volume EEA
+file. Download the selected production file from the reviewed source revision.
+No shared Compose import, generator, wrapper or exported manifest is required.
+Use current supported Docker Compose. A standalone definition does not certify
+compatibility with a particular Rancher importer: verify its actual version,
+deployment type, supported schema and environment/secret handling on the target.
 
-  * QC_TOOL_PERSISTENT_ROOT, Compose-only absolute host mount, for example
-      /srv/qc-tool; data, private/frontend and private/postgresql must already
-      exist on the verified filesystem;
-  * QC_TOOL_PERSISTENT_STORAGE_ROOT, optional container storage guard root;
-      unset in existing profiles, /mnt in the EEA persistent-storage override;
-  * QC_TOOL_PERSISTENT_STORAGE_ID, stable non-secret expected identity in
-      ROOT/.qc-tool-storage-id, provisioned by the operator, never by startup.
+Protect operator settings in a file outside the checkout, such as private.env,
+and pass it with docker compose --env-file, or use the deployment platform's
+reviewed configuration/secrets mechanism. This supplies deployment values,
+not another Compose file or blanket container environment injection. Only
+variables explicitly passed in a role's service configuration reach that
+container. Review that profile's passthrough before relying on an override;
+frontend secrets must not be passed to workers. Avoid sharing rendered
+configuration containing secrets.
 
-The frontend and worker check the configured identity before application work.
-Use python3 -m qc_tool.storage check or the explicit temporary-files probe.
-Host mount dependencies and independent backup/restore validation remain
-required; a bind mount or successful local probe does not certify Azure recovery.
+Filesystem and persistence
+--------------------------
 
-Data interchange directories are:
+All application paths describe the container filesystem. Host bind sources are
+separate operator configuration; equal container paths can have different
+frontend/worker sources, as with their private log volumes.
 
-  * PRODUCT_DIRS;
-  * BOUNDARY_DIR;
-  * INCOMING_DIR;
-  * WORK_DIR;
+Maintained profiles select QC_TOOL_DATA_ROOT=/mnt/qc-tool/data and separately
+mount data, shared control state, frontend-private state, worker scratch and
+role-specific logs. Workers read incoming deliveries, specifications and
+boundaries through read-only mounts. Jobs and shared state are writable;
+submissions and frontend-private state are absent. Preserve those boundaries.
 
+See docs/architecture/runtime-storage.md for directory ownership and lifetimes,
+and docs/deployment/eea-storage.md for host provisioning, mount/identity checks
+and the explicit fresh-target handoff. Startup validates mounted roots before
+application writes; it never repairs missing mounts, moves old volumes, adopts
+older data or upgrades an occupied database. PostgreSQL 17 uses a fresh
+volume/path and must never open an old PostgreSQL 14 cluster directory.
 
-Service qc_tool_frontend
-------------------------
+Database initialization remains the whole-application database plan|check|apply
+workflow. A completely matching schema is read-only; an entirely empty target
+can be explicitly initialized; partial/foreign/outdated schemas are refused.
+Read src/qc_tool/database/README.md before persistence or deployment changes.
 
-  * PRODUCT_DIRS, informs the frontend server where to look for product definition files; there may be multiple paths separated by colon;
-  * BOUNDARY_DIR, instructs the frontend server where it should store boundary package;
-  * INCOMING_DIR, instructs the frontend server where it should store uploaded files;
-  * WORK_DIR, informs the frontend server where it should look for job output files;
-  * SUBMISSION_DIR, if set instructs the frontend server where to put submissions, if not set or empty the feature is disabled;
-  * FRONTEND_DB_PATH, the SQLite database path when DB_ENGINE=sqlite. Image builds
-      create no database. Explicit database apply initializes a wholly empty
-      target; startup checks an existing current-model schema without upgrades.
-  * SHOW_LOGO, informs the frontend server to put the Copernicus logo at web pages;
-  * QC_TOOL_TRANSFER_DIR, private persistent Admin package/journal directory (default WORK_DIR/data-transfer). Custom container paths require an explicit persistent volume mount;
-  * QC_TOOL_TRANSFER_MAX_RECORDS, maximum portable record graph size (default 250000);
-  * QC_TOOL_TRANSFER_MAX_ARCHIVE_BYTES, maximum complete package bytes (default 17179869184, 16 GiB);
-  * QC_TOOL_TRANSFER_MAX_MEMBER_BYTES, maximum bytes in one included file or native dump (default the configured archive limit);
-  * QC_TOOL_TRANSFER_MAX_EXPANDED_BYTES, maximum expanded package contents (default 68719476736, 64 GiB);
-  * QC_TOOL_TRANSFER_MIN_FREE_BYTES, backup storage free-space reserve (default 536870912, 512 MiB);
-  * QC_TOOL_UPLOAD_TEMP_DIR, private mounted storage for multipart upload spooling (default system temporary directory);
-  * QC_TOOL_POSTGRES_TOOL_TIMEOUT, native PostgreSQL operation deadline in seconds (default 3600);
-  * UPDATE_JOB_STATUSES, instructs the frontend deliveries page to auto-refresh job status info (yes or no);
-  * UPDATE_JOB_STATUSES_INTERVAL, interval to refresh job statuses on frontend deliveries page (30000 miliseconds);
-  * WORKER_ALIVE_TIMEOUT, timeout in seconds to wait for job status response from worker (5 seconds);
-  * REFRESH_JOB_STATUSES_BACKGROUND, instructs the frontend server to refresh running job statuses in a background thread;
-  * REFRESH_JOB_STATUSES_BACKGROUND_INTERVAL, interval to refresh job statuses on frontend server in background thread (60 seconds);
-  * S3_ALLOWED_ENDPOINTS, comma-separated exact HTTPS origins that the frontend and worker may contact for S3 deliveries; empty disables S3 registration and download;
-  * S3_CONNECT_TIMEOUT_SECONDS, per-attempt S3 connection timeout between 0.1 and 30 seconds (default 3);
-  * S3_READ_TIMEOUT_SECONDS, per-attempt S3 response timeout between 0.1 and 120 seconds (default 10);
-  * S3_MAX_LISTED_OBJECTS, maximum objects inspected by one S3 registration request, from 1 to 1000 (default 1000);
-  * WORKER_ADDR, the internal (inside-container) address of the worker, default '0.0.0.0';
-  * WORKER_PORT, the internal (inside-container) port of the worker, default 8000;
+Debugging scratch
+-----------------
 
-
-Service qc_tool_worker
-----------------------
-
-  * PRODUCT_DIRS, informs the job where to look for product definition files; there may be multiple paths separated by colon;
-  * BOUNDARY_DIR, informs the check function where to look for boundary package;
-  * INCOMING_DIR, informs the job where it should look for uploaded files;
-  * PULL_JOB_URL, informs the scheduler where to pull a new job from;
-  * WORK_DIR, instructs the running jobs where it should store its operational files;
-  * PG_HOST, informs the jobs about the host name/ip address on which the postgresql server is running;
-  * PG_PORT, informs the job about the tcp port on which the postgresql server is listening for connections;
-  * PG_USER, informs the job which user name it should use when connecting to postgresql server;
-  * PG_DATABASE, informs the job which database name it should use when connecting to postgresql server;
-  * SHOW_LOGO, informs the worker to put Copernicus logo in pdf report;
-  * WORKER_ADDR, the internal (inside-container) address of the worker, default '0.0.0.0';
-  * WORKER_PORT, the internal (inside-container) port of the worker, default 8000;
-  * S3_ALLOWED_ENDPOINTS, the same exact HTTPS-origin allowlist used by the frontend; it must also be present in the worker environment;
-  * S3_CONNECT_TIMEOUT_SECONDS, per-attempt worker S3 connection timeout (default 3);
-  * S3_READ_TIMEOUT_SECONDS, per-attempt worker S3 response timeout (default 30);
-  * S3_MAX_LISTED_OBJECTS, maximum objects downloaded for one delivery, from 1 to 1000 (default 1000);
-  * S3_MAX_DOWNLOAD_BYTES, maximum declared and streamed bytes downloaded for one S3 delivery (default 53687091200);
-  * INSPIRE_SERVICE_URL, by default the builtin validator http://localhost:8080/validator/v2/ is used, informs the worker to connect to a custom local instance of the INSPIRE validator service;
-  * RUN_INSPIRE_VALIDATOR, default yes to turn on builtin validator, set to "no" to completely turn off the builtin validator;
-  * USE_LIGHTWEIGHT_VALIDATOR, default no, set to "yes" to use a builting geonetwork-based implementation of the metadata validator (RUN_INSPIRE_VALIDATOR should be set to "no" in that case);
-  * RUN_POSTGRES, default yes, set to "no" if postgres/postgis engine should be turned off;
-  * DELIVERY_ARCHIVE_MAX_ARCHIVE_BYTES, maximum compressed delivery ZIP size accepted by the worker (default 53687091200);
-  * DELIVERY_ARCHIVE_MAX_MEMBERS, maximum number of entries in a delivery ZIP (default 25000);
-  * DELIVERY_ARCHIVE_MAX_MEMBER_BYTES, maximum expanded size of one ZIP entry (default 53687091200);
-  * DELIVERY_ARCHIVE_MAX_UNCOMPRESSED_BYTES, maximum total expanded ZIP size (default 107374182400);
-  * DELIVERY_ARCHIVE_MAX_COMPRESSION_RATIO, maximum declared and observed expansion ratio (default 100);
-  * DELIVERY_ARCHIVE_MAX_PATH_BYTES, maximum UTF-8 byte length of a ZIP member path (default 1024);
-  * DELIVERY_ARCHIVE_MAX_COMPONENT_BYTES, maximum UTF-8 byte length of one path component (default 255);
-  * DELIVERY_ARCHIVE_MAX_PATH_DEPTH, maximum directory depth inside a ZIP (default 32);
-
-
-  * INSPIRE_SERVICE_URL, default using built-in validator , set to another url when using external validator;
-  
-
-
-Debugging parameters
---------------------
-
-  * LEAVE_SCHEMA, if "yes" then job schema will not be dropped;
-  * LEAVE_JOBDIR, if "yes" then job's working dir will not be removed;
-  * SKIP_INSPIRE_CHECK, if "yes" then connecting to Inspire geoportal for metadata checks will be skipped; applies to tests only;
+LEAVE_SCHEMA=yes retains the worker job schema for investigation.
+LEAVE_JOBDIR=yes intentionally retains worker scratch; retained reports/results
+are independent. Explicit scratch cleanup respects that debugging marker,
+active leases and process namespaces. It is not a general storage TTL policy.

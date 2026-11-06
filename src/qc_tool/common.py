@@ -27,6 +27,7 @@ from qc_tool.jobs import normalize_job_uuid
 from qc_tool.product_security import UnsafeProductDefinition
 from qc_tool.product_security import normalize_product_ident
 from qc_tool.product_security import validate_executable_product_configuration
+from qc_tool.storage.layout import layout_config, runtime_paths
 from qc_tool.worker_auth import build_worker_authorization
 from qc_tool.worker_auth import InvalidWorkerUrl
 from qc_tool.worker_auth import worker_job_status_url
@@ -150,8 +151,8 @@ def get_timeout(job_time_limit_hours=JOB_TIME_LIMIT_HOURS):
 
 
 def create_worker_token():
-    path = CONFIG["work_dir"].joinpath(WORKER_TOKEN_FILENAME)
-    Path(CONFIG["work_dir"]).mkdir(parents=True, exist_ok=True)
+    path = runtime_paths(CONFIG).worker_token_path
+    path.parent.mkdir(parents=True, exist_ok=True)
 
     token = token_urlsafe(32)
     staging_path = path.with_name(f".{path.name}.{token_urlsafe(12)}.tmp")
@@ -174,7 +175,7 @@ def create_worker_token():
 
 
 def get_worker_token():
-    path = CONFIG["work_dir"].joinpath(WORKER_TOKEN_FILENAME)
+    path = runtime_paths(CONFIG).worker_token_path
     create_worker_token()
 
     flags = os.O_RDONLY
@@ -224,7 +225,7 @@ def get_qc_tool_version():
 def uploaded_definition_root():
     """Return shared specification storage without creating it."""
 
-    return CONFIG["work_dir"].joinpath("product_definitions")
+    return runtime_paths(CONFIG).specifications_dir
 
 
 def product_definition_directories():
@@ -468,9 +469,7 @@ def get_product_definitions():
 def compose_job_dir(job_uuid):
     """Return the confined working directory for a validated job UUID."""
 
-    return CONFIG["work_dir"].joinpath(
-        "job_{:s}".format(compact_job_uuid(job_uuid))
-    )
+    return runtime_paths(CONFIG).job_dir(job_uuid)
 
 def format_uuid(job_uuid):
     """Return a canonical UUID string for legacy callers."""
@@ -478,9 +477,7 @@ def format_uuid(job_uuid):
     return normalize_job_uuid(job_uuid)
 
 def compose_job_stdout_filepath(job_uuid):
-    return CONFIG["work_dir"].joinpath(
-        ("job.{:s}.stdout").format(format_uuid(job_uuid))
-    )
+    return runtime_paths(CONFIG).job_stdout_path(job_uuid)
 
 def compose_job_log_filepath(job_uuid):
     job_dir = compose_job_dir(job_uuid)
@@ -755,19 +752,12 @@ def setup_config():
         config["product_dirs"] = _product_dirs
     else:
         config["product_dirs"] = [QC_TOOL_PRODUCT_DIR]
-    config["boundary_dir"] = Path(environ.get("BOUNDARY_DIR", "/mnt/qc_tool_boundary/boundaries"))
-    config["incoming_dir"] = Path(environ.get("INCOMING_DIR", TEST_DATA_DIR))
-    config["work_dir"] = Path(environ.get("WORK_DIR", "/mnt/qc_tool_volume/work"))
+    config.update(layout_config(environ, test_data_dir=TEST_DATA_DIR))
 
     # Parameters consumed by frontend.
 
     config["frontend_db_path"] = Path(environ.get("FRONTEND_DB_PATH", "/var/lib/qc_tool/frontend.sqlite3"))
-    config["announcement_path"] = config["frontend_db_path"].with_name(ANNOUNCEMENT_FILENAME)
-    config["submission_dir"] = environ.get("SUBMISSION_DIR", "")
-    if config["submission_dir"] == "":
-        config["submission_dir"] = None
-    else:
-        config["submission_dir"] = Path(config["submission_dir"])
+    config["announcement_path"] = runtime_paths(config).announcement_path
     config["case_insensitive_usernames"] = environ.get("CASE_INSENSITIVE_USERNAMES", "no") == "yes"
 
     # Parameters consumed by worker.

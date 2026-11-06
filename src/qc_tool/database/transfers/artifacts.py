@@ -16,6 +16,8 @@ import stat
 import tempfile
 from uuid import UUID
 
+from qc_tool.storage.layout import runtime_paths
+from .locations import storage_location, storage_path
 from qc_tool.common import CONFIG, JOB_INPUT_DIRNAME, JOB_OUTPUT_DIRNAME, JOB_TMP_DIRNAME
 from qc_tool.product_security import canonical_product_ident
 from qc_tool.frontend.dashboard.services.boundaries.resolver import resolve_boundary_generation
@@ -52,6 +54,9 @@ def storage_roots():
         result["submissions"] = Path(CONFIG["submission_dir"])
     for index, directory in enumerate(CONFIG["product_dirs"]):
         result[f"product-{index}"] = Path(directory)
+    paths = runtime_paths(CONFIG)
+    if paths.canonical or paths.specifications_dir != result["work"] / "product_definitions":
+        result["specifications"] = paths.specifications_dir
     return result
 
 
@@ -78,16 +83,18 @@ def _safe_directory(root, key="", *, required=True):
     return current
 
 
-def _tree(root, key, sources, directories, *, root_name, filter_file=None):
+def _tree(root, key, sources, directories, *, root_name, filter_file=None, logical_key=None):
     path = _safe_directory(root, key)
-    directories.append({"root": root_name, "key": validate_key(key)})
+    logical_key = key if logical_key is None else logical_key
+    directories.append({"root": root_name, "key": validate_key(logical_key)})
     for entry in sorted(os.scandir(path), key=lambda item: item.name):
-        relative = key + "/" + entry.name
+        relative = logical_key + "/" + entry.name
+        physical = (key + "/" if key else "") + entry.name
         validate_key(relative)
         if entry.is_symlink():
             raise TransferArchiveError("An artifact tree contains a symbolic link.")
         if entry.is_dir(follow_symlinks=False):
-            _tree(root, relative, sources, directories, root_name=root_name, filter_file=filter_file)
+            _tree(root, physical, sources, directories, root_name=root_name, filter_file=filter_file, logical_key=relative)
         elif entry.is_file(follow_symlinks=False):
             if filter_file is None or filter_file(relative):
                 sources.append(ArtifactSource(root_name, relative, Path(entry.path), Path(root)))
@@ -208,9 +215,10 @@ def collect_artifacts(payload, *, roots=None, include_files=None):
                 if not entry.is_file(follow_symlinks=False) or entry.is_symlink():
                     raise TransferArchiveError("Configured specifications must be regular files.")
                 sources.append(ArtifactSource(name, validate_key(entry.name), Path(entry.path), root))
-    uploaded = _safe_directory(roots["work"], "product_definitions", required=False)
+    spec_root, spec_key = storage_location(roots, "work", "product_definitions")
+    uploaded = _safe_directory(spec_root, spec_key, required=False)
     if uploaded is not None:
-        _tree(roots["work"], "product_definitions", sources, directories, root_name="work",
+        _tree(spec_root, spec_key, sources, directories, root_name="work", logical_key="product_definitions",
               filter_file=lambda key: _spec_path(key) and _spec_ident(key) in identifiers)
         # Lock and staging files were excluded; directories outside the reviewed
         # namespace are not published to the destination either.
@@ -593,7 +601,7 @@ class ArtifactRestorePlan:
                 entry = files[(item["root"], item["key"])]
                 if set(item) != {"root", "key", "device", "inode"} or type(item["device"]) is not int or type(item["inode"]) is not int:
                     raise ValueError
-                self._created_files.append((self.roots[entry["root"]] / entry["key"], item["device"], item["inode"], entry))
+                self._created_files.append((storage_path(self.roots, entry["root"], entry["key"]), item["device"], item["inode"], entry))
             for item in document["links"]:
                 if set(item) != {"name", "device", "inode"} or item["name"] not in {".boundary-current", "raster", "vector"} or type(item["device"]) is not int or type(item["inode"]) is not int:
                     raise ValueError
@@ -649,16 +657,16 @@ class ArtifactRestorePlan:
                     raise TransferArchiveError("A staged directory was replaced after interruption.")
                 os.chmod(path, 0o750)
             for entry in self.archive.directories:
-                self._directory(self.roots[entry["root"]] / entry["key"])
+                self._directory(storage_path(self.roots, entry["root"], entry["key"]))
             for entry in self.archive.entries:
-                target = self.roots[entry["root"]] / entry["key"]
+                target = storage_path(self.roots, entry["root"], entry["key"])
                 self._directory(target.parent)
                 if os.path.lexists(target):
-                    _require_matching(target, self.roots[entry["root"]], entry)
+                    _require_matching(target, storage_location(self.roots, entry["root"], entry["key"])[0], entry)
                     continue
                 temporary = None
                 try:
-                    staging = self.roots[entry["root"]] / ".record-transfer-staging"
+                    staging = storage_location(self.roots, entry["root"], entry["key"])[0] / ".record-transfer-staging"
                     self._directory(staging)
                     if staging.stat().st_dev != target.parent.stat().st_dev:
                         raise TransferArchiveError("A storage root contains a nested mount; configure separate roots before restoring artifacts.")
@@ -677,12 +685,13 @@ class ArtifactRestorePlan:
                     self._save_journal()
                     # Revalidate parents immediately before publication. Storage
                     # is administrator-owned and maintenance excludes app writers.
-                    parent_key = str(Path(entry["key"]).parent)
-                    _safe_directory(self.roots[entry["root"]], "" if parent_key == "." else parent_key)
+                    physical_root, physical_key = storage_location(self.roots, entry["root"], entry["key"])
+                    parent_key = str(Path(physical_key).parent)
+                    _safe_directory(physical_root, "" if parent_key == "." else parent_key)
                     try:
                         os.link(temporary, target, follow_symlinks=False)
                     except FileExistsError:
-                        _require_matching(target, self.roots[entry["root"]], entry)
+                        _require_matching(target, storage_location(self.roots, entry["root"], entry["key"])[0], entry)
                         self._created_files.remove(ownership)
                         self._save_journal()
                     _sync_directory(target.parent)
@@ -767,7 +776,7 @@ class ArtifactRestorePlan:
                 metadata = target.lstat()
                 if (metadata.st_dev, metadata.st_ino) != (device, inode) or not stat.S_ISREG(metadata.st_mode):
                     raise OSError("A created artifact was replaced.")
-                _require_matching(target, self.roots[entry["root"]], entry)
+                _require_matching(target, storage_location(self.roots, entry["root"], entry["key"])[0], entry)
                 target.unlink()
                 _sync_directory(target.parent)
             except FileNotFoundError:
@@ -995,10 +1004,11 @@ def inspect_retained_artifact_conflicts(archive, *, roots=None):
                 raise TransferArchiveError("Required retained storage is not configured.")
             _preflight_retained_trees(branch, roots)
             for entry in entries:
-                path = roots[root] / entry["key"]
-                _safe_directory(roots[root], str(Path(entry["key"]).parent), required=False)
+                physical_root, physical_key = storage_location(roots, root, entry["key"])
+                path = physical_root / physical_key
+                _safe_directory(physical_root, str(Path(physical_key).parent), required=False)
                 if os.path.lexists(path):
-                    _require_matching(path, roots[root], entry)
+                    _require_matching(path, physical_root, entry)
         except (OSError, ValueError):
             reason = ("Retained QC job artifacts conflict with this package or are unsafe."
                       if resource == "jobs" else
@@ -1091,7 +1101,7 @@ def plan_artifact_restore(archive, *, roots=None, journal_path=None):
         for entry in entries:
             if entry["root"] not in roots:
                 raise TransferArchiveError("A required storage root is not configured in this installation.")
-            root, key = roots[entry["root"]], entry["key"]
+            root, key = storage_location(roots, entry["root"], entry["key"])
             current = root
             for part in (None, *Path(key).parts[:-1]):
                 if part is not None:

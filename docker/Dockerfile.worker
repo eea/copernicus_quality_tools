@@ -33,14 +33,14 @@ RUN curl --fail --show-error --location --proto '=https' --tlsv1.2 \
         --output /tmp/squid.tar.gz && \
     echo "${SQUID_SHA256}  /tmp/squid.tar.gz" | sha256sum --check --strict && \
     tar -xzf /tmp/squid.tar.gz -C /tmp && cd "/tmp/squid-${SQUID_VERSION}" && \
-    ./configure --prefix=/usr \
+    CFLAGS="-O2 -g0" CXXFLAGS="-O2 -g0" ./configure --prefix=/usr \
             --sysconfdir=/etc/squid \
             --localstatedir=/var \
             --libexecdir=/usr/lib/squid \
             --srcdir=. \
             --with-default-user=proxy \
             --with-gnutls && \
-    make -j"${BUILD_JOBS}" && make install && \
+    make -j"${BUILD_JOBS}" && make install-strip && \
     rm -rf /tmp/squid.tar.gz "/tmp/squid-${SQUID_VERSION}"
 
 

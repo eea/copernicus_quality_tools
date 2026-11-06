@@ -11,11 +11,19 @@ The supported local stack is defined in
 uses production-like service boundaries while enabling development-only
 conveniences.
 
+The local profile contains its complete service mounts, connectivity and
+environment passthrough in one file. Commands select only `compose.local.yaml`.
+Local builds, source bind mounts, development flags and host ports are explicit
+in that file. Python owns
+application defaults; use the
+[environment reference](../reference/environment-variables.md) for supported
+operator overrides rather than copying default lists into each manifest.
+
 ## Local services
 
 | Service | Local implementation | Persistent data |
 | --- | --- | --- |
-| `userdb` | PostgreSQL 14 | `postgres_data` volume |
+| `userdb` | PostgreSQL 17 | fresh `postgres17_data_v3` volume |
 | `frontend` | Current checkout, Python 3.12, Django 5.2 | shared volumes and PostgreSQL |
 | `worker` | Current checkout, locally built Python 3.12/geospatial runtime | shared volumes plus worker-local services |
 
@@ -23,6 +31,16 @@ Both application images build locally from this checkout. The first worker
 build is substantially more expensive because it compiles GDAL and Squid and
 includes PostGIS, Java and INSPIRE. The frontend-only preview below does not
 start or build the worker.
+
+The maintained profiles set `QC_TOOL_DATA_ROOT=/mnt/qc-tool/data`. Separate
+`qc_tool_v3_*` volumes isolate each data area, shared control state, frontend
+private state, worker scratch and each service's logs. Workers mount delivery
+ZIPs, specifications and boundaries read-only; publications and private frontend
+files are absent. Existing pre-refactor volumes remain untouched. Selecting
+this profile creates fresh storage; it does not copy old records/files or open
+a PostgreSQL 14 volume with PostgreSQL 17. Preserve old volumes and use an
+explicit verified handoff when data must be retained. See
+[storage layout](../deployment/eea-storage.md#host-and-container-paths).
 
 ## Connect with pgAdmin
 
@@ -153,9 +171,9 @@ Development startup initializes this entirely empty database and creates the
 demo accounts. No worker runs, so this preview supports Admin inspection rather
 than QC job execution.
 
-The unique Compose project isolates **all six named volumes**, including the
-database, work/maintenance state, boundaries, incoming files, submissions and
-frontend storage. The original project, its database and files, and its
+The unique Compose project isolates **all named volumes**, including the
+database, retained jobs, shared state, specifications, boundaries, incoming
+files, submissions, frontend-private state, worker scratch and per-service logs. The original project, its database and files, and its
 localhost:8000 listener remain untouched. Database credentials keep their normal
 local configuration; no checked-in settings or source copying are required.
 Changing only `QC_TOOL_POSTGRES_DB` on the original project does not create a

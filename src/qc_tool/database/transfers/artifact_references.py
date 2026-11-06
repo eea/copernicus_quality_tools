@@ -9,6 +9,7 @@ from copy import deepcopy
 import hashlib
 import os
 from pathlib import Path
+from .locations import storage_location
 import re
 from uuid import NAMESPACE_URL, UUID, uuid5
 
@@ -115,7 +116,8 @@ def collect_optional_artifacts(payload, *, roots, include_files):
             ref.update(availability="unverified" if present else "missing",
                        inclusion="excluded" if present else "unavailable")
             return ref
-        result = candidate or _safe_file(roots[ref["root"]], ref["key"], checksum=include_files)
+        physical_root, physical_key = storage_location(roots, ref["root"], ref["key"])
+        result = candidate or _safe_file(physical_root, physical_key, checksum=include_files)
         if result is None:
             ref.update(availability="missing", inclusion="unavailable")
             warnings.append(f"{ref['resource']} {ref['source_key']}: {ref['role']} is unavailable; its reference is retained.")
@@ -213,7 +215,8 @@ def collect_optional_artifacts(payload, *, roots, include_files):
         for name, path in candidates:
             if name not in roots:
                 continue
-            inspected = _safe_file(roots[name], path, max_bytes=1024**2)
+            physical_root, physical_key = storage_location(roots, name, path)
+            inspected = _safe_file(physical_root, physical_key, max_bytes=1024**2)
             if inspected is not None and inspected[1] == row["digest"]:
                 candidate = inspected
                 break

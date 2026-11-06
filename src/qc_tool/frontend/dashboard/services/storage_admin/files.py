@@ -17,7 +17,8 @@ import unicodedata
 
 from django.conf import settings
 
-from qc_tool.common import CONFIG
+from qc_tool.common import CONFIG, uploaded_definition_root
+from qc_tool.storage.layout import runtime_paths
 from qc_tool.frontend.dashboard.services.boundaries.layout import TRASH_DIRECTORY_NAME as BOUNDARY_TRASH_DIRECTORY
 
 
@@ -51,7 +52,7 @@ def _areas():
          "Files retained as published submission evidence."),
         ("boundaries", "Boundaries", CONFIG.get("boundary_dir"), True,
          "Original boundary files and their supporting data."),
-        ("uploaded-specifications", "Product specifications", work / "product_definitions", True,
+        ("uploaded-specifications", "Product specifications", uploaded_definition_root(), True,
          "Saved original product specification versions."),
     ]
     persistent_root = getattr(settings, "QC_TOOL_PERSISTENT_STORAGE_ROOT", "")
@@ -103,7 +104,11 @@ def _configuration(area):
 
 def _private_locations():
     work = Path(CONFIG["work_dir"])
-    private = [work / "s3_credentials", work / "worker.token", work / "maintenance", work / "data-transfer",
+    paths = runtime_paths(CONFIG)
+    private = [*(
+        [paths.frontend_state_dir, paths.shared_state_dir, paths.logs_dir, paths.scratch_dir]
+        if paths.canonical else []
+    ), work / "s3_credentials", work / "worker.token", work / "maintenance", work / "data-transfer",
                getattr(settings, "QC_TOOL_MAINTENANCE_DIR", None),
                getattr(settings, "QC_TOOL_TRANSFER_DIR", None),
                getattr(settings, "S3_CREDENTIALS_DIR", None),
@@ -123,14 +128,14 @@ def _private_locations():
 
 
 def _content_locations():
-    locations = [Path(CONFIG["work_dir"]) / "product_definitions" / ".versions"]
+    locations = [uploaded_definition_root() / ".versions"]
     if CONFIG.get("boundary_dir"):
         locations.append(Path(CONFIG["boundary_dir"]) / ".boundary-generations")
     return frozenset(Path(os.path.abspath(str(value))) for value in locations)
 
 
 def _control_locations():
-    root = Path(CONFIG["work_dir"]) / "product_definitions"
+    root = uploaded_definition_root()
     locations = [root / ".state", root / ".upload.lock"]
     if CONFIG.get("boundary_dir"):
         boundary = Path(CONFIG["boundary_dir"])
@@ -144,7 +149,7 @@ def _content_path(root, parts):
 
 def _protected_locations(area):
     work = Path(CONFIG["work_dir"])
-    protected = [*_private_locations(), CONFIG.get("boundary_dir"), work / "product_definitions",
+    protected = [*_private_locations(), CONFIG.get("boundary_dir"), uploaded_definition_root(),
                  *(CONFIG.get("product_dirs") or ())]
     if area != "incoming":
         protected.append(settings.MEDIA_ROOT)
@@ -243,6 +248,13 @@ def _check_persistent_storage():
                    "WORK_DIR": str(CONFIG["work_dir"]), "INCOMING_DIR": str(settings.MEDIA_ROOT),
                    "BOUNDARY_DIR": str(CONFIG.get("boundary_dir") or ""),
                    "SUBMISSION_DIR": str(CONFIG.get("submission_dir") or "")}
+    if CONFIG.get("data_root"):
+        paths = runtime_paths(CONFIG)
+        environment.update(QC_TOOL_DATA_ROOT=str(paths.data_root), QC_TOOL_STORAGE_ROLE="frontend",
+                           QC_TOOL_SPECIFICATIONS_DIR=str(paths.specifications_dir),
+                           QC_TOOL_SHARED_STATE_DIR=str(paths.shared_state_dir),
+                           QC_TOOL_FRONTEND_STATE_DIR=str(paths.frontend_state_dir),
+                           QC_TOOL_LOG_DIR=str(paths.logs_dir))
     try:
         check_storage(environment)
     except StorageConfigurationError as error:

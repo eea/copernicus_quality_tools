@@ -21,11 +21,15 @@ does not activate it or overwrite an existing generation.
 - `storage/` owns trusted-root checks, locking, immutable generation publication,
   atomic activation, compatibility links, and durability helpers.
 - `legacy.py` performs the fail-closed migration from direct raster/vector paths.
-- `resolver.py` pins readers to one active immutable generation.
+- `qc_tool.boundaries.resolver` pins readers to one active immutable generation
+  without importing Django or frontend services; local `resolver.py` re-exports
+  the same function for compatibility.
 - `catalog.py` lists files from a pinned generation with explicit limits.
 - `configuration.py` adapts validated deployment settings into the typed limits
   passed by HTTP callers; it does not change the framework-independent service API.
-- `contracts.py`, `errors.py`, and `layout.py` hold shared domain types and policy.
+- `qc_tool.boundaries` owns shared types, failures, layout names and reader policy.
+  Local `contracts.py`, `errors.py`, and `layout.py` preserve existing imports by
+  re-exporting the same identities. Admin upload/archive/activation stay here.
 
 `archive/__init__.py` and `storage/__init__.py` are compatibility facades. Keep
 their exported imports stable when implementation files are reorganized.

@@ -60,7 +60,7 @@ class SchedulerPullJobTests(TestCase):
 class JobControllerCredentialTests(TestCase):
     def setUp(self):
         self.job_args = {
-            "job_uuid": "job-1",
+            "job_uuid": "00000000-0000-0000-0000-000000000001",
             "product_ident": "product",
             "skip_steps": None,
             "username": "alice",

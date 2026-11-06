@@ -1,11 +1,14 @@
 #!/bin/bash
 
 set -e
+export QC_TOOL_STORAGE_ROLE=worker
 
 # This stdlib-only guard runs before runtime imports, tokens, logs or validator
 # scratch directories can be created on a missing/wrong persistent mount.
 if [[ -n "${QC_TOOL_PERSISTENT_STORAGE_ROOT+x}" || -n "${QC_TOOL_PERSISTENT_STORAGE_ID+x}" ]]; then
     python3 -m qc_tool.storage check
+elif [[ -n "${QC_TOOL_DATA_ROOT+x}" ]]; then
+    python3 -m qc_tool.storage check-layout
 fi
 
 # A source bind mount must not make an old runtime appear to be a current

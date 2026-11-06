@@ -25,7 +25,7 @@ class WorkerEntrypointTests(unittest.TestCase):
         # The runtime gate is separately exercised against the real worker image.
         # Leave Python itself real for the argument serialization under test.
         self.executable("python3", "#!/bin/bash\n"
-                        'if [[ "$*" == "-m qc_tool.storage check" ]]; then\n'
+                        'if [[ "$*" == "-m qc_tool.storage check" || "$*" == "-m qc_tool.storage check-layout" ]]; then\n'
                         '  printf "%s\\n" "$*" >> "$QC_WORKER_TEST_COMMAND_LOG"\n'
                         '  exit "${QC_WORKER_TEST_STORAGE_FAILURE:-0}"\n'
                         'fi\n'
@@ -57,6 +57,7 @@ class WorkerEntrypointTests(unittest.TestCase):
             "QC_WORKER_TEST_COMMAND_LOG": str(self.root / "commands.log"),
         }
         self.environment.pop("JAVA_OPTIONS", None)
+        self.environment.pop("QC_TOOL_DATA_ROOT", None)
         self.environment.pop("QC_TOOL_PERSISTENT_STORAGE_ROOT", None)
         self.environment.pop("QC_TOOL_PERSISTENT_STORAGE_ID", None)
 
@@ -101,6 +102,25 @@ class WorkerEntrypointTests(unittest.TestCase):
         self.assertEqual((self.root / "commands.log").read_text().splitlines(), [
             "-m qc_tool.storage check", "runtime-check",
         ])
+
+    def test_canonical_layout_is_checked_before_runtime_without_identity_contract(self):
+        result, options = self.capture_options(QC_TOOL_DATA_ROOT="/mnt/qc-tool/data")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNotNone(options)
+        self.assertEqual((self.root / "commands.log").read_text().splitlines(), [
+            "-m qc_tool.storage check-layout", "runtime-check",
+        ])
+
+    def test_missing_canonical_mount_stops_before_worker_runtime_writes(self):
+        result, options = self.capture_options(QC_TOOL_DATA_ROOT="/mnt/qc-tool/data",
+                                              QC_WORKER_TEST_STORAGE_FAILURE="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIsNone(options)
+        self.assertEqual((self.root / "commands.log").read_text().splitlines(), [
+            "-m qc_tool.storage check-layout",
+        ])
+        self.assertFalse((self.root / "qc-tool-wgetrc").exists())
+        self.assertFalse((self.root / "etf").exists())
 
     def test_bad_storage_stops_before_runtime_and_private_files_are_created(self):
         for configuration in (

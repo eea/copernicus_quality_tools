@@ -16,7 +16,7 @@ import stat
 
 from django.db import DatabaseError
 
-from qc_tool.common import CONFIG
+from qc_tool.common import CONFIG, uploaded_definition_root
 from qc_tool.product_security import canonical_product_ident, normalize_product_ident
 from qc_tool.frontend.dashboard.services.boundaries.contracts import LIVE_DIRECTORY_NAMES
 from qc_tool.frontend.dashboard.services.boundaries.layout import (
@@ -331,7 +331,7 @@ def _specifications(inventory):
     except files.StorageError:
         # A missing upload root is normal before this installation's first
         # upload. A configured deployment source can still be current.
-        upload_root = CONFIG["work_dir"] / "product_definitions"
+        upload_root = uploaded_definition_root()
         if os.path.lexists(upload_root):
             states_complete = False
             inventory.warn("Uploaded specification storage is unavailable. Current specification selection cannot be confirmed.")
@@ -341,7 +341,7 @@ def _specifications(inventory):
         flat_rows.extend(_flat_specifications(inventory, "spec-" + str(index), "Installed source", "installed"))
     # Uploaded legacy flat files follow deployment directories in runtime
     # precedence, matching common.product_definition_directories().
-    if CONFIG["work_dir"] / "product_definitions" not in (CONFIG.get("product_dirs") or ()):
+    if uploaded_definition_root() not in (CONFIG.get("product_dirs") or ()):
         try:
             with files.root_descriptor("uploaded-specifications"):
                 flat_rows.extend(_flat_specifications(inventory, "uploaded-specifications", "Original installed file", "legacy"))

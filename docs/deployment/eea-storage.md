@@ -6,224 +6,179 @@ nav_order: 6
 
 # EEA persistent storage
 
-Use `docker/docker-compose.eea.yml` with the optional
-`docker/compose.eea-storage.yaml` override for a Linux VM whose persistent
-filesystem is mounted by the operator. **Admin → Storage** opens
-**Persistent storage**, showing the actual application folders under
-`/mnt`; frontend and workers use the same files and container paths.
+Use `docker/compose.eea-storage.yaml` **alone** for an operator-mounted Linux
+filesystem. It is a complete standalone EEA deployment profile, including the
+frontend, worker and PostgreSQL services. The canonical layout separates durable
+application files, shared control state, frontend-private state, worker scratch
+and per-service logs. Each area is mounted separately; neither application
+container receives the whole host root.
 
-This is a deployment option, not a change to an existing installation. Without
-the override, the EEA profile retains its existing Docker named volumes. Adding
-the override does not copy their contents. The actual EEA Azure resources,
-mounts, permissions and recovery behavior have not been verified here.
+Choose this host-storage file or the named-volume `docker-compose.eea.yml`;
+do not merge them. Download the one selected file from the reviewed revision.
+A protected environment file supplies deployment values, without introducing
+another Compose definition. Host sources, writable/read-only binds and
+provisioning boundaries remain explicit for operator review. For Rancher,
+verify the actual importer/version prerequisites described in
+[deployment](index.md#rancher-import) before claiming target compatibility.
 
-## Choose and mount the filesystem
+**This is a fresh-target deployment configuration.** The maintained profiles use
+new `qc_tool_v3_*` named volumes and `postgres17_data_v3`; they do not adopt or
+copy older application volumes. PostgreSQL 17 must never be pointed at a
+PostgreSQL 14 data directory. Preserve existing volumes, private backups and
+recovery data until a separately verified handoff is complete.
 
-For the current single-VM deployment with one frontend, a Linux filesystem such
-as ext4 or XFS on an Azure managed data disk is the simplest fit for QC Tool's
-existing POSIX file operations. This recommendation follows the application's
-locking, permissions and durable-write requirements; it is not a claim about
-the infrastructure EEA currently operates. Follow Microsoft's
-[Linux data-disk attachment and persistent mounting guide](https://learn.microsoft.com/en-us/azure/virtual-machines/linux/attach-disk-portal),
-using the filesystem UUID when configuring mounts across reboots.
+## Host and container paths
 
-If EEA supplies Azure Files NFS instead, Microsoft documents POSIX permissions
-and hard-link support, with network-based access controls. Review its
-[NFS protocol and limitations](https://learn.microsoft.com/en-us/azure/storage/files/files-nfs-protocol)
-and validate the application's locking, synchronization and recovery behavior
-on that exact mount. An SMB or Blob mount is not an interchangeable filesystem
-merely because a directory can be listed. Do not infer support for multiple
-frontend replicas from a shared storage service.
+Provision a new reviewed host root, for example `/srv/qc-tool-v3`, only after
+verifying its real mount with `mountpoint` and `findmnt`. A Docker bind mount
+cannot establish that the intended device/share is mounted.
 
-Use a real mount such as `/srv/qc-tool`, rather than an Azure temporary/resource
-disk or a container's writable layer. Before creating any application folders,
-verify the mounted device/share and its expected identity on the host:
+| Host path under `QC_TOOL_PERSISTENT_ROOT` | Container path | Frontend | Worker |
+| --- | --- | --- | --- |
+| `data/incoming` | `/mnt/qc-tool/data/incoming` | read/write | read-only |
+| `data/boundaries` | `/mnt/qc-tool/data/boundaries` | read/write | read-only |
+| `data/specifications` | `/mnt/qc-tool/data/specifications` | read/write | read-only |
+| `data/jobs` | `/mnt/qc-tool/data/jobs` | read/write | read/write |
+| `data/submissions` | `/mnt/qc-tool/data/submissions` | read/write | absent |
+| `state/shared` | `/mnt/qc-tool/state/shared` | read/write | read/write |
+| `private/frontend` | `/var/lib/qc_tool` | read/write | absent |
+| `scratch/worker` | `/var/tmp/qc-tool/jobs` | absent | read/write |
+| `logs/frontend` | `/var/log/qc-tool` | read/write | absent |
+| `logs/worker` | `/var/log/qc-tool` | absent | read/write |
+| `private/postgresql17` | `/var/lib/postgresql/data` in `userdb` | absent | absent |
 
-```bash
-QC_TOOL_PERSISTENT_ROOT=/srv/qc-tool
-mountpoint --quiet "$QC_TOOL_PERSISTENT_ROOT"
-findmnt --mountpoint "$QC_TOOL_PERSISTENT_ROOT" --output TARGET,SOURCE,FSTYPE,OPTIONS
-```
+`QC_TOOL_DATA_ROOT=/mnt/qc-tool/data` selects this layout. `WORK_DIR` is the
+legacy configuration alias for `data/jobs`, containing retained QC artifacts.
+Original specification bytes and activation metadata live in
+`data/specifications`; bundled sources remain in the image. Shared state holds
+worker authentication and maintenance coordination. Frontend-private state
+holds credentials, transfer/backup journals and packages, multipart staging,
+SQLite when selected, announcements and static assets. Transfer journals default
+to `private/frontend/data-transfer`, while backup/import payloads use the separate
+`QC_TOOL_BACKUPS_DIR` child `private/frontend/backups`. Neither is a worker mount. Worker extraction
+scratch has a separate capacity budget and is excluded from retained evidence.
+Logs use distinct frontend and worker sources even though their container paths
+match. Auxiliary validator/cache/database paths inside a worker remain separate
+from the persistent application database.
 
-Stop if the mount check fails or the reported source is unexpected. Docker bind
-mounts cannot establish that the intended Azure storage is mounted: an existing
-empty host mountpoint can otherwise look like valid local storage.
+The Admin persistent-storage browser opens `/mnt/qc-tool/data`. Its browser
+filters are additional protection; private state is physically outside that
+root and is never mounted in workers. Desktop SFTP must export a separate
+reviewed read-only tree as described in [storage access](storage-access.md).
 
-## Prepare the application and private folders
+## Filesystem requirements and provisioning
 
-Only after verifying the mount, provision this layout through the operator's
-normal configuration management:
+The application uses POSIX permissions, hard links, symbolic links, atomic
+replacement, file/directory `fsync`, and independent-process `flock`. A local
+Linux filesystem on a persistent managed disk is the simplest single-VM fit.
+A network filesystem requires testing on the exact service and mount options;
+a directory listing alone does not establish compatibility. Keep one frontend
+instance. Shared storage does not make the background refresh service safe for
+multiple frontend replicas.
 
-```text
-/srv/qc-tool/                     # QC_TOOL_PERSISTENT_ROOT: mounted filesystem
-├── data/                        # shared frontend/worker mount at /mnt
-│   ├── .qc-tool-storage-id       # operator-created storage identity
-│   ├── qc_tool_boundary/
-│   │   └── boundaries/
-│   ├── qc_tool_incoming/
-│   │   └── incoming/
-│   ├── qc_tool_submission/
-│   │   └── submission/
-│   └── qc_tool_work/
-│       └── work/
-│           ├── product_definitions/   # uploaded originals and saved versions
-│           ├── upload-staging/        # private frontend upload spool
-│           └── …                     # jobs, reports and private runtime state
-└── private/                     # outside the browsable /mnt tree
-    ├── frontend/                # frontend mount at /var/lib/qc_tool
-    └── postgresql/              # userdb mount at /var/lib/postgresql/data
-```
+After verifying the device/share and filesystem identity, create the table's
+host directories using operator configuration management. Set ownership for the
+reviewed images' runtime UID/GID. Preserve private directory modes (`0700`) and
+credential file modes (`0600`); never use blanket `0777` or recursively change
+an existing PostgreSQL directory's ownership.
 
-The existing `WORK_DIR`, `BOUNDARY_DIR`, `INCOMING_DIR` and `SUBMISSION_DIR`
-values do not change. Bundled specification sources remain in the image;
-uploaded versions remain in persistent `work/product_definitions`.
+Provision `.qc-tool-storage-id` **inside every application mount root** in the
+table: the five data directories, `state/shared`, `private/frontend`,
+`scratch/worker`, and both log directories. Each marker contains the same stable
+non-secret deployment identity, for example `eea-qc-tool-v3-production-01`, on
+one line. Use a regular single-link marker without group/public write access
+(for example `0644`). The application never creates or repairs markers.
+PostgreSQL's directory has no application marker; the host independently guards
+its mount before allowing PostgreSQL to start.
 
-Give each directory the ownership required by the reviewed image's runtime
-UID/GID. Frontend and worker must both access shared application files;
-PostgreSQL data belongs to its database UID. Preserve private file modes such
-as `0700` directories and `0600` credentials. Do not apply blanket `0777`
-permissions or recursively change an existing database's ownership without
-reviewing its image and current deployment.
+Do not place one marker only in `data/` or the host parent: those parents are
+not the mounted application roots. A missing or mismatched marker on any
+role-visible root blocks startup before application writes. Worker read-only
+input roots share their markers with the frontend's corresponding mounts.
 
-Choose a stable, non-secret storage identity, for example
-`eea-qc-tool-production-01`. For the first provisioning only, create
-`data/.qc-tool-storage-id` containing that identity on one line, then set the
-same value in `QC_TOOL_PERSISTENT_STORAGE_ID`. Retain it with the filesystem
-and its recovery record. The application never creates or repairs this marker.
-Use 1–128 ASCII letters, digits, periods, underscores or hyphens, starting with
-a letter or digit. The marker must be a regular, single-link file without
-group/public write access, for example mode `0644`.
-Do not replace an existing marker to bypass a failed check; investigate the
-mount or configuration. An identity is not a password or an access credential.
+## Configure and check
 
-The persistent browser root excludes the marker, credentials, transfer and
-maintenance journals, locks and database files through its existing path
-policy. Raw PostgreSQL and frontend state are separate mounts outside that
-root. Other ordinary application folders retain their real hierarchy. The
-browser's file operations remain permission-controlled; mounting a filesystem
-does not make every file editable.
-Preprovision `work/upload-staging` as a private `0700` directory owned by the
-frontend runtime UID; the override places large upload spools there instead of
-the container's temporary filesystem.
-
-## Select and verify the Compose configuration
-
-Use Docker Compose **2.24.4 or later**: the override's
-[`!override` tags](https://docs.docker.com/reference/compose-file/merge/#replace-value)
-replace the baseline mount lists explicitly. Use reviewed frontend/worker images that
-include the storage guard. In the existing private deployment environment file,
-add:
+Use current supported Docker Compose. Supply matching reviewed frontend/worker
+image digests that implement this layout. In the
+protected deployment environment file:
 
 ```dotenv
-QC_TOOL_PERSISTENT_ROOT=/srv/qc-tool
-QC_TOOL_PERSISTENT_STORAGE_ID=eea-qc-tool-production-01
+QC_TOOL_PERSISTENT_ROOT=/srv/qc-tool-v3
+QC_TOOL_PERSISTENT_STORAGE_ID=eea-qc-tool-v3-production-01
 ```
 
-`QC_TOOL_PERSISTENT_ROOT` is a host path used by Compose. The override sets
-`QC_TOOL_PERSISTENT_STORAGE_ROOT=/mnt` inside frontend and worker. Configure the
-same Compose file set for every operation:
+`QC_TOOL_PERSISTENT_ROOT` is a host path consumed by Compose;
+`QC_TOOL_PERSISTENT_STORAGE_ROOT=/mnt/qc-tool/data` is the container's browser
+root. The guard validates the resolved role-specific roots, including shared
+and private roots outside that browser tree. Use the same Compose project,
+environment file and selected standalone file for every command:
 
 ```bash
-QC_RELEASE_PROJECT=qc_tool_app
-QC_RELEASE_ENV_FILE=/secure/path/qc-tool.env
+QC_RELEASE_PROJECT=qc_tool_v3_candidate
+QC_RELEASE_ENV_FILE=/secure/path/qc-tool-v3.env
 
 qc_compose() {
-  docker compose \
-    --project-name "$QC_RELEASE_PROJECT" \
+  docker compose --project-name "$QC_RELEASE_PROJECT" \
     --env-file "$QC_RELEASE_ENV_FILE" \
-    -f docker/docker-compose.eea.yml \
-    -f docker/compose.eea-storage.yaml \
-    "$@"
+    -f docker/compose.eea-storage.yaml "$@"
 }
 
 qc_compose config --quiet
 qc_compose run --rm --no-deps frontend python3 -m qc_tool.storage check
 qc_compose run --rm --no-deps frontend python3 -m qc_tool.storage probe
-```
-
-Inspect the rendered mounts without publishing its secrets. Confirm both
-application services use the same `data` source at `/mnt`, and that the private
-frontend and PostgreSQL directories are mapped separately. Repeat the probe
-with the worker image before admitting work:
-
-```bash
+qc_compose run --rm --no-deps --entrypoint python3 worker -m qc_tool.storage check
 qc_compose run --rm --no-deps --entrypoint python3 worker -m qc_tool.storage probe
 ```
 
-`check` validates the configured root and expected identity without creating
-application directories. `probe` additionally exercises filesystem operations
-using temporary test files. A successful probe establishes local capability;
-it does not certify cross-host locking, power-loss durability, Azure recovery
-or workload throughput. Retain independent backups and run a restore exercise.
-The normal entrypoints check storage before starting application work and
-refuse missing or mismatched storage rather than creating a local fallback.
+Inspect rendered mounts privately; avoid printing rendered environment secrets.
+Confirm narrow data mounts, read-only worker inputs, separate log sources and
+absence of frontend-private/submission storage in workers. `check` validates
+existing directories/markers without creating application state. `probe` uses
+its own temporary test files on writable role roots; read-only worker inputs are
+validated without writes. Probe success does not certify cross-host locking,
+power-loss recovery, throughput or Azure infrastructure.
 
-## Make host startup depend on the mount
+`QC_TOOL_REQUIRE_MOUNTS=yes` makes canonical startup refuse any required root
+that is not an actual mountpoint, including a directory left in the container
+writable layer. Private upload staging is safely created under its validated
+frontend root only after the layout/identity check.
 
-The host service must wait for the real mount as well as Docker, using
-[`RequiresMountsFor`](https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html#RequiresMountsFor=).
-This example
-assumes `/srv/qc-tool` has a reviewed persistent mount definition, the checkout
-is `/opt/qc-tool`, and the environment file is protected. Adapt it to the EEA
-service manager; it is not installed automatically:
+Standalone named-volume profiles omit the identity contract. Their canonical
+entrypoints still run `check-layout` before application imports/writes to
+validate existing mount directories and configuration. Empty named volumes are
+fresh application roots; they are not implicitly populated from old storage.
 
-```ini
-[Unit]
-Description=QC Tool
-Requires=docker.service
-After=docker.service
-RequiresMountsFor=/srv/qc-tool
+## Host startup and restore
 
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/opt/qc-tool
-EnvironmentFile=/secure/path/qc-tool.env
-ExecStartPre=/usr/bin/mountpoint --quiet /srv/qc-tool
-ExecStart=/usr/bin/docker compose --project-name qc_tool_app --env-file /secure/path/qc-tool.env -f docker/docker-compose.eea.yml -f docker/compose.eea-storage.yaml up --detach --wait
-ExecStop=/usr/bin/docker compose --project-name qc_tool_app --env-file /secure/path/qc-tool.env -f docker/docker-compose.eea.yml -f docker/compose.eea-storage.yaml stop
+Make the host service depend on the actual mount, using
+`RequiresMountsFor=/srv/qc-tool-v3` and an explicit `mountpoint --quiet` precheck
+(or the equivalent in the deployment's service manager). Account for Docker's
+automatic container restart path as well: a Compose unit alone cannot prevent
+an existing container restarting before that unit runs. PostgreSQL does not
+execute the application's identity guard. Monitor device/share identity,
+capacity and mount availability after startup.
 
-[Install]
-WantedBy=multi-user.target
-```
+For an existing installation, first verify a complete database backup and
+matching file backup. Enable maintenance, wait for positive worker quiescence,
+then stop application and external writers. Copy files offline into the new
+layout under operator control, preserving original bytes, ownership, modes and
+required links. Include hidden specification/boundary activation state, worker
+authentication, credentials, database selection, transfer journals and storage
+pins. Moving only visible files is incomplete. Path-dependent references and
+recovery journals require explicit reconciliation; changing environment paths
+alone does not translate them.
 
-Record and check the expected `findmnt` source as part of host provisioning and
-monitor mount availability afterwards. The startup identity guard complements
-these host checks; it does not manage or repair the Azure mount.
-Also account for Docker's container restart policies: existing containers can
-restart when the Docker daemon starts, before this Compose unit runs. Arrange
-mount ordering for that automatic-start path as well, or use an operator-owned
-restart strategy that admits containers only after the mount check. The
-PostgreSQL image does not run the application's storage-identity guard.
+Restore a verified native PostgreSQL copy into a separate fresh PostgreSQL 17
+target using the [manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md).
+Never copy a live raw PostgreSQL directory, mount PG14 bytes in PG17, initialize
+a populated/restored database, or reset/fake/alter an existing schema.
+Production startup performs a read-only readiness check; entirely empty new
+installations need an explicit whole-application `database plan|apply|check`
+procedure. v3.0.0 remains models-only and supplies no migration definitions.
 
-## Move an existing installation deliberately
-
-Keep its current volumes and configuration until a separate target is verified.
-Create a complete recoverable database backup and matching file backup, enable
-maintenance, wait for confirmed quiescence, then stop all application and
-external writers. Perform an offline, operator-controlled copy of files to the
-newly mounted tree, preserving original bytes, ownership, modes and required
-links. Include private credentials, selection pointers and recovery journals;
-the public file browser intentionally does not expose all of them.
-
-Restore a verified native PostgreSQL backup into a separate empty target using
-the [manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md). A raw
-PostgreSQL directory is not a logical backup and must never be copied live.
-Use `database check` against a matching/restored database; do not initialize a
-populated target, generate migrations, reset tables or automatically adopt a
-different schema. Validate database/file references, original checksums, login,
-version selection and a representative QC job before explicitly switching
-traffic. Retain the former deployment for recovery and coordinate rollback so
-it cannot discard newly accepted work.
-
-After cutover, verify **Browse files → Persistent storage** and downloads
-through the actual HTTPS ingress, then test container replacement and a planned
-host reboot. Configure monitoring for capacity, mount failures and backups.
-Keep one frontend instance; the current frontend owns a background refresh
-loop. Local regression tests do not replace these production checks.
-
-For a desktop client, use a separate reviewed read-only SFTP export tree as
-described in [Storage browser and desktop connections](storage-access.md).
-Never export `/srv/qc-tool`, its `data` parent or the complete work tree: SFTP
-does not inherit the browser's private-path filters. This storage profile opens
-no SFTP port and grants no SSH account or key automatically.
+Before switching traffic, verify schema, retained records/files, original
+checksums, version activation, login, permissions and a representative QC job.
+Retain the old installation for recovery, with an explicit rollback policy that
+cannot discard newly accepted work. Test container replacement, planned host
+reboot and coordinated database/file restore. This documentation and local
+regression tests do not establish a live EEA deployment or production recovery.

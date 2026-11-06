@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime, timezone
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -69,6 +70,81 @@ def operation_dir(operation_id, *, create=False):
     if not stat.S_ISDIR(status.st_mode) or status.st_mode & 0o077:
         raise TransferError("Transfer operation storage is unsafe.")
     return path
+
+
+def _package_root_path():
+    configured = getattr(settings, "QC_TOOL_BACKUPS_DIR", "")
+    return Path(configured) if configured else _directory_path()
+
+
+def package_storage_identity():
+    """Bind new operation journals to their explicitly configured payload store."""
+    root = _package_root_path()
+    return {"layout": "separate" if getattr(settings, "QC_TOOL_BACKUPS_DIR", "") else "legacy",
+            "root_sha256": hashlib.sha256(os.fsencode(root)).hexdigest()}
+
+
+def package_directory():
+    """Private payload volume, distinct from durable control journals when set."""
+    if not getattr(settings, "QC_TOOL_BACKUPS_DIR", ""):
+        return directory()
+    path = _package_root_path()
+    if not path.is_absolute() or ".." in path.parts or path == Path("/"):
+        raise TransferError("Backup package storage must be an absolute private directory.")
+    journal = _directory_path()
+    if path == journal or path in journal.parents or journal in path.parents:
+        raise TransferError("Backup package storage must be separate from transfer journals.")
+    ancestor = Path(path.anchor)
+    for component in path.parts[1:]:
+        ancestor /= component
+        try:
+            status = ancestor.lstat()
+        except FileNotFoundError:
+            break
+        if not stat.S_ISDIR(status.st_mode):
+            raise TransferError("Backup package storage cannot contain symbolic links or non-directory ancestors.")
+    missing = []
+    parent = path
+    while not parent.exists():
+        missing.append(parent)
+        parent = parent.parent
+    try:
+        path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    except OSError as error:
+        raise TransferError("Backup package storage is unavailable.") from error
+    status = path.lstat()
+    if not stat.S_ISDIR(status.st_mode) or status.st_mode & 0o077:
+        raise TransferError("Backup package storage must be a private real directory (0700).")
+    for created in reversed(missing):
+        sync_directory(created)
+        sync_directory(created.parent)
+    return path
+
+
+def package_dir(operation_id, *, create=False):
+    """Locate exactly this operation's configured payload; never search old roots."""
+    operation = read_operation(operation_id)
+    expected = package_storage_identity()
+    recorded = operation.get("package_storage")
+    if recorded != expected and not (recorded is None and expected["layout"] == "legacy"):
+        raise TransferError("This transfer's package storage configuration changed. Preserve its journals and payload for operator recovery.")
+    if expected["layout"] == "legacy":
+        return operation_dir(operation_id)
+    path = package_directory() / str(operation_id)
+    if create:
+        path.mkdir(mode=0o700)
+        sync_directory(path.parent)
+    try:
+        status = path.lstat()
+    except FileNotFoundError as error:
+        raise TransferError("This transfer package storage is unavailable.") from error
+    if not stat.S_ISDIR(status.st_mode) or status.st_mode & 0o077:
+        raise TransferError("Transfer package storage is unsafe.")
+    return path
+
+
+def package_path(operation_id):
+    return package_dir(operation_id) / "package.zip"
 
 
 def write_json(path, value):

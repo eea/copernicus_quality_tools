@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+export QC_TOOL_STORAGE_ROLE=frontend
 
 cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend
 
@@ -8,6 +9,11 @@ cd /usr/local/src/copernicus_quality_tools/src/qc_tool/frontend
 # without this explicit contract retain their existing volume behavior.
 if [ -n "${QC_TOOL_PERSISTENT_STORAGE_ROOT+x}" ] || [ -n "${QC_TOOL_PERSISTENT_STORAGE_ID+x}" ]; then
     python3 -m qc_tool.storage check
+elif [ -n "${QC_TOOL_DATA_ROOT+x}" ]; then
+    python3 -m qc_tool.storage check-layout
+fi
+if [ -n "${QC_TOOL_DATA_ROOT+x}" ]; then
+    python3 -m qc_tool.storage prepare-frontend
 fi
 
 # Validate runtime topology before touching schema or static storage. Multiple

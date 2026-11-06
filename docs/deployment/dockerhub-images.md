@@ -170,7 +170,15 @@ QC_TOOL_FRONTEND_IMAGE=eeacms/copernicus-qctool-frontend@sha256:<verified-digest
 QC_TOOL_WORKER_IMAGE=eeacms/copernicus-qctool-worker@sha256:<verified-digest>
 ```
 
-`docker/docker-compose.eea.yml` requires both references and preserves the
+Select one standalone production profile from the reviewed release:
+`docker/docker-compose.eea.yml` for named volumes, or
+`docker/compose.eea-storage.yaml` alone for operator-mounted Azure/EEA storage.
+Downloading the selected file provides its complete Compose definition. Supply
+private deployment values through the reviewed environment/secrets mechanism;
+no shared Compose file or generated export is needed. Rancher import still
+requires verification of that installation's importer/version prerequisites.
+
+`docker/docker-compose.eea.yml` requires both image references and preserves the
 persistent shared storage used by maintenance and transfer recovery. It does not
 upgrade an existing application schema. The v3.0.0 models-only policy still
 requires a matching schema or a separately reviewed fresh-target handoff. Follow

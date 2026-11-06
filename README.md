@@ -19,40 +19,37 @@ Please report any issues in the QC tool via GitHub:
 * Describe your issue. When describing an issue, please include the QC tool version and steps to reproduce.
 * The development team will investigate the issue and get back to you.
 
-# Prerequisities
+# Installation
 
-* docker version 1.13 or higher, see https://docs.docker.com/install/linux/docker-ce/ubuntu/;
-* docker-compose 1.21 or higher, see https://docs.docker.com/compose/install/#install-compose;
+Use current supported Docker Engine and Docker Compose. Follow the
+[deployment guide](docs/deployment/index.md) for reviewed image digests,
+secrets, HTTPS ingress and explicit database initialization, or the
+[local workflow](docs/getting-started/local-development.md) for development.
 
-* Note: docker-compose version 3 file format is used. In case of errors, please upgrade to a newer version.
+Each maintained deployment profile is one complete Compose file. Choose
+[`docker/docker-compose.eea.yml`](docker/docker-compose.eea.yml) for named volumes
+or [`docker/compose.eea-storage.yaml`](docker/compose.eea-storage.yaml) for
+operator-provisioned Azure/EEA host storage, and select that file alone. Local
+and SQLite/provider profiles are self-contained too. A private environment file
+supplies deployment values; no additional Compose file, generator or wrapper is
+required. Rancher importer/version prerequisites still require verification on
+the target deployment, as described in the [deployment guide](docs/deployment/index.md#rancher-import).
 
-* For installation on Windows, see [docker/NOTES.windows](docker/NOTES.windows.md).
+The maintained profiles select a canonical separated storage layout. New
+`qc_tool_v3_*` application volumes and `postgres17_data_v3` retain older volumes
+without adopting their data. Workers read incoming deliveries, specifications
+and boundaries through read-only mounts; private frontend state and submitted
+publications are absent from worker mounts. See
+[storage paths and handoff](docs/deployment/eea-storage.md).
 
-# Run the application
+Production startup checks a matching schema read-only. An entirely empty new
+installation needs an explicit `database plan|apply|check` procedure and a
+separately created administrator; starting Compose does not initialize it.
+Never point PostgreSQL 17 at an existing PostgreSQL 14 data directory or reset
+an occupied database to make a deployment start. Preserve the old database and
+files until a separate logical restore and coordinated file handoff are verified.
 
-(1) Go to the [latest release](https://github.com/eea/copernicus_quality_tools/releases)
-
-(2) Download the file `docker-compose.service_provider.yml`
-
-(3) (Optional) Adjust the file `docker-compose.service_provider.yml` in accord with your environment. Follow the [deployment guide](docs/deployment/index.md) and [environment-variable reference](docs/reference/environment-variables.md). There is also `docker-compose.eea.yml` prepared targeting eea infrastructure with submission feature enabled.
-
-(4) Run the application
-
-```
-sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app up --scale worker=4
-```
-
-(5) You can reach the web console at any host address and port 8000.  For example, if you run the browser at the same host as docker containers, you can reach the application at http://localhost:8000.
-
-(6) Create the first administrator through Django's `createsuperuser` command,
-or use your deployment's identity/bootstrap process. Never configure a shared
-or predictable password in production.
-
-(7) To upgrade to a new release, run:
-```
-sudo docker-compose -f ./docker-compose.service_provider.yml -p qc_tool_app pull
-```
-This will instruct docker to re-download the latest QC tool release images from docker hub repository.
+For Windows host setup, see [Windows notes](docker/NOTES.windows.md).
 
 # For developers
 

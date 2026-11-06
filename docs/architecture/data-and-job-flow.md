@@ -125,9 +125,20 @@ flag alone does not authorize erasing its history.
 | Django users, deliveries, jobs | PostgreSQL `userdb` | frontend |
 | Uploaded deliveries | `INCOMING_DIR` shared volume | frontend, worker |
 | Boundary generations | `BOUNDARY_DIR` shared volume | frontend, worker |
-| Results and worker token | `WORK_DIR` shared volume | frontend, worker |
+| Results and reports | `WORK_DIR` retained job volume | frontend, worker |
+| Worker token and maintenance | `QC_TOOL_SHARED_STATE_DIR` persistent volume | frontend, worker |
 | Submission copies | `SUBMISSION_DIR` shared volume | frontend |
-| Worker scratch and QC database | worker container | worker job only |
+| Private credentials and transfer recovery | `QC_TOOL_FRONTEND_STATE_DIR` persistent volume | frontend |
+| Worker scratch | `QC_TOOL_SCRATCH_DIR` worker-only volume | worker job only |
+| Worker QC database | worker PostGIS job schemas | worker job only |
+
+Normal job directories retain JSON, specification snapshots, PDF reports, logs
+and `output.d`. The original ZIP remains in incoming storage during QC; the
+publication workflow later copies it to submission `input.d` and verifies its
+hash. Extraction and intermediate files use a separately owned leased scratch
+child. Normal context exit cleans that child; debugging retention and interrupted
+work are handled explicitly. See [runtime storage ownership](runtime-storage.md)
+for the complete tree, legacy path behavior and guarded scratch cleanup.
 
 Back up the user database and all required shared volumes as one operational
 system. A database-only backup may point to delivery or result files that no

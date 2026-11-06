@@ -17,6 +17,7 @@ from .archive import ArtifactSource, ArchiveLimits, CompressionCounter, Transfer
 from .artifacts import ArtifactInventory, ArtifactRestorePlan, _safe_directory, storage_roots
 from .components import FILE_COMPONENTS, COMPONENT_LABELS as _COMPONENT_LABELS
 from .contracts import digest
+from .locations import storage_location
 
 
 VERSION = 2
@@ -50,6 +51,8 @@ def normalize_components(components=None):
 def component_for(root, key):
     """Classify storage identities without querying the source database."""
     validate_key(key)
+    if root == "specifications":
+        return "specifications"
     if root == "work":
         first = Path(key).parts[0]
         if first == "product_definitions":
@@ -119,7 +122,8 @@ def collect(*, roots=None, limits=None, components=None, report=None):
             report("scan_files", processed_items=visited)
         if visited > limits.max_members * 4 or len(sources) + len(directories) >= limits.max_members - 2:
             raise TransferArchiveError("Retained storage exceeds the configured backup inventory limit.")
-        target = root / key
+        physical_root, physical_key = storage_location(roots, root_name, key)
+        target = physical_root / physical_key
         # Known managed boundary links are configuration, not payloads. Their
         # original immutable generations are copied independently below.
         if root_name == "boundaries" and key in {"raster", "vector"} and target.is_symlink():
@@ -138,9 +142,9 @@ def collect(*, roots=None, limits=None, components=None, report=None):
                 for child in children:
                     visit(root_name, root, key + "/" + child.name)
         elif allowed(root_name, key):
-            with open_regular(target, storage_root=root):
+            with open_regular(target, storage_root=physical_root):
                 pass
-            sources.append(ArtifactSource(root_name, key, target, root))
+            sources.append(ArtifactSource(root_name, key, target, physical_root))
 
     candidates = dict(roots)
     # An unconfigured publication root is unavailable, rather than proof that a
@@ -161,8 +165,15 @@ def collect(*, roots=None, limits=None, components=None, report=None):
         if _safe_directory(root, required=False) is None:
             unavailable.append(name)
             continue
+        if name == "specifications":
+            visit("work", roots["work"], "product_definitions")
+            continue
         with os.scandir(root) as children:
             for entry in children:
+                if name == "work" and entry.name == "product_definitions" and "specifications" in roots:
+                    # A dedicated mount is authoritative. Do not discover or
+                    # re-read it through an unselected legacy job-side folder.
+                    continue
                 visit(name, root, entry.name)
     summary = {}
     for component in COMPONENTS:
@@ -320,7 +331,7 @@ def plan_restore(archive, *, journal_path, include_files=True, roots=None):
         for entry in values:
             if entry["root"] not in roots:
                 raise TransferArchiveError("A required backup storage root is not configured.")
-            root, key = roots[entry["root"]], entry["key"]
+            root, key = storage_location(roots, entry["root"], entry["key"])
             current = root
             for part in (None, *Path(key).parts[:-1]):
                 if part is not None:

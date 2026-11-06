@@ -11,6 +11,9 @@ manifests. Select a persistence profile, pin reviewed image digests, provide
 secrets, adapt hostnames/origins, and put the frontend behind a correctly
 configured HTTPS reverse proxy.
 
+Use current supported Docker Engine and Docker Compose. Each supplied production
+profile is a complete standalone file with its own services, mounts and networks.
+
 EEA's existing release flow uses GitHub tags to trigger Docker Hub automated
 builds for the frontend and worker. Tag an already-reviewed, green commit, verify
 both published images, then hand their digests to the EEA deployment. GitHub tag
@@ -29,16 +32,51 @@ persistent storage. For application updates, follow [Operations](operations.md#u
 
 | Profile | Frontend database | Shared storage | Appropriate for |
 | --- | --- | --- | --- |
-| `docker-compose.service_provider.yml` | SQLite on one named volume | one `qc_tool_volume` | one frontend, simple self-hosted installation |
-| `docker-compose.eea.yml` | PostgreSQL 14 | separate DB/boundary/incoming/work/submission volumes | managed installation with external user DB lifecycle |
-| EEA + `compose.eea-storage.yaml` | PostgreSQL 14 on a private persistent path | one mounted application tree plus separate private frontend/database folders | Linux Azure VM with operator-managed persistent storage |
+| `docker-compose.service_provider.yml` | SQLite in frontend-private state | separate canonical data, state, scratch and log volumes | one frontend, simple self-hosted installation |
+| `docker-compose.eea.yml` | PostgreSQL 17 on a fresh volume | separate canonical data, state, scratch and log volumes | managed installation with external user DB lifecycle |
+| `compose.eea-storage.yaml` alone | PostgreSQL 17 at a fresh private host path | separate host bind for each role-owned storage area | Linux Azure VM with operator-managed persistent storage |
 
 For Azure production, follow [EEA persistent storage](eea-storage.md) to mount
 and verify the filesystem, configure startup identity checks and expose its real
-application folders in Admin's file browser. This optional override preserves
-the current container paths and does not move existing named-volume contents.
-Use the same base/override file set for every command; the single-file examples
-below must be adapted when that profile is selected.
+application folders in Admin's file browser. This standalone profile preserves
+the canonical container paths and does not move existing named-volume contents.
+All maintained profiles select the canonical layout with `QC_TOOL_DATA_ROOT`;
+new `qc_tool_v3_*` and `postgres17_data_v3` volume names preserve older data.
+Do not start a candidate against older volumes or assume path references move
+automatically. See the storage guide for a deliberate fresh-target handoff.
+Choose one file and use it for every command. Named-volume EEA uses
+`-f docker/docker-compose.eea.yml`; Azure/EEA host storage uses only
+`-f docker/compose.eea-storage.yaml`. Do not merge those two profiles.
+
+### Configuration ownership
+
+Each entrypoint contains its complete runtime topology and explicit environment
+passthrough. There are no shared Compose imports, generated manifests or custom
+merge tags. Download the one selected file from the reviewed source revision;
+an operator's private environment file supplies its deployment values.
+
+| Owner | Responsibility |
+| --- | --- |
+| Python configuration and `qc_tool.storage.layout` | Application defaults, validated limits and runtime path derivation |
+| Standalone local/EEA/provider files | Complete role-specific mounts, connectivity, health checks and explicit environment passthrough; local builds versus pinned images, database selection and origins |
+| Standalone `compose.eea-storage.yaml` | Complete EEA services plus explicit operator-provisioned host bind mounts and storage identity |
+
+Application defaults are maintained in Python and documented in the
+[environment reference](../reference/environment-variables.md). Keep consistent
+runtime contracts across the standalone profiles while retaining their explicit
+deployment differences. The provider selects SQLite and the lightweight
+validator. Host provisioning and bind-mount decisions remain explicit in the
+Azure/EEA profile.
+
+### Rancher import
+
+The standalone file has no cross-file Compose dependency. Compatibility with a
+specific Rancher importer still depends on the Rancher version and deployment
+type. Record those prerequisites and verify the importer's supported schema,
+environment/secret substitution, bind mounts, health checks and service startup
+settings on the target installation. A successful `docker compose config` checks
+Docker Compose syntax; it does not establish Rancher import or Azure deployment
+compatibility.
 
 Both profiles support multiple worker replicas. Keep one frontend process and
 one frontend container for now: the WSGI module owns a background status-refresh
@@ -65,7 +103,10 @@ frontend to an untrusted network.
 
 ## 1. Pin and customize the manifests
 
-Copy the selected Compose file into deployment configuration management, then:
+Copy the selected standalone file into deployment configuration management from
+the reviewed tag/commit. Downloading that one production profile is sufficient
+for its Compose definition. Keep deployment values in a private environment file
+or the target platform's reviewed configuration/secrets mechanism, then:
 
 - set `QC_TOOL_FRONTEND_IMAGE` and `QC_TOOL_WORKER_IMAGE` to matching reviewed
   image digests; production profiles refuse to select legacy defaults;
@@ -122,9 +163,13 @@ QC_TOOL_WORKER_IMAGE=<registry/worker@sha256:reviewed-digest>
 Both production profiles require `QC_TOOL_FRONTEND_IMAGE`,
 `QC_TOOL_WORKER_IMAGE` and `DJANGO_SECRET_KEY`.
 `QC_TOOL_POSTGRES_PASSWORD` is required by the PostgreSQL profile. Do not add it
-to a SQLite profile unnecessarily. An env file only supplies substitutions;
-the Compose service must explicitly pass each application setting into its
-container.
+to a SQLite profile unnecessarily. `--env-file` supplies Compose interpolation;
+it does not inject every entry into every container. Only settings explicitly
+passed by that service's environment configuration reach the role. For example,
+frontend credentials stay out of worker configuration. Keep a protected file
+such as `/secure/path/private.env` outside the checkout and use the same file
+for each command. Inspect the selected profile's passthrough list when adding a
+reviewed operator override.
 
 ## 3. Configure TLS trust deliberately
 

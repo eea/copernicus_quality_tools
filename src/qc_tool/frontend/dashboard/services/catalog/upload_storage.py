@@ -13,10 +13,10 @@ from .errors import CatalogError
 
 
 @contextmanager
-def staged_specification(work_dir, payload=b""):
+def staged_specification(work_dir, payload=b"", *, specification_dir=None):
     """Serialize upload publications and prepare complete bytes before DB writes."""
 
-    directory = Path(work_dir) / "product_definitions"
+    directory = Path(specification_dir) if specification_dir is not None else Path(work_dir) / "product_definitions"
     directory.mkdir(mode=0o755, parents=True, exist_ok=True)
     if directory.is_symlink() or not directory.is_dir():
         raise OSError("Specification directory must be a real directory")
