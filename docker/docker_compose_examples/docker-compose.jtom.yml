@@ -22,12 +22,12 @@ services:
     networks:
       - qc_tool_network
     volumes:
-      - /home/jtomicek/copernicus_quality_tools/qc_tool_boundary:/mnt/qc_tool_boundary
-      - /home/jtomicek/copernicus_quality_tools/qc_tool_uploads:/mnt/qc_tool_uploads/uploads
-      - /home/jtomicek/copernicus_quality_tools/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
-      - /home/jtomicek/copernicus_quality_tools/qc_tool_work:/mnt/qc_tool_work
-      - /home/jtomicek/copernicus_quality_tools/qc_tool_submission:/mnt/qc_tool_submission
-      - /home/jtomicek/GISAT/GitHub/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /mnt/c/Users/jtomicek/copernicus_quality_tools/qc_tool_boundary:/mnt/qc_tool_boundary
+      - /mnt/c/Users/jtomicek/copernicus_quality_tools/qc_tool_uploads:/mnt/qc_tool_uploads/uploads
+      - /mnt/c/Users/jtomicek/copernicus_quality_tools/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /mnt/c/Users/jtomicek/copernicus_quality_tools/qc_tool_work:/mnt/qc_tool_work
+      - /mnt/c/Users/jtomicek/copernicus_quality_tools/qc_tool_submission:/mnt/qc_tool_submission
+      - /mnt/c/Users/jtomicek/GitHub/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
   worker:
     build:
@@ -50,10 +50,10 @@ services:
     networks:
       - qc_tool_network
     volumes:
-      - /home/jtomicek/copernicus_quality_tools/qc_tool_boundary:/mnt/qc_tool_boundary
-      - /home/jtomicek/copernicus_quality_tools/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
-      - /home/jtomicek/copernicus_quality_tools/qc_tool_work:/mnt/qc_tool_work
-      - /home/jtomicek/GISAT/GitHub/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
+      - /mnt/c/Users/jtomicek/copernicus_quality_tools/qc_tool_boundary:/mnt/qc_tool_boundary
+      - /mnt/c/Users/jtomicek/copernicus_quality_tools/qc_tool_incoming:/mnt/qc_tool_incoming/incoming
+      - /mnt/c/Users/jtomicek/copernicus_quality_tools/qc_tool_work:/mnt/qc_tool_work
+      - /mnt/c/Users/jtomicek/GitHub/copernicus_quality_tools:/usr/local/src/copernicus_quality_tools
 
 networks:
   qc_tool_network:
