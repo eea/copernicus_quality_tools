@@ -63,7 +63,7 @@
             ? "Stopping work is taking longer than usual. Progress checks continue automatically."
             : "Checking that application requests and QC jobs have stopped…", true);
         try {
-            var response = await window.fetch(form.getAttribute("action") || window.location.href, {
+            var response = await window.fetch(form.getAttribute("action") || window.location.href.split("#")[0], {
                 method: "POST", body: new window.FormData(form),
                 headers: {Accept: "application/json"}, credentials: "same-origin",
                 cache: "no-store", signal: requestController.signal
