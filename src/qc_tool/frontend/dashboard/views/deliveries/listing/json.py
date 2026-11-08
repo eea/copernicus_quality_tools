@@ -3,6 +3,7 @@
 from django.http import JsonResponse
 
 from qc_tool.frontend.accounts.authorization import access_for_request
+from qc_tool.frontend.http_payloads import DatabaseDateTimeJSONEncoder
 from qc_tool.frontend.dashboard.services.deliveries import (
     count_delivery_statuses,
 )
@@ -71,5 +72,6 @@ def get_deliveries_json(request):
             "workflow_counts": delivery_workflow_counts(status_counts),
             "active_status": parameters.delivery_status.value,
             "active_view": parameters.delivery_view.value,
-        }
+        },
+        encoder=DatabaseDateTimeJSONEncoder,
     )

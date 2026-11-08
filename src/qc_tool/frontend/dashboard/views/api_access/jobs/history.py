@@ -2,6 +2,8 @@
 
 from django.http import JsonResponse
 
+from qc_tool.frontend.http_payloads import DatabaseDateTimeJSONEncoder
+
 
 def job_history(
     request,
@@ -61,4 +63,4 @@ def job_history(
         "message": "Job history of delivery id={}".format(delivery_id),
         "data": job_list,
     }
-    return JsonResponse(result)
+    return JsonResponse(result, encoder=DatabaseDateTimeJSONEncoder)

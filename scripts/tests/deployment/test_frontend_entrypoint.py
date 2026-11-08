@@ -80,6 +80,14 @@ class FrontendEntrypointTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return shlex.split(commands[-1])
 
+    def test_standard_library_http_imports_from_frontend_working_directory(self):
+        result = subprocess.run(
+            [sys.executable, "-c", "import http.server; import wsgiref.simple_server"],
+            cwd=self.repository / "src/qc_tool/frontend",
+            text=True, capture_output=True, timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_production_checks_readiness_then_uses_one_threaded_process(self):
         result, commands = self.startup()
         self.assertEqual(result.returncode, 0, result.stderr)

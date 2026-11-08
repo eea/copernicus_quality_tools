@@ -2,6 +2,8 @@
 
 from django.http import JsonResponse
 
+from qc_tool.frontend.http_payloads import DatabaseDateTimeJSONEncoder
+
 
 def list_deliveries(
     request,
@@ -56,4 +58,6 @@ def list_deliveries(
         "next_offset": next_offset,
         "deliveries": data,
     }
-    return JsonResponse(response_data, safe=False)
+    return JsonResponse(
+        response_data, safe=False, encoder=DatabaseDateTimeJSONEncoder,
+    )

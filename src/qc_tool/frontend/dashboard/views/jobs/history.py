@@ -8,6 +8,7 @@ from qc_tool.common import check_running_job
 from qc_tool.common import CONFIG
 from qc_tool.common import JOB_RUNNING
 from qc_tool.frontend.accounts.authorization import access_for_request
+from qc_tool.frontend.http_payloads import DatabaseDateTimeJSONEncoder
 from qc_tool.frontend.dashboard import models
 from qc_tool.frontend.dashboard.access import can_view_job
 from qc_tool.frontend.dashboard.access import require_delivery_view
@@ -45,8 +46,8 @@ def get_job_history_json(request, delivery_id):
         return JsonResponse({
             "rows": rows,
             "delivery_summary": job_history_delivery_summary(delivery, account_access),
-        })
-    return JsonResponse(rows, safe=False)
+        }, encoder=DatabaseDateTimeJSONEncoder)
+    return JsonResponse(rows, safe=False, encoder=DatabaseDateTimeJSONEncoder)
 
 
 def job_history_page(request, delivery_id):
