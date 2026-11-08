@@ -20,6 +20,7 @@
 
     {% url 'announcement' as announcement_url %}
     {% include "dashboard/shared/announcements/notice.html" with announcement=announcement id="dashboard-announcement-title" read_url=announcement_url only %}
+    {% include "dashboard/jobs/includes/prerequisites.html" with prerequisites=qc_prerequisites only %}
 
     <section class="dashboard-kpi-section" aria-labelledby="dashboard-kpi-title">
         <h2 id="dashboard-kpi-title" class="sr-only">Workspace overview</h2>
@@ -129,11 +130,11 @@
                     <a href="{% url 'products' %}">View status <span aria-hidden="true">→</span></a>
                 </article>
                 {% endif %}
-                {% if not boundary_version_available %}
+                {% if not boundary_package_available %}
                 <article class="dashboard-attention-item dashboard-attention-item--neutral">
                     <span class="dashboard-attention-item__icon" aria-hidden="true"><svg class="ui-icon" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#map-pin"></use></svg></span>
-                    <div><h3>Boundary package unavailable</h3><p>QC jobs require an active boundary package.</p></div>
-                    <p>Contact an administrator to restore the boundary package.</p>
+                    <div><h3>Boundary data is blocking QC</h3><p>Resolve the setup prerequisite before running QC.</p></div>
+                    <a href="#qc-boundary-prerequisite-title">View setup warning <span aria-hidden="true">→</span></a>
                 </article>
                 {% endif %}
                 {% if token_count == 0 %}

@@ -35,7 +35,7 @@
         <div>
             <h2 id="job-result-outcome-title">{{ result_view.outcome.title }}</h2>
             <p>{{ result_view.outcome.message }}</p>
-            {% if job_report.error_message %}<p class="job-result-error-message">{{ job_report.error_message }}</p>{% endif %}
+            {% if job_report.error_message and job_report.error_message != result_view.outcome.message %}<p class="job-result-error-message">{{ job_report.error_message }}</p>{% endif %}
             {% if result_view.outcome.action %}<p><a class="btn-qc-secondary" href="{{ result_view.outcome.action.url }}">{{ result_view.outcome.action.label }}</a></p>{% endif %}
         </div>
     </div>

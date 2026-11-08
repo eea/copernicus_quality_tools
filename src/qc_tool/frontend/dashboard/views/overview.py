@@ -12,6 +12,7 @@ from qc_tool.frontend.dashboard.services.configuration.presentation import (
 from qc_tool.frontend.dashboard.services.overview import (
     build_workspace_overview,
 )
+from qc_tool.frontend.dashboard.services.jobs.prerequisites import job_prerequisite_context
 
 from qc_tool.frontend.dashboard.views.products import (
     _workspace_product_catalog,
@@ -24,6 +25,7 @@ def dashboard_home(request):
     account_access = access_for_request(request)
     product_catalog, product_catalog_available = _workspace_product_catalog()
     boundary_version = get_boundary_version()
+    prerequisites = job_prerequisite_context(account_access)
     dashboard = build_workspace_overview(account_access)
     token_count = (
         request.user.personal_access_tokens.count()
@@ -43,7 +45,7 @@ def dashboard_home(request):
             and dashboard.summary.ready_to_submit
         )
         or not product_catalog_available
-        or boundary_version == "Unavailable"
+        or not prerequisites["available"]
         or token_count == 0
     )
     return render(
@@ -52,7 +54,8 @@ def dashboard_home(request):
         {
             "announcement": get_announcement_message(),
             "boundary_version": boundary_version,
-            "boundary_version_available": boundary_version != "Unavailable",
+            "boundary_package_available": prerequisites["available"],
+            "qc_prerequisites": prerequisites,
             "dashboard": dashboard,
             "has_dashboard_attention": has_dashboard_attention,
             "product_catalog_available": product_catalog_available,

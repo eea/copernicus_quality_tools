@@ -11,6 +11,6 @@ def setup_failure_outcome(report, status, account_access):
         return None
     outcome = {"title": "QC could not start", "message": BOUNDARY_UNAVAILABLE_MESSAGE,
                "tone": "warning", "icon": "alert-triangle"}
-    if account_access.is_administrator:
+    if account_access.is_administrator and account_access.can_manage_configuration:
         outcome["action"] = {"label": "Configure boundary data", "url": reverse("boundaries")}
     return outcome

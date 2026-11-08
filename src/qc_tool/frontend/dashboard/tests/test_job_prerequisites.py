@@ -49,7 +49,7 @@ class JobPrerequisiteTests(TestCase):
         with self.assertRaises(JobPrerequisiteUnavailable) as caught:
             self.delivery.create_job("product", "", requested_by=self.admin, account_access=access_for(self.admin))
         self.assertEqual(caught.exception.code, "boundary_generation_unavailable")
-        self.assertIn("Admin → Boundaries", str(caught.exception))
+        self.assertIn("An administrator must activate boundary data", str(caught.exception))
         self.assertNotIn(str(self.boundaries), str(caught.exception))
         self.assertFalse(Job.objects.exists())
         self.delivery.refresh_from_db()
@@ -63,10 +63,30 @@ class JobPrerequisiteTests(TestCase):
 
     def test_setup_blocks_run_and_offers_boundary_management_to_administrator(self):
         response = self.client.get(reverse("setup_job"), {"deliveries": self.delivery.pk})
-        self.assertContains(response, "QC setup needs administrator attention", status_code=503)
+        self.assertContains(response, "Boundary data is required before QC can run", status_code=503)
         self.assertContains(response, reverse("boundaries"), status_code=503)
         self.assertContains(response, "<fieldset disabled>", status_code=503)
+        html = response.content.decode()
+        self.assertLess(html.index("data-qc-prerequisite-notice"), html.index('id="selected-deliveries-title"'))
         self.assertFalse(Job.objects.exists())
+
+    def test_dashboard_warning_precedes_metrics_and_offers_an_admin_action(self):
+        response = self.client.get(reverse("dashboard_home"))
+        self.assertContains(response, "Boundary data is required before QC can run")
+        self.assertContains(response, reverse("boundaries"))
+        html = response.content.decode()
+        self.assertLess(html.index("data-qc-prerequisite-notice"), html.index('data-dashboard-metric="deliveries"'))
+
+    def test_valid_package_without_optional_version_file_does_not_block_qc(self):
+        self.activate_fixture()
+        setup = self.client.get(reverse("setup_job"), {"deliveries": self.delivery.pk})
+        self.assertEqual(setup.status_code, 200)
+        self.assertNotContains(setup, "data-qc-prerequisite-notice")
+        self.assertNotContains(setup, "<fieldset disabled>")
+        dashboard = self.client.get(reverse("dashboard_home"))
+        self.assertTrue(dashboard.context["boundary_package_available"])
+        self.assertEqual(dashboard.context["boundary_version"], "Unavailable")
+        self.assertNotContains(dashboard, "data-qc-prerequisite-notice")
 
     def test_setup_tells_ordinary_user_to_contact_admin_without_admin_destination(self):
         self.delivery.user = self.user

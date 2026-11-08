@@ -1,0 +1,11 @@
+{% load static %}
+{% if not prerequisites.available %}
+<section class="workspace-notice workspace-notice--warning" aria-labelledby="qc-boundary-prerequisite-title" data-qc-prerequisite-notice role="alert">
+    <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#map-pin"></use></svg>
+    <div>
+        <h2 id="qc-boundary-prerequisite-title">{{ prerequisites.title }}</h2>
+        <p>{{ prerequisites.message }}</p>
+    </div>
+    {% if prerequisites.admin_url %}<a class="btn btn-qc-secondary" href="{{ prerequisites.admin_url }}">Open Admin → Boundaries</a>{% endif %}
+</section>
+{% endif %}

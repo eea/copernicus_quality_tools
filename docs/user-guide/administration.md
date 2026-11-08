@@ -418,6 +418,12 @@ administrator role and `manage_configuration`. Product managers and users with
 configuration permission alone do not gain access. Boundary management is absent
 from the regular workspace; QC jobs continue using the active package.
 
+An unavailable or unsafe active package produces a prominent Dashboard and QC
+setup warning. QC setup disables **Run QC**, and the server refuses browser/API
+job creation before inserting a job. Authorized administrators can open boundary
+management from the warning; other users are directed to an administrator.
+The package's optional version label does not determine execution readiness.
+
 The canonical page is `/admin/boundaries/`. Old `/boundaries/` and
 `/boundaries/upload/` page bookmarks redirect to Admin; old boundary data and
 upload endpoints are no longer available. Session recovery stays inside Admin.

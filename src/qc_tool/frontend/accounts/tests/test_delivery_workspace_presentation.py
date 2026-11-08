@@ -2,6 +2,7 @@
 
 import re
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from urllib.parse import urlsplit
 
@@ -21,6 +22,7 @@ from django.utils import timezone
 from qc_tool.frontend.accounts.authorization.permissions import (
     AccountPermission,
 )
+from qc_tool.common import CONFIG
 from qc_tool.frontend.accounts.authorization.roles import Role
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
@@ -363,10 +365,12 @@ class DeliveryWorkspacePresentationTests(TestCase):
         self,
         _boundary_version,
     ):
-        response = self.client.get(reverse("dashboard_home"))
+        boundary_dir = Path(self.enterContext(TemporaryDirectory()))
+        with patch.dict(CONFIG, boundary_dir=boundary_dir):
+            response = self.client.get(reverse("dashboard_home"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Boundary package unavailable")
+        self.assertContains(response, "Boundary data is required before QC can run")
         self.assertContains(response, "Contact an administrator")
         self.assertNotContains(response, "Boundary package date")
         self.assertNotContains(response, 'href="{}"'.format(reverse("boundaries")))

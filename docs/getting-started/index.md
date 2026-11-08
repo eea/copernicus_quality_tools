@@ -161,6 +161,12 @@ generation before executing checks. An operator must provide and activate a ZIP
 with top-level `raster/` and `vector/` directories before the first job. See
 [Boundary packages](../user-guide/administration.md#boundary-packages).
 
+Dashboard and QC setup show a visible warning while no usable boundary package
+is active. **Run QC** stays disabled, and browser/API job creation refuses the
+request before queuing a job. Administrators can follow **Admin → Boundaries**
+from the warning; other users are directed to an administrator. Boundary version
+metadata is optional and does not determine whether a package is available.
+
 ## 8. Make a source change
 
 The local frontend uses Django's development server and the checkout bind
