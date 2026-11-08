@@ -357,13 +357,13 @@ volume, repeated partial transfers and bidirectional interchange. It also adds
 schema, lifecycle and retention responsibilities; a polymorphic target pointer
 does not automatically provide SQL referential integrity.
 
-Under the current [draft models-only policy](../../../src/qc_tool/database/README.md),
-adding such a model would require a freshly initialized disposable database for
-development/testing and an explicit reviewed deployment decision. It must not
-be added in place to the existing installation, shipped as a baseline or hidden
-inside this feature. A later migration-managed release needs its separately
-reviewed initialization/adoption transition. The receipt-backed option is a
-bounded starting point, not a reason to prebuild future migration machinery.
+Under the current [managed database policy](../../../src/qc_tool/database/README.md),
+adding such a model requires a reviewed forward migration and disposable
+initialization/upgrade tests. It must not be added directly to a populated
+installation or hidden inside a record import. Supported upgrades use the
+guarded candidate workflow; unknown history-free drafts remain refused. The
+receipt-backed option is a bounded starting point; a dedicated model needs its
+own reviewed lifecycle and retention design.
 
 ## Re-export and portable v2 requirements
 

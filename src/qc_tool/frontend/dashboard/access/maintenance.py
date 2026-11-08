@@ -5,6 +5,7 @@ from django.urls import resolve
 
 
 CONTROL_ROUTE_NAMES = frozenset({"admin_maintenance", "worker_maintenance", "admin_data_transfer",
+                               "admin_migrations", "admin_migration_status",
                                "admin_backup_export", "admin_backup_import",
                                "boundaries_retention_action",
                                "admin_data_transfer_status", "admin_data_transfer_download", "admin_database",

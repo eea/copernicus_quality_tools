@@ -20,10 +20,11 @@ both published images, then hand their digests to the EEA deployment. GitHub tag
 CI and Docker Hub builds run independently. See [Docker Hub images](dockerhub-images.md)
 for the existing build rules, source provenance and artifact checks.
 
-New installations initialize an entirely empty database from current models.
-v3.0.0 ships no migration framework, schema snapshots or legacy converter.
-Legacy conversion is private manual operator work; restore only a prepared
-current-schema artifact into a separate target. Read the
+New 3.0.0 installations initialize an entirely empty database from committed
+Django migrations. Supported updates use the explicit Admin candidate upgrade
+workflow; startup never applies pending migrations. Earlier installations of
+the same 3.0.0 version may have the supported history-free schema and require
+strict candidate-only adoption. Legacy conversion is private manual operator work. Read the
 [database guide](../../src/qc_tool/database/README.md) and
 [manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md) before attaching
 persistent storage. For application updates, follow [Operations](operations.md#upgrades).
@@ -259,9 +260,9 @@ qc_compose run --rm --no-deps frontend \
   python3 -m qc_tool.frontend.manage database apply --traceback
 ```
 
-`apply` creates the current-model schema and standard permissions/roles on an
-empty database. It is a read-only no-op for a complete matching schema and
-refuses partial or foreign schemas and detected model drift. Stop on an error;
+`apply` runs committed Django migrations and standard permission/role bootstrap
+on an entirely empty database. It is a read-only no-op for a current managed
+schema and refuses unsupported occupied schemas/history. Stop on an error;
 preserve the target and restricted logs for investigation. It never repairs existing tables.
 
 For a manual data cutover, use the
@@ -280,7 +281,7 @@ qc_compose run --rm --no-deps frontend \
   python3 -m qc_tool.frontend.manage database check
 ```
 
-`check` validates the current schema read-only. Continue only after it and the
+`check` validates current schema and migration history read-only. Continue only after it and the
 release's data/storage validation succeed:
 
 ```bash
@@ -290,7 +291,9 @@ qc_compose up --detach --scale worker=4
 Production frontend startup runs the read-only schema check and collects static
 files before Gunicorn. It refuses an empty or incompatible schema. Use the
 explicit initialization job above; `QC_TOOL_INITIALIZE_ON_STARTUP=yes` is reserved
-for development/test. Startup does not convert data or apply schema upgrades.
+for development/test. Startup does not convert data or apply pending schema upgrades. To upgrade an
+existing supported release, follow the [migration runbook](../../src/qc_tool/database/MIGRATIONS.md)
+and the release's maintenance admission procedure.
 
 The manifests wait for PostgreSQL and frontend liveness before starting dependent
 services and use a child-reaping init process for detached transfer runners.

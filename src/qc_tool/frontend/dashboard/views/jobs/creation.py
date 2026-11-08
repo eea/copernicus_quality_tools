@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard import models
 from qc_tool.frontend.dashboard.services.jobs import JobRequestError
+from qc_tool.frontend.dashboard.services.jobs.prerequisites import JobPrerequisiteUnavailable
 from qc_tool.frontend.dashboard.services.jobs import (
     parse_batch_job_creation_request,
 )
@@ -53,6 +54,8 @@ def create_job(request):
             str(exc),
             status=403,
         )
+    except JobPrerequisiteUnavailable as exc:
+        return _error_response(exc.code, exc.message, status=exc.status_code)
     except ValueError as exc:
         return _error_response(
             "delivery_not_eligible_for_qc",

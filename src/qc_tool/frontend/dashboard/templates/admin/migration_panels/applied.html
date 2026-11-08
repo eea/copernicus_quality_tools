@@ -1,0 +1,17 @@
+<section class="module transfer-panel" id="migration-applied" aria-labelledby="migration-applied-heading">
+    <h2 id="migration-applied-heading">Applied migration history</h2>
+    <div class="transfer-panel__body">
+      <p>Django records applied migration files in the active database. Upgrade attempts and retained copies are listed separately below.</p>
+      {% if migration_database.state == 'unavailable' %}<p class="transfer-warnings">The active database cannot be inspected. Its recorded migration history has not been verified. Retained upgrade operations remain available below.</p>
+      {% elif applied_names %}
+      <details class="migration-records"><summary>Applied Django migrations ({{ applied_names|length }})</summary>
+        <div class="migration-storage-scroll" tabindex="0" role="region" aria-label="Applied Django migration history">
+          <table class="migration-record-table"><caption>Recorded times come from Django history. Initial history adoption records its initialization time, rather than when the original tables were created.</caption>
+            <thead><tr><th scope="col">Application area</th><th scope="col">Migration</th><th scope="col">Recorded at</th></tr></thead>
+            <tbody>{% for item in migration_applied_rows %}<tr><th scope="row">{{ item.area }}</th><td><code>{{ item.identity }}</code></td><td>{% if item.recorded_local %}<time datetime="{{ item.recorded_local|date:'c' }}">{{ item.recorded_local|date:'j M Y H:i:s T' }}</time>{% else %}Not recorded{% endif %}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </details>
+      {% else %}<p>No Django migration history is recorded on this database.{% if migration_initializes_history %} Use the verified-copy initialization workflow above.{% endif %}</p>{% endif %}
+    </div>
+  </section>

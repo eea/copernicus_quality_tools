@@ -1,13 +1,44 @@
 # QC Tool database
 
-QC Tool **v3.0.0 has a new models-only schema**. Django models are its only
-schema definition. [policy.json](policy.json) is `draft` with `baselines: {}`;
-there are no first-party migration packages, baseline snapshots, legacy import
-commands or released-migration execution paths in this version.
+QC Tool **3.0.0 includes migration management**. Committed native Django
+migrations define the whole application schema; models describe its current
+state. The central database package owns policy, schema/history checks, fresh
+initialization and the guarded administrator upgrade workflow. Earlier 3.0.0
+installations may have the supported history-free, models-only schema; adoption
+is explicit and candidate-only. The application version remains 3.0.0. Future
+3.0.1 and 3.1.0 releases add reviewed forward migrations.
 
-The central database package owns fresh initialization and read-only readiness
-checks for the entire application, including Django's account tables. It does
-not upgrade, repair, reset or adopt an existing database.
+## Code ownership
+
+| Package | Responsibility |
+| --- | --- |
+| `frontend/accounts/migrations/` | Native history for account and access models |
+| `frontend/dashboard/migrations/` | Native history for catalog, deliveries, QC execution and publication models |
+| `database/migrations/` | Native history for application-wide transfer receipts |
+| `database/schema/` | Reusable read-only catalog, field, constraint and strict supported-source inspection |
+| `database/deployment.py` | Empty-target initialization and the stable whole-application schema lock |
+| `database/migration_engine/` | Read-only graph/history inspection, strict predecessor recognition and Django execution on owned candidates |
+| `database/upgrades/` | Compose backup, restored candidate, migration evidence and administrator review |
+| `database/transfers/` | Existing PostgreSQL backup/restore, durable runner, file pins and database selection |
+| `frontend/dashboard/views/admin_migrations/` | Small HTTP handlers, journey decisions, confirmation forms and presentation; database operations delegate to the shared services |
+
+There is one Django migration graph, one backup engine and one database-selection
+mechanism. Frontend and worker continue sharing retained business storage through
+the configured storage layout. Upgrade candidates reference the existing physical
+files and protect them with durable pins; SQL upgrades do not import or reorganize
+that storage. The [runbook](MIGRATIONS.md) describes the ordered handoff.
+
+`schema.SchemaInspector` owns read-only current/historical model inspection.
+`deployment.SchemaInitializer` reuses it and adds only explicit empty-target
+initialization. SQL expression and index comparison have named owners under
+`schema/`; transfer compatibility consumes the same native-type normalization.
+Migration history, fingerprints and candidate execution live in separate
+`migration_engine/` modules. `upgrades/` composes review, evidence and recovery
+without copying the existing backup/restore engine. See the
+[module boundaries and remaining priorities](../../../docs/architecture/repository-layout.md#small-modules-and-shared-ownership)
+before expanding these workflows.
+
+## Whole-application commands
 
 ```sh
 PYTHONPATH=src python3 -m qc_tool.frontend.manage database plan
@@ -17,46 +48,41 @@ PYTHONPATH=src python3 -m qc_tool.frontend.manage database check
 
 | Command | Behavior |
 | --- | --- |
-| `plan` | Read-only: reports whether the database is empty, matches current models, or has an incompatible schema. |
-| `apply` | Initializes an entirely empty database. A matching existing schema is a read-only no-op. A partial, foreign or outdated schema is refused. |
-| `check` | Read-only: validates the managed model schema and required integrity/access paths. An empty or incompatible database fails. |
+| `plan` | Read-only schema/history inspection and installed migration plan |
+| `apply` | Initialize an entirely empty target using committed migrations; a current managed target is a read-only no-op |
+| `check` | Read-only whole-application schema/history readiness check |
 
-An explicit `apply` works for fresh development, test **and production** targets.
-Startup checks readiness; it never initializes production automatically. Local
-Compose opts into development initialization with
-`QC_TOOL_INITIALIZE_ON_STARTUP=yes`. CI and startup never generate migration files.
-Use fresh disposable targets after changing models. An empty product catalog
-does not mean an empty database: account and history tables may still contain data.
+Startup checks readiness and never upgrades an occupied database. Development/test
+may explicitly opt into empty-target initialization; production initialization
+is an operator command. CI and startup never generate migration files. Fresh
+initialization creates standard permissions/roles, but no users, products or
+deliveries. Administrators upload unchanged original specifications separately.
 
-The frontend startup check uses `database check --allow-maintenance-recovery`.
-The ordinary `database check` remains strict. If an explicitly selected database
-is unavailable, the recovery option admits only the maintenance UI after checking
-the same ready maintenance generation, retained database identity/schema and a
-usable administrator there. It never changes the pointer or either database.
-Recovery startup skips development initialization, demo accounts and development
-server database checks; a failed selected-database recovery cannot trigger `apply`.
+The **Admin → Maintenance → Database migrations** workflow uses installed code only: ready maintenance,
+verified native PostgreSQL backup with retained files, separate operation-owned
+restore candidate, strict supported-source verification, Django forward
+migrations, verification and explicit database switch. It retains the serving
+database, backup, candidate, journals and file pins. SQL migrations do not move
+or rewrite original specifications, delivery ZIPs, QC results or publications.
+Unknown drift/history is refused. Ordinary `--fake-initial` is not strict schema
+adoption; only the reviewed initial adoption procedure may record initial history
+on its exact supported history-free 3.0.0 restored candidate.
 
-Readiness validates required model structure and declared integrity/access paths.
-It does not exhaustively compare field-generated positive-integer checks,
-additional constraints, triggers, privileges or storage. A handoff archive has
-separate full schema/data reconciliation evidence; the checker alone does not
-certify a manually altered database or a complete production installation.
+Read the [migration runbook](MIGRATIONS.md) for source compatibility, recovery,
+SQLite boundaries and future release practice. Minor `3.0.x` and major `3.x.0`
+labels do not establish schema/storage compatibility. Across incompatible schemas,
+recovery needs the previous pinned images and retained data offline; reversing
+migrations cannot reconstruct discarded rows or files.
 
-Fresh initialization creates the current tables, standard permissions and roles.
-It creates no users, products or deliveries. Administrators upload original
-specifications through **Products → Upload specification**; specifications and
-uploaded snapshots must never be rewritten.
+The schema inspector validates required tables, columns, backend types,
+nullability, primary/foreign keys, uniqueness and declared constraints/indexes.
+This readiness check alone is not strict source adoption or a complete recovery
+certification. Native restore separately reconciles complete database inventory;
+upgrade verification additionally checks supported history and storage evidence.
 
-Legacy conversion is **manual and outside the maintained codebase**. A prepared
-native PostgreSQL archive contains the new schema and converted records together.
-Restore it into a separate empty database using [MANUAL_RESTORE.md](MANUAL_RESTORE.md).
-Do not run initialization before restoring its schema, restore legacy DDL over
-this schema, or reset/fake/alter existing databases to simulate a cutover.
-Private conversion source/evidence and database copies are excluded from Git.
-
-Initial migration history belongs to a separately reviewed release in **3.0.1
-or later**. Its transition from model-created tables must be designed then;
-v3.0.0 ships no future migration or automatic adoption mechanism.
+Legacy conversion remains manual work outside the maintained codebase. Restore
+prepared native archives into separate empty targets using [MANUAL_RESTORE.md](MANUAL_RESTORE.md).
+Never initialize a restore target first or fake/reset a serving database.
 
 ## Administrative data transfer
 
@@ -174,8 +200,8 @@ retained for a read-only report and original-package download; applying them is
 blocked. Invalid/damaged included payloads remain rejected. No unknown fields
 are silently discarded and no conversion or future reader is inferred. Only
 implemented reviewed readers belong in the supported registry. This package
-contract is separate from database migration history and does not change the
-draft schema policy.
+contract is separate from Django migration history. A supported archive reader
+does not authorize an unsupported schema upgrade.
 
 The Admin Database landing page runs a fresh read-only schema readiness check on
 each visit and displays its time, expected record-contract version and concrete
@@ -186,47 +212,48 @@ boundaries, so transfer journals and reconciliation remain necessary even when
 record changes use a database transaction.
 
 Versioned provenance in the existing receipt JSON supports repeated imports and
-re-exports without changing the draft schema. See the
+re-exports independently of schema migration. See the
 [additive import architecture](../../../docs/architecture/additive-record-import.md).
 
-This receipt is a current draft model addition, **not migration management**.
-An installation created from an earlier draft model set is now a different
-schema: use a newly initialized disposable target for development and verify it
-with the whole-application database command. Do not add the missing table to an
-existing developer/production database, generate a baseline, or infer an upgrade
-from its `v3.0.0` label. Production adoption remains a separately reviewed release
-and operator procedure. See the [record-transfer design](../../../docs/architecture/record-transfer-design.md)
-for the supported safety boundaries.
+The receipt model is included in committed initial migration history. Earlier
+models-only draft databases missing it are not equivalent supported 3.0.0 sources;
+never add just that table or fake history to bypass adoption checks. See the
+[record-transfer design](../../../docs/architecture/record-transfer-design.md)
+for package and filesystem durability boundaries.
 
 ## References
 
 | Task | Reference |
 | --- | --- |
-| Initialize or verify a fresh database | [Initialization runbook](MIGRATIONS.md) |
+| Initialize or verify a fresh database | [Migration runbook](MIGRATIONS.md) |
 | Restore the prepared database copy | [Manual PostgreSQL restore](MANUAL_RESTORE.md) |
 | Review model ownership | [Application schema](SCHEMA.md) |
 | Review stored fields and SQL integrity | [Table dictionary](TABLES.md) |
-| Review verified evidence and remaining work | [Audit](AUDIT.md), [v3.0.0 record](releases/3.0.0.md) |
+| Review verified evidence and remaining work | [Audit](AUDIT.md), [v3.0.0 migration management](releases/3.0.0.md) |
 | Record a production installation | [Release template](RELEASE_TEMPLATE.md) |
 
 ## Package layout
 
 ```text
 src/qc_tool/database/
-├── policy.json, policy.py          # Models-only source contract
-├── deployment.py                  # Empty-schema initializer and readiness inspector
+├── policy.json, policy.py          # Managed release and adoption contract
+├── deployment.py                  # Explicit empty initialization and schema lock
+├── schema/                        # Shared read-only model/catalog inspection
+│   └── strict/                    # Exact source checks, backend expressions and objects
+├── migration_engine/              # Native graph, historical state and candidate execution
+├── migrations/                    # Central application migration history
+├── upgrades/                      # Separate review, evidence, execution and recovery owners
 ├── apps.py                        # Django management-command discovery
 ├── management/commands/database.py
 ├── checks/source.py               # Offline source-layout check
-├── checks/schema.py               # Disposable model-created schema verification
+├── checks/schema.py               # Disposable migration-created schema verification
 ├── models.py                      # Atomic administrative transfer receipt
 ├── transfers/                     # Versioned records, artifacts and recovery
 ├── tests/                         # Offline and database regression checks
 └── releases/                      # Release evidence
 ```
 
-`accounts`, `dashboard` and `qc_database` are model namespaces within one database workflow.
-Django's migration modules are disabled for all managed application/framework
-apps. Native Django `migrate --run-syncdb` is used internally only when the whole
-schema is empty; the public operation is `database apply`. It writes no migration
-history. Existing schemas never run initialization or its bootstrap signals.
+`accounts`, `dashboard` and `qc_database` are model namespaces in one migration
+workflow. Their committed migrations and Django framework migrations share the
+native dependency graph and recorder. The central package adds application-wide
+safety gates; it does not replace Django's migration engine.

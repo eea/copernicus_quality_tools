@@ -149,6 +149,30 @@ def disable(actor, expected_generation):
             raise MaintenanceError("The environment forces maintenance. The operator must remove MAINTENANCE_MODE first.")
         if state["phase"] != "ready":
             raise MaintenanceError("Finish stopping work before disabling maintenance.")
+        # Reopening is a central state transition, shared by Admin and CLI.
+        # Keep this read-only check under the same lock as pointer switches;
+        # maintenance admission must not let pending history reach normal work.
+        from django.core.management.base import CommandError
+        from django.db import connection
+        from qc_tool.database import selection
+        from qc_tool.database.deployment import SchemaInitializer
+        from qc_tool.database.transfers.errors import TransferError
+
+        try:
+            selected = selection.current_database()
+            configured = selection.configured_connection()
+            if (connection.vendor == "postgresql"
+                    and connection.settings_dict["NAME"] == configured["NAME"]):
+                selected = selection.read_state()["active"]
+            with selection.database_scope(selected):
+                if connection.vendor == "postgresql":
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT current_database()")
+                        if cursor.fetchone() != (selected,):
+                            raise CommandError("A retained transaction is connected to a different database than the selected target.")
+                SchemaInitializer(connection).check()
+        except (CommandError, DatabaseError, TransferError) as error:
+            raise MaintenanceError("The selected database schema or migration history is not ready. Keep maintenance enabled and finish the reviewed candidate upgrade before reopening.") from error
         state.update(enabled=False, phase="off", generation=state["generation"] + 1, blockers=[], readiness_checked_at="")
         stamp(state, actor)
         write_status(state)

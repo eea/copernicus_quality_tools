@@ -36,6 +36,7 @@ from qc_tool.worker.status import CheckStatus
 from qc_tool.worker.manager import create_connection_manager
 from qc_tool.worker.manager import create_jobdir_manager
 from qc_tool.boundaries import resolve_boundary_generation
+from qc_tool.jobs.failures import public_job_failure
 
 
 log = logging.getLogger(__name__)
@@ -262,10 +263,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
                 log.exception("Job has been interrupted by an exception.")
                 # Results are exposed through browser and API views. Keep
                 # paths, dependency details and credentials in server logs.
-                job_result["error_message"] = (
-                    "The QC job failed unexpectedly. Contact an administrator "
-                    "and provide the job identifier."
-                )
+                job_result.update(public_job_failure(ex_obj))
             job_result["job_finish_date"] = datetime.utcnow().strftime(TIME_FORMAT)
             step_statuses = set(job_step["status"] for job_step in job_result["steps"])
             if job_result["error_message"] is not None:

@@ -2,7 +2,7 @@
 
 from django.test import SimpleTestCase
 
-from qc_tool.database.deployment import _index_signature
+from qc_tool.database.schema.signatures import index_signature
 from qc_tool.database.predicates import named_sqlite_check, predicate_signature
 
 
@@ -42,7 +42,7 @@ class SchemaPredicateTests(SimpleTestCase):
     def test_partial_index_literal_case_changes_its_integrity_contract(self):
         original = "CREATE UNIQUE INDEX accepted ON receipts (unit_id) WHERE review_state = 'accepted'"
         changed = "CREATE UNIQUE INDEX accepted ON receipts (unit_id) WHERE review_state = 'ACCEPTED'"
-        self.assertNotEqual(_index_signature(original), _index_signature(changed))
+        self.assertNotEqual(index_signature(original), index_signature(changed))
 
     def test_negated_comparison_matches_backend_not_equal_form(self):
         self.assertEqual(predicate_signature("NOT (notes = '')"), predicate_signature("notes <> ''"))

@@ -1,0 +1,19 @@
+{% extends "admin/database_base.html" %}
+{% load static %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'dashboard/css/admin/data-transfer.css' %}"><link rel="stylesheet" href="{% static 'dashboard/css/admin/migrations.css' %}">{% endblock %}
+{% block extrahead %}{{ block.super }}<script src="{% static 'dashboard/js/admin/data-transfer.js' %}" defer></script>{% endblock %}
+{% block database_content %}
+<div class="transfer-page migration-page" id="migration-workspace">
+  {% if admin_busy %}{% include "admin/includes/action_busy.html" %}{% elif action_error %}<p class="errornote" role="alert">{{ action_error }}</p>{% endif %}
+
+  {% include "admin/migration_panels/overview.html" %}
+  {% include "admin/migration_panels/next_step.html" %}
+  {% include "admin/migration_panels/operation.html" %}
+  {% include "admin/migration_panels/plan.html" %}
+  {% include "admin/migration_panels/review.html" %}
+  {% include "admin/migration_panels/backups.html" %}
+  {% include "admin/migration_panels/applied.html" %}
+  {% include "admin/migration_panels/history.html" %}
+  {% include "admin/migration_panels/help.html" %}
+</div>
+{% endblock %}

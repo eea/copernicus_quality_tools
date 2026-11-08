@@ -1,3 +1,4 @@
+from qc_tool.frontend.dashboard.tests.boundary_fixtures import ready_boundary_package
 from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -27,6 +28,7 @@ from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 
 class ProductUnitPersistenceTests(TestCase):
     def setUp(self):
+        ready_boundary_package(self)
         definitions = {ident: managed_definition(ident) for ident in ("product", "new-product")}
         self.enterContext(patch(
             "qc_tool.frontend.dashboard.services.product_units.jobs.creation._catalog_snapshot",

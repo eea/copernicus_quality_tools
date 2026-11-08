@@ -48,6 +48,25 @@ def normalize_components(components=None):
     return tuple(item for item in COMPONENTS if item in components)
 
 
+def storage_identity(*, roots=None):
+    """Bind a same-deployment upgrade to configured physical business roots.
+
+    Archive identities deliberately remain portable. Upgrade review additionally
+    needs empty roots and absolute mappings, so identical bytes at a new mount
+    cannot silently reuse approval of a previous deployment layout. This does
+    not follow symlinks, discover paths or create missing storage.
+    """
+    configured = storage_roots() if roots is None else roots
+    identity = {}
+    for name, value in sorted(configured.items()):
+        path = Path(value)
+        if (not path.is_absolute() or ".." in path.parts
+                or any(ord(character) < 32 or ord(character) == 127 for character in str(path))):
+            raise TransferArchiveError("Migration storage roots must use explicit absolute paths without parent traversal.")
+        identity[name] = str(path)
+    return identity
+
+
 def component_for(root, key):
     """Classify storage identities without querying the source database."""
     validate_key(key)

@@ -528,10 +528,12 @@ available for an older source schema. Native import uses its fresh prepared
 destination and does not repair an occupied schema. Previously
 completed downloads and safe staged-package discard remain available.
 
-The [v3.0.0 database policy](../../src/qc_tool/database/README.md) remains
-models-only. Use a fresh current-model target where required; this UI does not
-introduce migration history or a baseline. Isolate external SQL/filesystem
-writers before transferring or maintaining a deployment.
+The [current v3.0.0 database policy](../../src/qc_tool/database/README.md) uses
+committed Django migrations. Record transfers require a compatible destination;
+they do not adopt history or upgrade an occupied schema. Use **Maintenance →
+Database migrations** for the separately guarded candidate-upgrade procedure.
+Isolate external SQL/filesystem writers before transferring or maintaining a
+deployment.
 
 See [maintenance operations](../deployment/maintenance.md) and
 [record-transfer architecture](../architecture/record-transfer-design.md).

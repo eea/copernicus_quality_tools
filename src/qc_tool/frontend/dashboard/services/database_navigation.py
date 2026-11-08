@@ -27,6 +27,7 @@ def maintenance_task_urls():
     export_url = reverse("admin_backup_export")
     import_url = reverse("admin_backup_import")
     return {
+        "migrations_url": reverse("admin_migrations"),
         "database_manager_url": transfer_url + "?" + urlencode({"tab": "databases"}),
         "export_page_url": export_url,
         "import_page_url": import_url,
@@ -35,6 +36,12 @@ def maintenance_task_urls():
         "backup_files_url": export_url + "#prepared-backups",
         "transfer_history_url": export_url + "#backup-history",
     }
+
+
+def maintenance_operation_url(operation):
+    """Keep progress and recovery inside the Admin workflow that owns the pin."""
+    route = "admin_migrations" if operation.get("kind") in {"upgrade", "migration"} else "admin_data_transfer"
+    return reverse(route) + "?" + urlencode({"operation": operation["operation_id"]})
 
 
 def transfer_workspace_context(workflow, title, description, operation=False):

@@ -1,17 +1,16 @@
 # Application schema
 
-QC Tool uses one application database. **3.0.0 is models-only**: policy is
-`draft`, with no first-party migration definitions or baseline snapshots.
-Django models describe the schema used to initialize a fresh target. Initial
-migration history is reserved for a separately reviewed release from **3.0.1
-onward**; it does not automatically adopt an existing 3.0.0 database.
-This reference explains model ownership and persistence rules. The
-[database runbook](MIGRATIONS.md) owns fresh initialization and read-only checks.
+QC Tool uses one application database. **the current 3.0.0 is migration-managed**: committed
+Django migrations define its history and models describe its current state.
+Earlier installations of the same 3.0.0 version may be models-only. Adoption is restricted to the
+exact supported schema on a verified separate restore candidate; no serving
+schema is automatically adopted. This reference owns model responsibilities;
+the [migration runbook](MIGRATIONS.md) owns initialization, upgrades and checks.
 
-The [table dictionary](TABLES.md) describes stored fields and access paths.
-The [release checklist](AUDIT.md#remaining-release-checklist) tracks remaining
-work; the [metadata review](AUDIT.md#column-and-metadata-review-2026-09-21) records
-completed model cleanup and retained evidence. Physical schema evidence must
+The [table dictionary](TABLES.md) and [audit](AUDIT.md) retain the earlier 3.0.0
+field reference and dated physical evidence. The [3.0.0 release record](releases/3.0.0.md)
+and [release template](RELEASE_TEMPLATE.md) own the managed transition gates.
+Physical schema evidence must
 identify its source revision, policy, backend and initialization method.
 
 ## Naming and ownership
@@ -24,13 +23,13 @@ the stored fact independently of the Python package or UI that displays it.
 These prefixes group tables within one database. They do not create separate
 PostgreSQL schemas, services or release procedures. Django app labels remain
 framework identities for model discovery, content types and permissions;
-`accounts`, `dashboard` and `qc_database` share one models-only initialization workflow.
+`accounts`, `dashboard` and `qc_database` share one native Django migration workflow.
 
 ### Database administration
 
 The central [`qc_database` app](models.py) owns administrative transfer evidence.
-It shares the same models-only initialization/readiness workflow as every other
-component; it has no separate schema upgrade path.
+It shares the same migration/readiness workflow as every other component;
+it has no separate schema upgrade path.
 
 | Table | Model | Stored facts |
 | --- | --- | --- |
@@ -46,11 +45,9 @@ and original bytes, and map users explicitly. Versioned source/local provenance
 uses the existing receipt JSON; this change adds no schema. Account-only imports create inactive identities and do not apply
 source authority. See [administrative data transfer](README.md#administrative-data-transfer).
 
-This model was added during `draft` schema development. Existing earlier draft
-databases are refused by readiness checks; create a fresh disposable database
-for development verification. Do not repair them or generate migration/baseline
-history to add this feature. Production schema adoption remains a separate
-reviewed release decision.
+The receipt table belongs to committed initial history. A models-only source
+missing it is not the supported source schema; initialization never patches an
+occupied target. Source adoption requires the complete reviewed schema contract.
 
 ### Accounts
 
@@ -63,8 +60,8 @@ They do not import dashboard models.
 | `account_product_grant` | [UserProductGrant](../frontend/accounts/models/product_grants.py) | Explicit user scope for a canonical business-product or exact QC-definition identifier |
 
 Django owns users, groups, permissions, content types, sessions and admin history.
-The migration recorder is infrastructure state when migration history is used;
-it is not a QC Tool model or required models-only application table. Standard
+The migration recorder is required infrastructure state in managed releases;
+it is not a QC Tool business model. Standard
 `auth_*` and `django_*` business tables remain framework-managed. `AccountCapability` is an unmanaged permission anchor, so it
 has a content type and permissions but creates no application table.
 
@@ -261,10 +258,9 @@ migration baseline. Raw SQL must obtain and quote table identifiers from
 model metadata, as the [delivery query](../frontend/dashboard/services/deliveries/listing/query/sql.py)
 does. Do not duplicate a table-name registry in another configuration file.
 
-For 3.0.0, follow [models-only verification](MIGRATIONS.md#local-verification)
-and verify each schema change on fresh disposable databases without generating
-migration definitions. Existing tables are not upgraded by initialization.
-From the first reviewed freeze in 3.0.1 or later, preserve established baseline,
-table and model identities and include reviewed forward migrations with later
-schema changes. Transitioning an existing 3.0.0 database requires a separately
-reviewed conversion/adoption plan; never reset or fake it into a new history.
+Preserve committed migration identities and released file contents. Include a
+reviewed forward Django migration with every model/schema change, and verify
+fresh installation plus supported populated-source upgrades on disposable SQLite
+and PostgreSQL targets. Keep the source/adoption and storage contracts explicit;
+never reset or fake an existing serving database into a new history. See the
+[migration runbook](MIGRATIONS.md#maintaining-future-releases).

@@ -1,5 +1,6 @@
 """Parsed filenames select managed specifications without verifying ZIP contents."""
 
+from qc_tool.frontend.dashboard.tests.boundary_fixtures import ready_boundary_package
 import json
 from copy import deepcopy
 from pathlib import Path
@@ -335,6 +336,7 @@ class DeliveryIdentificationUploadTests(TestCase):
 
 class DeliveryIdentificationJobTests(TestCase):
     def setUp(self):
+        ready_boundary_package(self)
         self.user = get_user_model().objects.create_user(username="identified-job-owner")
         self.definition, self.release = mapped_definition(self, "urban_atlas")
         self.other_definition, self.other_release = managed_definition("unrelated")
@@ -427,6 +429,7 @@ class DeliveryIdentificationJobTests(TestCase):
 )
 class DeliveryIdentificationApiTests(TestCase):
     def setUp(self):
+        ready_boundary_package(self)
         self.user = get_user_model().objects.create_user(username="identified-api-owner")
         mapped_definition(self, "urban_atlas")
         managed_definition("unrelated")

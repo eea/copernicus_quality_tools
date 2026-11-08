@@ -14,7 +14,8 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import path
 
 from qc_tool.common import CONFIG
-from qc_tool.database.transfers import storage_pins, store
+from qc_tool.database.transfers import recovery_files, storage_pins, store
+from qc_tool.database.transfers.archive import ArchiveLimits
 from qc_tool.database.transfers.errors import TransferError
 from qc_tool.frontend.dashboard.services.storage_admin.references import (
     StorageReferenceError, assert_unreferenced, describe_references,
@@ -58,6 +59,79 @@ class PinFixtures:
 
 
 class StoragePinTests(PinFixtures, SimpleTestCase):
+    def aliased_specifications(self, *, canonical=True):
+        specifications = self.root / "specifications" if canonical else self.work / "product_definitions"
+        roots = {"work": self.work, "product-0": specifications,
+                 "incoming": self.incoming, "boundaries": self.root / "boundaries",
+                 "submissions": self.published}
+        if canonical:
+            roots["specifications"] = specifications
+        for root in set(roots.values()):
+            root.mkdir(parents=True, exist_ok=True)
+        original = specifications / "original.json"
+        original.write_bytes(b'{"fixture": "original specification bytes"}')
+        inventory, entries, _fingerprint, _size = recovery_files.snapshot(limits=ArchiveLimits(), roots=roots)
+        self.assertEqual(len(entries), 2)
+        return original, inventory, entries
+
+    def test_upgrade_retains_one_physical_file_with_two_configured_archive_identities(self):
+        original, inventory, entries = self.aliased_specifications()
+        operation = self.operation()
+        document = storage_pins.pin_existing_files(operation, inventory.sources, entries)
+        self.assertEqual(len(document["files"]), 1)
+        retained = document["files"][0]
+        self.assertEqual(Path(document["roots"][retained["root"]]) / retained["key"], original)
+        with patch.object(store, "write_json", side_effect=AssertionError("idempotent pin rewrite")):
+            repeated = storage_pins.pin_existing_files(operation, reversed(inventory.sources), reversed(entries))
+        self.assertEqual(repeated, document)
+        self.assertEqual(original.read_bytes(), b'{"fixture": "original specification bytes"}')
+
+    def test_upgrade_refuses_aliases_with_conflicting_checksums_without_creating_pin(self):
+        _original, inventory, entries = self.aliased_specifications()
+        operation = self.operation()
+        entries[1] = {**entries[1], "sha256": "0" * 64}
+        with self.assertRaisesMessage(TransferError, "aliases disagree"):
+            storage_pins.pin_existing_files(operation, inventory.sources, entries)
+        self.assertFalse((store.operation_dir(operation["id"]) / storage_pins.FILENAME).exists())
+
+    def test_upgrade_deduplicates_legacy_aliases_with_different_parent_storage_roots(self):
+        original, inventory, entries = self.aliased_specifications(canonical=False)
+        self.assertEqual(len({source.storage_root for source in inventory.sources}), 2)
+        operation = self.operation()
+        document = storage_pins.pin_existing_files(operation, inventory.sources, entries)
+        self.assertEqual(len(document["files"]), 1)
+        retained = document["files"][0]
+        self.assertEqual(Path(document["roots"][retained["root"]]) / retained["key"], original)
+        with patch.object(store, "write_json", side_effect=AssertionError("idempotent pin rewrite")):
+            repeated = storage_pins.pin_existing_files(operation, reversed(inventory.sources), reversed(entries))
+        self.assertEqual(repeated, document)
+
+    def test_upgrade_refuses_ambiguous_or_incomplete_source_inventory(self):
+        _original, inventory, entries = self.aliased_specifications()
+        operation = self.operation()
+        with self.assertRaisesMessage(TransferError, "repeats a logical"):
+            storage_pins.pin_existing_files(operation, [*inventory.sources, inventory.sources[0]], entries)
+        with self.assertRaisesMessage(TransferError, "omits a physical"):
+            storage_pins.pin_existing_files(operation, inventory.sources, entries[:1])
+        self.assertFalse((store.operation_dir(operation["id"]) / storage_pins.FILENAME).exists())
+
+    def test_upgrade_pins_dedicated_specification_mount_at_original_physical_path(self):
+        specifications = self.root / "specifications"
+        boundaries = self.root / "boundaries"
+        roots = {"work": self.work, "specifications": specifications, "incoming": self.incoming,
+                 "boundaries": boundaries, "submissions": self.published}
+        for root in roots.values():
+            root.mkdir()
+        original = specifications / "original.json"
+        original.write_bytes(b'{"fixture": "original specification bytes"}')
+        inventory, entries, _fingerprint, _size = recovery_files.snapshot(limits=ArchiveLimits(), roots=roots)
+        self.assertEqual(entries[0]["key"], "product_definitions/original.json")
+        document = storage_pins.pin_existing_files(self.operation(), inventory.sources, entries)
+        retained = document["files"][0]
+        self.assertEqual(Path(document["roots"][retained["root"]]) / retained["key"], original)
+        self.assertEqual(original.read_bytes(), b'{"fixture": "original specification bytes"}')
+        self.assertFalse((self.work / "product_definitions").exists())
+
     def test_absent_transfer_storage_is_not_created_by_read_or_empty_restore(self):
         with patch.object(store, "directory", side_effect=AssertionError("read-side creation")):
             self.assertEqual(storage_pins.describe_pins("incoming", "owner/file.zip"), [])

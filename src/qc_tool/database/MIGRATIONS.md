@@ -1,111 +1,177 @@
-# Database initialization for v3.0.0
+# Database migrations and release upgrades
 
-This filename remains the database workflow entry point. **There are no
-application migrations in v3.0.0.** Current models create a fresh schema;
-existing schemas are checked without modification. Future migration management
-starts with a separately reviewed 3.0.1-or-later change.
+QC Tool **3.0.0 includes migration management**. Committed native
+Django migrations define accounts, catalog, deliveries, publication and transfer
+receipts together. Django maintains its framework tables and `django_migrations`
+history. Earlier installations of the same 3.0.0 application version may be
+history-free. The supported models-only schema is adopted only on a verified
+separate copy; its serving database and original files are retained. Future
+3.0.1 and 3.1.0 releases extend the committed history with forward migrations.
+
+Use commands, policy and frontend/worker images from the same reviewed revision.
+Startup checks readiness. It does not apply pending migrations, adopt an occupied
+database or generate migration files.
 
 ## Choose the operation
 
-| Target | Operation |
+| Target | Supported operation |
 | --- | --- |
-| Entirely empty new database | `database plan`, then explicit `database apply`, then `database check` |
-| Existing database matching current models | `database check`; `apply` also returns without writing |
-| Partial, legacy or outdated schema | Stop. Use a separate fresh target; this version does not transform it. |
-| Prepared v3 PostgreSQL archive | Restore into a new empty target using [MANUAL_RESTORE.md](MANUAL_RESTORE.md), then `database check` |
-| Development model change | Change models directly and verify fresh disposable SQLite and PostgreSQL databases |
+| Entirely empty new SQLite or PostgreSQL database | `database plan`, explicit `database apply`, then `database check` |
+| Current schema and complete installed migration history | `database check`; repeated `apply` is a read-only no-op |
+| Supported earlier release | Maintenance, full backup, separate restored candidate, installed migrations, verification, explicit switch |
+| Exact supported history-free 3.0.0 schema | Candidate-only strict adoption of reviewed initial history |
+| Partial, foreign or unknown schema/history | Stop and retain it; no repair or guessed history |
+| Prepared native archive | Restore its own schema into an empty separate database; do not initialize it first |
 
-Use the exact source/image intended for the target and its normal environment
-settings. Commands cover accounts, catalog, deliveries, publication and Django
-framework tables together. They do not populate products or create demo users.
+An empty product catalog is not evidence of an empty database. Users, tokens,
+deliveries and history can exist independently of catalog contents.
+
+## Fresh installation
 
 ```sh
 PYTHONPATH=src python3 -m qc_tool.frontend.manage database plan
-PYTHONPATH=src python3 -m qc_tool.frontend.manage database apply --traceback
+PYTHONPATH=src python3 -m qc_tool.frontend.manage database apply
 PYTHONPATH=src python3 -m qc_tool.frontend.manage database check
 ```
 
-`plan` and `check` perform read-only inspection. `apply` serializes PostgreSQL
-initialization with an advisory lock, rechecks emptiness, creates current models
-and bootstraps permissions/roles only in an empty schema. It never adds missing
-tables or permissions to an occupied database. A complete matching schema is a
-read-only no-op; any incompatible schema fails without reset or repair.
+`plan` and `check` are read-only. On an entirely empty target, `apply` uses
+Django's migration engine and creates standard permissions and roles. It creates
+no users, products or deliveries. A matching managed target is left unchanged;
+an occupied unsupported target is refused. PostgreSQL schema work uses the
+application-wide advisory lock and bounded lock/statement timeouts.
 
-Readiness inspection covers managed tables (including automatic join tables),
-columns and supported backend types, nullability, primary/foreign keys, required
-uniqueness and declared constraints/indexes. This verifies the schema contract;
-it does not certify account access, storage availability, restored record
-completeness or QC acceptance parity. See [SCHEMA.md](SCHEMA.md).
+Production initialization is explicit. Development/test may opt into empty-target
+initialization with `QC_TOOL_INITIALIZE_ON_STARTUP=yes`; that option cannot
+upgrade an existing database. `QC_TOOL_MIGRATE_ON_STARTUP` remains unsupported.
 
-CHECK-body comparison covers named `Meta.constraints` and SQLite JSON validity.
-The inspector does not exhaustively compare field-generated positive-integer
-checks, additional same-table constraints, triggers or privileges. Use the
-archive's separate schema/data reconciliation evidence during manual handoff.
-Only detected incompatibilities are refused; this is not a general SQL adoption
-or repair mechanism.
+## Administrator upgrade journey
 
-## Startup
+The Admin migration task runs migrations shipped in the **installed image**.
+It does not upload Python/SQL, fetch a release, change images or choose arbitrary
+migration targets. Install the reviewed target image pair under the release's
+maintenance admission procedure before running its migration plan.
 
-Production startup runs `database check` and refuses an unready database. Run an
-explicit initialization job only for a confirmed empty installation, or manually
-restore a prepared archive. Do not point either operation at legacy production.
+1. Rehearse on disposable representative copies. Record source schema/history,
+   target image digests, storage identities and recovery steps. Verify space for
+   backup, candidate, indexes and transaction work; isolate external writers.
+2. Enable maintenance and wait for positive worker acknowledgement and **Ready**.
+   A timeout, banner or HTTP health check does not prove quiescence.
+3. Create and verify a native PostgreSQL backup with all retained file sections.
+   Review missing historical files, external objects and private recovery material
+   explicitly. Retain an independent off-host copy as well.
+4. Restore into a new operation-owned candidate. Verify exact original schema/data
+   restoration **before** migration. Preserve shared-file identities and pins.
+5. Review the supported source and installed Django graph. Initial adoption
+   accepts only the exact reviewed 3.0.0 schema with absent history on this
+   candidate. Record the complete reviewed initial graph, including framework
+   predecessors. Ordinary `--fake-initial` table-existence checks are insufficient
+   evidence of equivalence. Never fake history on the serving database.
+6. Run native forward migrations on the candidate. Verify target history/schema,
+   connected records, administrator access and retained-file checksums. SQL
+   transactions do not make filesystem changes transactional.
+7. Explicitly review **Switch active database**. Selection changes a private
+   deployment pointer and retains the previous database, backup, journals and file
+   pins. Maintenance stays enabled.
+8. Check login, permitted/denied access, deliveries, reports, submissions and a
+   representative QC job with the reviewed images before turning maintenance off.
 
-The startup adapter adds `--allow-maintenance-recovery` to `database check`.
-This option is restricted to `check --database default`; ordinary checks stay
-strict. It can admit the maintenance UI after an unavailable explicit selection
-only when the same maintenance generation is still ready, the retained source
-has recorded verification evidence and its identity/schema/administrator access
-pass read-only inspection. It never initializes, repairs, switches or resumes a
-database. Recovery startup skips demo bootstrap and local initialization. An
-unselected incompatible database remains refused.
+The first adoption exception applies only to the explicit managed transition and
+its strictly verified restored candidate. Legacy conversion stays private manual
+operator work outside this codebase.
 
-Development/test startup can opt into `QC_TOOL_INITIALIZE_ON_STARTUP=yes`.
-It uses the same guarded initializer. Automatic initialization is refused in
-production. The former migration-startup option is no longer supported.
-CI and startup never generate migration definitions.
+Supported PostgreSQL predecessors can have `integer` or `bigint` IDs on three
+implicit framework join tables: `auth_group_permissions`, `auth_user_groups`
+and `auth_user_user_permissions`. Native Django framework history uses `integer`
+IDs there; earlier model initialization can retain either known width. Strict
+models-only source recognition and managed readiness accept those two
+representations only on these three ID columns. Adoption preserves their actual
+width and values without altering or narrowing those columns. Other columns and unrecognized widths
+remain exact. This accounts for differing Django initialization defaults; it is
+not permission to accept arbitrary drift.
+
+For a managed source with pending migrations, its historical migration state
+verifies source schema before current models are queried. Source recovery binds
+complete native SQL and all retained file roots; the migrated target still
+undergoes current-model record/reference validation. A release that makes source
+administrator authentication incompatible needs a separately reviewed offline
+procedure rather than assuming the new Admin can read the old account schema.
+
+## Failure and recovery
+
+An interrupted or failed upgrade retains the original serving database and holds
+maintenance. Preserve the backup, candidate, journals and storage pins. A lost
+acknowledgement does not prove rollback: inspect recorded Django history and
+verification evidence before retrying. Never erase a pin/journal, clear tables,
+fake an unapplied operation or reset a database to make the interface continue.
+
+Migrations are transactional where the backend and migration support it; a whole
+multi-migration upgrade is not one universal transaction. Earlier migrations may
+have committed. `atomic = False`, irreversible data changes, external services
+and filesystem side effects require release-specific recovery. Preserve uncertain
+candidates for inspection; a new candidate from the retained verified backup is
+the conservative recovery path.
+
+Quick switch-back is restricted to the same maintenance generation before ordinary
+work resumes and requires compatible installed code. Across incompatible schemas,
+recover using the previous pinned images and retained database/storage under an
+offline operator procedure. Reverse migrations cannot reconstruct discarded data
+or files. After reopening, an older copy can discard accepted work; use a forward
+fix or separately reviewed reconciliation.
+
+## Maintaining future releases
+
+The product calls `3.0.x` minor updates and `3.x.0` major updates. These labels
+describe scope; they do not establish database, storage, package or worker
+compatibility. A minor update may require migration; a major update may have no
+schema operation. Compatibility comes from committed dependencies, explicit
+supported-source contracts and verified storage behavior.
+
+For example, a 3.0.1 fix without model changes reuses the committed 3.0.0 graph.
+A 3.0.1 model change adds a forward migration; a 3.1.0 release follows the same
+workflow with its reviewed source and storage contracts. Do not regenerate the
+initial migrations or infer storage compatibility from either version number.
+
+Readiness distinguishes physical drift from reviewed declarations in native
+migration state. Declared database defaults and generated columns are checked
+against expressions compiled by Django; this inspection does not execute source
+defaults or functions. Changed expressions, missing migration definitions,
+dependency cycles, conflicting branches and current model fields without their
+committed migrations are blockers. An unsupported backend rewrite of a complex
+expression requires review rather than guessed equivalence or automatic repair.
+
+Generate and review native migrations in development, commit them with the model
+change and test supported upgrade paths. Data migrations use historical models
+through `apps.get_model()`. Keep operations bounded and deterministic. For large
+PostgreSQL deployments use staged compatible changes, resumable backfills and
+later cleanup. Preserve released migration contents, app labels and table names.
+When stored business fields change, update the explicit portable transfer field
+registry and reviewed semantic compatibility fixtures as part of that release.
+Native backups preserve SQL independently; a schema migration does not implicitly
+make an older portable package reader understand new fields.
+
+Keep storage transformations separate from SQL migration. This path retains
+original specifications, delivery ZIPs, QC artifacts and publications at existing
+identities. A future path/format change needs a reviewed resumable procedure,
+checksums and old/new reader compatibility. Never edit original specifications
+or uploaded snapshots.
 
 ## Local verification
 
-Use a fresh isolated test database, with no production storage or network access.
-The schema check refuses nonempty targets; its synthetic fixtures and checks
-are test-only. The frontend test suite creates its own disposable test database.
+Use isolated disposable databases and temporary storage. CI checks committed
+source and model drift without creating migration files:
 
 ```sh
 PYTHONPATH=src python3 -m unittest qc_tool.database.tests.test_source
 PYTHONPATH=src python3 -m qc_tool.database.checks.source
+PYTHONPATH=src python3 -m qc_tool.frontend.manage makemigrations --check --dry-run
 PYTHONPATH=src python3 -m qc_tool.database.checks.schema
 PYTHONPATH=src python3 -m qc_tool.frontend.manage test qc_tool.database.tests.integration
 ```
 
-Repeat schema and integration verification on SQLite and PostgreSQL. Include
-fresh initialization, read-only repeated application, production-mode readiness,
-refusal of partial/foreign schemas, authorization/bootstrap and retained history
-lookups. Check the [testing guide](../../../docs/development/testing.md) for the
-supported container runtime. Do not generate migrations as a verification step.
-
-## Manual legacy conversion and restore
-
-Conversion scripts are not part of QC Tool. Preserve the original exports and
-private conversion evidence separately, validate the transformed records in a
-new target, then hand off a native PostgreSQL archive, checksum, provenance and
-restore report. The archive can be restored without converter code. Available
-historical exports are not a coherent current production snapshot.
-
-Follow [MANUAL_RESTORE.md](MANUAL_RESTORE.md) for the standard restore procedure.
-User passwords, product grants/catalog, private credentials and shared files need
-separate evidence; SQL cannot reconstruct absent ZIPs or published reports.
-Historical submission dates block duplicate filename admission without inventing
-modern publication receipts or approvals.
-
-## Failure and recovery
-
-A failed check blocks startup. Inspect the target and retain its data. No failure
-justifies automatic reset, fake records or schema repair. If initialization fails
-on a newly allocated disposable target, diagnose it and use another empty target;
-do not repurpose an existing database. If a restore fails, retain its logs and
-retry into another new empty target after fixing the cause.
-
-Production cutover is a later manual operator action. Coordinate source writes,
-verify a final backup and a recovery copy, provision accounts/storage/catalog,
-validate the exact image pair, and switch traffic only after those checks pass.
-Record the installation using [RELEASE_TEMPLATE.md](RELEASE_TEMPLATE.md).
+Repeat fresh initialization, populated source-copy adoption, native forward
+migration, drift/history refusal and recovery on supported SQLite/PostgreSQL
+backends as applicable. Admin native backup/candidate switching is PostgreSQL-only.
+SQLite requires an offline consistent backup and separately reviewed disposable-copy
+upgrade procedure. See [testing](../../../docs/development/testing.md) and the
+[3.0.0 record](releases/3.0.0.md). CI is not proof of a production restore,
+distributed filesystem or live EEA deployment.

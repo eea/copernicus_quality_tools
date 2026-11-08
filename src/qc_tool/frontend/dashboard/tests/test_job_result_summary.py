@@ -124,6 +124,23 @@ class JobResultSummaryTests(TestCase):
                 self.assertEqual(result["summary"]["status"]["label"], label)
                 self.assertEqual(result["outcome"]["title"], title)
 
+    def test_boundary_setup_failure_is_actionable_without_changing_the_report(self):
+        self.job.job_status = JOB_ERROR
+        self.report["error_code"] = "boundary_generation_unavailable"
+        original = deepcopy(self.report)
+        outcome = self.present()["outcome"]
+        self.assertEqual(outcome["title"], "QC could not start")
+        self.assertIn("activate boundary data", outcome["message"])
+        self.assertNotIn("action", outcome)
+        self.assertEqual(self.report, original)
+        admin_outcome = build_result_presentation(self.job, self.report, access_for(self.admin))["outcome"]
+        self.assertEqual(admin_outcome["action"]["url"], reverse("boundaries"))
+
+    def test_known_failure_code_cannot_replace_a_successful_result(self):
+        self.job.job_status = JOB_OK
+        self.report["error_code"] = "boundary_generation_unavailable"
+        self.assertEqual(self.present()["outcome"]["title"], "QC passed")
+
     def test_summary_uses_selected_job_and_historical_specification(self):
         Job.objects.create(delivery=self.delivery, job_status=JOB_OK, product_ident="newer")
         result = self.present()

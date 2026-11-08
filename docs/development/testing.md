@@ -81,26 +81,30 @@ docker compose -f docker/compose.local.yaml exec frontend \
   python3 -m qc_tool.frontend.manage collectstatic --noinput
 ```
 
-The checkout is mounted read-only. Current Django models define the schema;
-no migration files, converter or automatic schema-upgrade path are maintained.
-Use a new disposable database after model changes. `database check` validates
-an existing schema without modifying it.
+The checkout is mounted read-only. Committed native Django migrations define
+schema history; startup never upgrades an occupied database. Use disposable
+copies for migration tests. `database check` validates schema/history read-only.
 
-## Models-only schema checks
+## Migration and schema checks
 
-CI verifies the models-only source contract and runs the frontend suite on
-SQLite and PostgreSQL. It rejects first-party migration packages and application
-conversion machinery and builds the schema directly from current models. Integration tests
-exercise schema validation, initialization, permissions, synthetic records,
-repeat initialization and refusal of unsafe existing schemas. They do not
-convert or upgrade old production data.
+CI validates the managed release policy and committed migration packages, then
+runs `makemigrations --check --dry-run` in the pinned frontend runtime. This
+detects missing model migrations without generating files. Native Django creates
+fresh test schemas on SQLite and PostgreSQL. Whole-application readiness,
+initialization, read-only repeat application and unsupported schema/history
+refusal remain required.
 
-The inspector validates the required model contract, including named `Meta`
-CHECK predicates, SQLite JSON validity and declared index definitions. It does
-not exhaustively compare field-generated positive-integer checks, arbitrary
-extra SQL constraints, triggers or privileges. Fresh Django initialization
-still creates its generated rules; physical inventory and data/access/storage
-validation remain separate evidence for a prepared restore.
+Upgrade tests use only disposable source/candidate databases and temporary files.
+Cover exact populated 3.0.0 candidate adoption, native forward schema/data changes,
+unknown history/drift refusal, stale reviews, candidate ownership, process failure
+and retained-file integrity. An upgrade failure must leave the serving database,
+backup, journals, pins and maintenance intact. The Admin native restore/switch
+journey is PostgreSQL-only; SQLite initialization/engine checks do not imply a
+browser migration workflow.
+
+Readiness checks required model structure; strict adoption adds the immutable
+supported-source contract. Neither alone proves restored records, file coverage,
+access or a live production recovery. Reconcile those separately.
 
 Follow the [database runbook](../../src/qc_tool/database/MIGRATIONS.md) for complete
 local verification. For a disposable SQLite schema check in a one-shot container:
@@ -133,7 +137,7 @@ docker compose -f docker/compose.local.yaml exec frontend \
 
 These explicit package labels include the central database integration tests
 and both dashboard test packages while avoiding the historical
-`dashboard/tests.py` discovery-name collision. Run the models-only source
+`dashboard/tests.py` discovery-name collision. Run the managed source
 contract tests and source gate separately on the host:
 
 ```bash
@@ -295,24 +299,23 @@ Never weaken the check or commit its secret.
 
 ## Central database source contract
 
-v3.0.0 has no migration framework, first-party definitions, initial snapshots or
-legacy converter. Fresh schemas are built from current models. Initial migration
-definitions may be introduced only in a separately reviewed 3.0.1-or-later release
-with an explicit transition contract; this branch provides no future migration
-machinery.
+The current 3.0.0 includes migration management. Keep native migration definitions
+committed and preserve released contents, names and dependencies. The
+[database runbook](../../src/qc_tool/database/MIGRATIONS.md) and
+[policy](../../src/qc_tool/database/policy.json) govern the whole application.
+Earlier installations of the same 3.0.0 version may be history-free; strict
+adoption is limited to their explicitly supported complete schema on a separate
+verified restore candidate. The serving source remains unchanged.
+Unknown drafts and foreign schemas are refused rather than faked or repaired.
 
-The [whole-application database runbook](../../src/qc_tool/database/MIGRATIONS.md)
-and [`policy.json`](../../src/qc_tool/database/policy.json) govern every component.
-Production may initialize an entirely empty database using the same explicit
-command. `plan` and `check` inspect schema read-only; `apply` refuses partial or foreign schemas and
-detected model drift and leaves a complete current schema unchanged.
+`database plan|check` inspect read-only. `database apply` initializes only an
+entirely empty database; repeated application to a current managed target leaves
+it unchanged. Installed pending migrations require the guarded candidate upgrade
+workflow. Startup and CI never generate or automatically apply upgrade history.
 
-The workflow uses SQLite and PostgreSQL 14. PostgreSQL tests additionally
-exercise serialization between concurrent initialization jobs and restoration
-of timeout settings. Do not use `--keepdb` across model schema changes.
-
-A disposable schema fixture is not a production restore, release-to-release or
-load test. Prepared data copies require private reconciliation, corresponding
-storage and a restore rehearsal. Record matching source/image identifiers and
-evidence limits in the [release record](../../src/qc_tool/database/releases/3.0.0.md).
-CI success alone cannot promise zero downtime.
+Run schema/engine regressions on SQLite and PostgreSQL, including initialization
+serialization and restored timeout settings. Do not reuse `--keepdb` across
+unreviewed schema/history changes. A disposable fixture is not production restore,
+load or release-to-release evidence. Record exact source/images, storage coverage
+and recovery rehearsal in the [3.0.0 release record](../../src/qc_tool/database/releases/3.0.0.md).
+CI success cannot promise zero downtime.

@@ -1,0 +1,18 @@
+<section class="module transfer-panel migration-overview" aria-labelledby="migration-release-heading" data-database-state="{{ migration_database.state }}">
+    <h2 id="migration-release-heading">Database status <span class="migration-badge migration-badge--{{ migration_database.state }}">{{ migration_health }}</span></h2>
+    <div class="transfer-panel__body">
+      <dl class="migration-metrics">
+        <div><dt>Installed QC Tool</dt><dd>{% if migration_status.installed_release %}v{{ migration_status.installed_release }}{% else %}Unavailable{% endif %}</dd></div>
+        <div><dt>Pending migrations</dt><dd>{% if migration_database.state != 'ready' and migration_database.state != 'legacy' and migration_database.state != 'pending' %}Not verified{% else %}<a href="{% if pending_names %}#migration-plan{% else %}#migration-next-heading{% endif %}">{{ pending_names|length }}</a>{% endif %}</dd></div>
+        <div><dt>Applied migrations</dt><dd>{% if migration_database.state == 'unavailable' %}Not verified{% else %}<a href="#migration-applied">{{ applied_names|length }}</a>{% endif %}</dd></div>
+        <div><dt>Maintenance</dt><dd>{{ migration_maintenance_state }}</dd></div>
+      </dl>
+      <p class="migration-active"><strong>Active database</strong> <code>{{ migration_status.active_database|default:'Unavailable' }}</code></p>
+      <p class="help">{% if migration_checked_at %}Checked {{ migration_checked_at|date:'j M Y H:i:s T' }} · {% endif %}<a href="{{ operation_url }}">Refresh overview</a> performs a read-only check.</p>
+      <div class="migration-page-links" aria-label="Migration page sections"><a href="#migration-applied">Applied migration history</a><a href="#migration-history-heading">Past upgrades &amp; attempts</a><a href="#migration-help">Help &amp; intervention</a></div>
+      <details class="transfer-details"><summary>Installed release and database details</summary>
+        <dl class="transfer-scope-summary"><dt>Source schema</dt><dd>{{ migration_source_label }}</dd><dt>Migration readiness</dt><dd>{{ migration_database_state }}</dd>{% if migration_status.previous_database %}<dt>Previous database retained</dt><dd><code>{{ migration_status.previous_database }}</code></dd>{% endif %}</dl>
+        <p>Each release contains its reviewed Django migration history. This page runs only migrations shipped with this installation. Release numbers alone do not determine database or storage compatibility.</p>
+      </details>
+    </div>
+  </section>

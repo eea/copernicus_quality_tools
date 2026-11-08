@@ -107,9 +107,10 @@ class AdminMaintenanceTests(TestCase):
             response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["admin_section"], "maintenance")
-        self.assertEqual(_MaintenanceControls(response).headings, ["Maintenance mode", "Backups"])
+        self.assertEqual(_MaintenanceControls(response).headings, ["Maintenance mode", "Backups", "Database upgrades"])
         self.assertContains(response, 'href="' + reverse("admin_backup_export") + '"')
         self.assertContains(response, 'href="' + reverse("admin_backup_import") + '"')
+        self.assertContains(response, 'href="' + reverse("admin_migrations") + '"')
         self.assertNotContains(response, "Manage databases")
         self.assertNotContains(response, "Backup history")
         self.assertContains(response, "stops queued and running QC jobs")
@@ -676,7 +677,7 @@ class AdminMaintenanceTests(TestCase):
         ):
             response = self.render_status("ready")
 
-        self.assertContains(response, "Changes are paused for a backup or restore.")
+        self.assertContains(response, "Changes are paused for a backup, restore or database upgrade.")
         self.assertContains(response, "View progress")
         self.assertContains(
             response, reverse("admin_data_transfer") + "?operation=" + operation_id,

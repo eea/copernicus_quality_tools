@@ -1,3 +1,4 @@
+from qc_tool.frontend.dashboard.tests.boundary_fixtures import ready_boundary_package
 import json
 import logging
 from pathlib import Path
@@ -17,6 +18,7 @@ from qc_tool.frontend.dashboard.views.workers import pull_job
 
 class S3WorkerCredentialsTests(TestCase):
     def setUp(self):
+        ready_boundary_package(self)
         directory = TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.store = Path(directory.name) / "credentials"

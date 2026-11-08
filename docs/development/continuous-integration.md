@@ -37,11 +37,11 @@ GitHub. Existing detailed job results remain visible for diagnosis.
 
 | Job | Contract |
 | --- | --- |
-| Source and shared checks | Workflow/shell syntax, models-only source policy, JavaScript event tests and deployment manifest configuration |
+| Source and shared checks | Workflow/shell syntax, managed source policy and committed migration packages, JavaScript event tests and deployment manifest configuration |
 | Worker admission and interruption | Fast authentication, maintenance, scheduler, process-group and storage-guard regressions |
 | Maintainer tools (offline) | Explicit discovery under `scripts/tests/`, including release refusal and required-check contracts; no real publication or production access |
 | Packaged frontend | One image build, dependency/client checks, real Gunicorn responsiveness and production security checks |
-| Frontend (sqlite/postgres) | Both full application/database suites using the exact shared frontend image; disposable current-model schemas only |
+| Frontend (sqlite/postgres) | Both full application/database suites using the exact shared frontend image; disposable migration-created schemas and candidate upgrade/recovery tests; model drift checked with `makemigrations --check --dry-run` |
 | Browser uploads (volume/bind) | Firefox and Chromium file chooser/drop journeys against real templates, Gunicorn and fresh shared upload storage |
 | Supported worker image and QC regressions | Worker image build, runtime/driver and dependency checks, real Supervisor probe and full worker suite with scratch PostgreSQL |
 | CI | Stable required result covering all prerequisite jobs |
@@ -51,11 +51,12 @@ browser matrices run independently after the frontend build; failures do not
 cancel the other matrix legs. The worker builds and tests on one runner because
 its image is substantially larger than the frontend.
 
-Application PostgreSQL is major 14, matching the frontend's native backup
+Application PostgreSQL is major 17, matching the frontend's native backup
 clients. The worker's embedded PostgreSQL 17/PostGIS is separate QC scratch
 infrastructure. Neither represents an upgrade of the application database.
-Models-only source/schema guards remain required for v3.0.0; no CI command
-generates migrations, resets an occupied database or adopts a foreign schema.
+Managed source/graph guards and `makemigrations --check --dry-run` are required
+for 3.0.0. CI never generates migration files, resets an occupied database or
+adopts a foreign schema. Upgrade/adoption tests use disposable owned copies.
 
 Strict production validation also checks QC Tool's upload-aware CSRF middleware.
 Django 5.2's literal-path warning does not recognize that subclass, so the

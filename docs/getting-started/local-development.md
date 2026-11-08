@@ -102,14 +102,15 @@ docker compose -f docker/compose.local.yaml restart worker
 ```
 
 Local Compose enables `QC_TOOL_INITIALIZE_ON_STARTUP=yes` in the development
-environment. It initializes an entirely empty database from current models and
-standard roles, without importing products. A complete matching database is
+environment. It initializes an entirely empty database using committed Django
+migrations and standard roles, without importing products. A complete matching database is
 left unchanged; partial or foreign schemas and detected model drift are refused.
 Use a new separate development target after model schema changes, preserving any data you
 still need. Startup never upgrades or resets an existing database.
 
-v3.0.0 contains no migration framework, definitions, snapshots or legacy
-converter. See [Database initialization](../development/database-migrations.md).
+The current 3.0.0 includes migration management. Use committed forward migrations
+and disposable upgrade copies; startup does not adopt an occupied models-only
+3.0.0 database. See [Database migrations](../development/database-migrations.md).
 
 The initial product catalog is empty. Add reviewed JSON specifications through
 **Products → Upload specification** as an administrator, then assign their

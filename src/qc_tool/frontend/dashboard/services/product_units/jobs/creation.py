@@ -7,9 +7,11 @@ from qc_tool.common import JOB_RUNNING
 from qc_tool.common import JOB_WAITING
 from qc_tool.common import QCException, validate_skip_steps
 from qc_tool.delivery_names import DeliveryNameParserUnavailable
+from qc_tool.frontend.accounts.services.actors import actor_username
 from qc_tool.frontend.accounts.services.products import available_product_idents
 from qc_tool.frontend.dashboard.access.deliveries import can_manage_delivery
 from qc_tool.frontend.dashboard.services.catalog.sync.locks import lock_catalog_sync
+from qc_tool.frontend.dashboard.services.jobs.prerequisites import require_job_prerequisites
 from qc_tool.frontend.dashboard.services.s3.credentials import (
     S3CredentialsUnavailable, load_s3_credentials,
 )
@@ -77,6 +79,7 @@ def create_delivery_job(
                 )
             except (QCException, KeyError, TypeError, ValueError) as exc:
                 raise ValueError("The specification changed. Review the selected QC steps and try again.") from exc
+        require_job_prerequisites()
         job = Job.objects.create(
             date_created=timezone.now(),
             job_status=JOB_WAITING,
@@ -88,7 +91,7 @@ def create_delivery_job(
             skip_steps=skip_steps,
             delivery=locked_delivery,
             requested_by=requested_by,
-            requested_by_username=_actor_username(requested_by),
+            requested_by_username=actor_username(requested_by),
             request_source=request_source,
             requested_api_token_id=(
                 getattr(api_token, "pk", None) if api_token is not None else None
@@ -181,15 +184,6 @@ def _catalog_snapshot(product_ident, *, logger):
         raise ValueError(
             "This specification is awaiting activation in shared storage. Retry its upload before starting QC."
         ) from exc
-
-
-def _actor_username(actor):
-    if actor is None:
-        return ""
-    getter = getattr(actor, "get_username", None)
-    return str(getter() if callable(getter) else getattr(actor, "username", ""))[
-        :150
-    ]
 
 
 def _copy_projection(source, destination):

@@ -10,7 +10,11 @@ schema; it does not convert it into today's models.
 Legacy conversion for v3.0.0 remains manual work outside this codebase. A prepared
 handoff archive must contain the **new schema and converted records**, checksum,
 source provenance and validation evidence. Restoration needs standard PostgreSQL
-tools and the application; it needs no converter or application migration history.
+tools and the application; it needs no converter. An older history-free archive
+retains its original schema and history state. It is not ready for the current
+managed 3.0.0 build merely because the version label matches: the exact supported
+source must use the candidate-only adoption procedure in the
+[migration runbook](MIGRATIONS.md). Unknown older drafts are refused.
 
 Use an entirely new empty target. Keep the legacy database and existing local
 databases intact. Do not run `database apply` before restoring an archive that

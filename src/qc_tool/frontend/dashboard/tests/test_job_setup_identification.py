@@ -1,5 +1,6 @@
 """Filename hints guide QC choices without becoming verified delivery data."""
 
+from qc_tool.frontend.dashboard.tests.boundary_fixtures import ready_boundary_package
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -31,6 +32,7 @@ class JobSetupIdentificationTests(TestCase):
         )
 
     def setUp(self):
+        ready_boundary_package(self)
         self.client.force_login(self.user)
 
     def result(self, status, candidates=(), *, summary="Urban Atlas · 2024 · Example city"):

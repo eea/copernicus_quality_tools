@@ -310,89 +310,63 @@ PostgreSQL 14 bytes or initialize production automatically. Rehearse a separate
 logical restore and coordinated file handoff using [EEA storage](eea-storage.md).
 
 
-The [database guide](../../src/qc_tool/database/README.md) owns models-only
-initialization and schema validation. Use the procedure from the same source
-revision as the pinned image and record its evidence with the
+The [database guide](../../src/qc_tool/database/README.md) owns managed schema
+history. **The current 3.0.0 includes native Django migrations** and explicit adoption
+of the exact supported history-free schema from earlier installations of that
+same version. Use images, policy and commands
+from the same source revision. Record evidence with the
 [release template](../../src/qc_tool/database/RELEASE_TEMPLATE.md).
-
-v3.0.0 has no migration framework, definitions, snapshots or legacy converter.
-Its database command cannot upgrade existing tables. A complete schema matching
-the candidate models can be retained; a changed schema requires a separately
-prepared target and reviewed data transfer. Initial migration definitions are
-reserved for a separate 3.0.1-or-later review; this branch supplies no such path.
-
-For a prepared current-schema copy, use the
-[manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md). Keep conversion
-scripts, original legacy sources and intermediate artifacts in private operator
-storage outside the maintained application.
 
 ### Maintenance procedure
 
-1. Rehearse the candidate with representative data and boundaries. Verify a
-   coherent database/storage backup and restore procedure.
-2. Pin matching frontend and worker image identifiers. Render the deployment
-   configuration and inspect its target database and persistent volumes.
-3. Enter maintenance mode, prevent new writes/uploads, and drain or deliberately
-   stop active jobs. Stop frontend and workers so clients and background tasks
-   cannot continue writing.
-4. Take the coordinated backup. If the schema changes, prepare and validate a
-   separate target through the manual restore procedure; preserve the old target.
-5. Run the candidate image's read-only `database plan` and `database check`
-   against the selected target. Validate retained records and corresponding
-   storage. Stop if its schema is partial, foreign or has detected model drift.
-6. Only after validation, select the reviewed target and recreate application
-   services. Exercise login, permitted/denied access, deliveries, submissions
-   and a representative worker job.
-7. Leave maintenance mode and monitor. Record image identifiers, backup/restore
-   references, target identity and validation results.
+1. Rehearse source → target on disposable representative data and retained files.
+   Pin matching frontend/worker images, inspect the standalone Compose profile,
+   verify backup/candidate capacity and keep the previous image pair available.
+2. Enable maintenance and wait for positive worker acknowledgement and Ready.
+   Isolate external writers, scheduled commands and incompatible old instances.
+3. Create a verified native PostgreSQL backup including all retained application
+   file sections. Review omissions, remote objects, credentials/configuration and
+   cluster-global recovery material; retain an independent off-host copy.
+4. Install the target image under its supported maintenance admission procedure.
+   In Admin migrations, restore the backup into a separate operation-owned
+   candidate, verify the original restore and review supported source/history.
+5. Run the installed forward Django graph against the candidate only. Verify
+   target schema/history, records, administrator access and original file bytes.
+   No SQL migration moves storage or rewrites specifications/publications.
+6. Explicitly review and confirm the database switch. Keep maintenance on, old
+   database, backup, candidate, operation journals and file pins.
+7. Verify login, permitted/denied access, delivery/report/publication history and
+   a representative QC job. Reopen only after the release's recovery decision.
 
-```bash
-qc_compose config --quiet
-qc_compose pull
-```
+The [migration runbook](../../src/qc_tool/database/MIGRATIONS.md) describes initial
+3.0.0 candidate adoption, failure recovery and future release practice. Compatibility
+comes from supported schema/history/storage contracts, independently of the
+product's minor `3.0.x` and major `3.x.0` release labels. The interface runs only
+installed reviewed code; it does not download images or execute uploaded migrations.
 
-After configuration validation succeeds, enter maintenance and drain jobs.
-Stop all application writers:
+An interrupted upgrade retains the serving database and maintenance. Never clear
+a candidate, delete a pin/journal or fake recorder entries to force a retry. A
+lost transaction acknowledgement requires inspection. Non-atomic/data migrations
+need release-specific recovery; a fresh candidate from the retained backup avoids
+guessing which side effects occurred.
 
-```bash
-qc_compose stop worker frontend
-```
+Quick switch-back requires compatible code, the same uninterrupted maintenance
+generation and no reopened work. Across incompatible schemas, stop application
+services and recover with the previous pinned images and retained database/files
+under the reviewed offline procedure. Reversing migrations cannot reconstruct
+deleted rows/files. After reopening, use a forward fix or reviewed reconciliation
+so recovery does not silently discard accepted work.
 
-Take the coordinated backup described above. Configure only the reviewed target
-and inspect it with the pinned frontend image:
+SQLite does not have the Admin native PostgreSQL candidate workflow. Keep a
+consistent offline SQLite backup and use a separately reviewed disposable-copy
+upgrade procedure. Legacy conversion stays private manual operator work; do not
+restore legacy DDL over an initialized target.
 
-```bash
-qc_compose run --rm --no-deps frontend \
-  python3 -m qc_tool.frontend.manage database plan
-qc_compose run --rm --no-deps frontend \
-  python3 -m qc_tool.frontend.manage database check
-```
-
-Both commands inspect schema without writing application data. `database apply`
-is for empty-target initialization; it is not an upgrade or repair command.
-A complete current schema makes `apply` a read-only no-op. If validation fails,
-keep the services stopped, preserve the target, and review the discrepancy rather
-than resetting data or changing the schema to make startup pass.
-
-Continue only after schema, data, storage and application compatibility checks
-succeed:
-
-```bash
-qc_compose up --detach --remove-orphans --scale worker=4
-qc_compose exec frontend python3 -m qc_tool.frontend.manage check --deploy
-```
-
-Use the same service configuration and pinned image for validation and the
-application. The `run` command replaces ordinary startup and `--no-deps` avoids
-launching application services as a side effect. Prevent concurrent deployments
-with the deployment runner's environment lock. The repository does not supply a
-production deployment orchestrator.
-
-Production startup validates schema read-only. It does not verify restored
-business records, filesystem contents or S3 credentials. Keep those checks in
-the manual restore/recovery procedure. The first initialization attempt can use
-`--traceback`; retain its output in restricted logs and avoid a retry merely to
-obtain diagnostics.
+Production startup remains a read-only readiness gate. `database apply` is for
+empty-target initialization and a read-only repeat on a current managed target;
+it never performs an in-place upgrade merely to make startup pass. For an
+unsupported source/schema, preserve it and stop. The repository does not supply
+a production deployment orchestrator or prove Rancher importer compatibility.
 
 ## Scale workers
 

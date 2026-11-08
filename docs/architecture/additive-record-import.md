@@ -230,7 +230,10 @@ A release number such as v3.1.0 alone does not establish compatibility. Future
 contract changes need a reviewed data reader and fixtures proving field/history
 preservation. Unsupported drift is blocked with an explanation, never defaulted
 or discarded. Native backup remains available for preserving unsupported source
-schemas. The v3.0.0 models-only initialization policy remains unchanged.
+schemas. Package compatibility remains independent of the [managed 3.0.0
+migration transition](../../src/qc_tool/database/MIGRATIONS.md): additive import
+never authorizes schema adoption or upgrades an occupied database. Earlier
+history-free 3.0.0 adoption is confined to its exact supported restored candidate.
 
 ## Administrator workflow
 

@@ -272,10 +272,11 @@ that an old hashless QC job checked those bytes. Retain this distinction in the
 model and UI. Do not silently backfill `Job.input_sha256` with the hash of an
 arbitrary discovered ZIP and present it as historical QC evidence.
 
-Any future provenance model change in draft v3.0.0 must follow the current
-models-only policy and be tested on fresh disposable databases. This appendix
-does not propose changing or repairing a populated developer/production schema,
-adding first-party migrations, or importing legacy data converters.
+Any future provenance model change must follow the current managed database
+policy: add a reviewed forward migration and test fresh initialization and
+supported candidate upgrades on disposable databases. This appendix does not
+propose changing or repairing a populated developer/production schema directly
+or importing legacy data converters.
 
 ## Proposed job-bound resolver
 

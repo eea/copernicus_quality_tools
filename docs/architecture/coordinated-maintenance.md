@@ -145,7 +145,11 @@ Ready maintenance fences cooperating writers while readers may still have open
 database connections. Stop services and close readers before DDL or replacing
 a database; coordinate external writers separately. Back up the database with
 its referenced files, credentials and original specifications, and verify a
-restore. The [models-only database policy](../../src/qc_tool/database/README.md)
-is unchanged: initialization requires an entirely empty target, existing matching
-schemas are read-only no-ops, and incompatible occupied schemas are refused.
-Maintenance does not authorize schema repair, reset, migration or adoption.
+restore. The [managed database policy](../../src/qc_tool/database/README.md)
+keeps empty-target initialization separate from upgrades. Current managed schemas
+are read-only no-ops; unknown schema/history is refused. Maintenance readiness
+alone never authorizes schema repair/reset or arbitrary adoption. The explicit
+3.0.0 upgrade workflow requires a full verified backup, separate owned restored
+candidate, supported-source checks, installed Django migrations and reviewed
+switch. It retains the source, candidate and file pins. SQL migration does not
+move retained storage.

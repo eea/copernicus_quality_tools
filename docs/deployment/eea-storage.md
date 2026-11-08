@@ -174,7 +174,10 @@ Never copy a live raw PostgreSQL directory, mount PG14 bytes in PG17, initialize
 a populated/restored database, or reset/fake/alter an existing schema.
 Production startup performs a read-only readiness check; entirely empty new
 installations need an explicit whole-application `database plan|apply|check`
-procedure. v3.0.0 remains models-only and supplies no migration definitions.
+procedure. Managed 3.0.0 uses committed native Django migrations for fresh
+initialization. Supported upgrades migrate a separate restored candidate under
+ready maintenance before an explicit database switch; they do not move storage.
+See the [migration runbook](../../src/qc_tool/database/MIGRATIONS.md).
 
 Before switching traffic, verify schema, retained records/files, original
 checksums, version activation, login, permissions and a representative QC job.

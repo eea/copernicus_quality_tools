@@ -1,19 +1,21 @@
 # QC Tool 3.0.0
 
-## Major release: fresh database required
+## Database initialization and supported adoption
 
-QC Tool 3.0.0 uses a **models-only schema**, with no migration framework,
-first-party definitions, initial snapshots or legacy converter. The
-whole-application `database plan|check` commands inspect the schema read-only.
-`database apply` initializes an **entirely empty database** from current models,
-including in production; it is a read-only no-op for a complete matching schema.
-Partial or foreign schemas and detected model drift are refused. Initialization
-never upgrades or resets an existing database.
+The current QC Tool 3.0.0 includes **committed native Django migrations** for the
+whole application. `database plan|check` inspect schema and history read-only.
+`database apply` initializes an **entirely empty database** from committed history,
+including in production; it is a read-only no-op for a complete current managed
+schema. Partial or foreign schemas, unknown history and detected model drift are
+refused. Startup never upgrades or resets an existing database.
 
-The first migration-managed schema is reserved for an explicitly reviewed
-release from **3.0.1 onward**. Existing 3.0.0 tables cannot automatically adopt
-new initial migrations; a separate conversion/adoption plan is required. Never
-use fake migration records to bypass that transition.
+Earlier installations of the same 3.0.0 version may have a history-free,
+models-only schema. Only the exact supported complete schema can adopt initial
+history, using ready maintenance, a full backup and a separately verified
+restored candidate. The serving database and original file paths are retained;
+the administrator explicitly selects the verified copy before reopening.
+Future 3.0.1 and 3.1.0 releases preserve these migration identities and add
+reviewed forward migrations. Version labels alone do not prove compatibility.
 
 Legacy records are converted manually outside the codebase into a separate
 prepared database copy. Restore only a validated current-schema artifact using
@@ -37,6 +39,10 @@ database rows; historical dates do not become verified receipts or approvals.
   table controls, notifications and consistent workspace navigation.
 - API token access snapshots, credential-file references and publication history
   preserve explicit access boundaries and review provenance.
+- **Admin → Maintenance → Database migrations** shows schema/history readiness,
+  applied and pending changes, backup coverage, preparation progress and reviewed
+  database selection. SQL migrations preserve original specifications, delivery
+  ZIPs, QC artifacts and publications at their existing physical paths.
 
 ## Operator actions
 
@@ -45,9 +51,10 @@ credentials, and upload the original product specification files. Removed routes
 and country/region fields are not compatibility aliases; update integrations to
 the documented API, including `verified_product_unit_code`.
 
-Production can initialize an entirely empty database through the same models-only
-command. Run schema and data checks on a prepared restore before selecting it for
-cutover; do not attach a legacy database and expect startup to convert it.
+Production can initialize an entirely empty database through the same native
+migration command. Use the guarded candidate workflow for supported adoption or
+upgrades. Run schema, history, data, access and storage checks before selecting a
+prepared copy; do not attach a legacy database and expect startup to convert it.
 `QC_TOOL_INITIALIZE_ON_STARTUP=yes` is reserved for development/test convenience.
 
 Use a verified frontend/worker image pair from the same release. Image publication

@@ -5,6 +5,7 @@ not presentation classes or template whitespace.  Feature templates may change
 their layout while the shared page chrome remains recognisable and accessible.
 """
 
+from qc_tool.frontend.dashboard.tests.boundary_fixtures import ready_boundary_package
 import re
 from contextlib import ExitStack
 from html.parser import HTMLParser
@@ -343,6 +344,7 @@ class SharedPageChromeTests(TestCase):
     """Keep navigable pages in one coherent, accessible hierarchy."""
 
     def setUp(self):
+        ready_boundary_package(self)
         self.user = get_user_model().objects.create_user(
             username="page-chrome-owner",
             password="test-password",

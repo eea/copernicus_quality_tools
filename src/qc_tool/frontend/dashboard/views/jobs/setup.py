@@ -18,6 +18,7 @@ from qc_tool.frontend.dashboard.services.configuration.presentation import (
     get_announcement_message,
 )
 from qc_tool.frontend.dashboard.services.requests import IdentifierListError
+from qc_tool.frontend.dashboard.services.jobs.prerequisites import job_prerequisite_context
 from qc_tool.frontend.dashboard.services.requests import (
     parse_positive_identifier_list,
 )
@@ -73,11 +74,15 @@ def setup_job(request):
             "has_filename_hints": False, "identification_blocks_jobs": True,
             "identification_notice": "Delivery filename recognition is temporarily unavailable. Try again later.",
         }
+    prerequisites = job_prerequisite_context(account_access)
+    if not prerequisites["available"]:
+        response_status = 503
     return render(
         request,
         "dashboard/jobs/setup.html",
         {
             "deliveries": deliveries,
+            "qc_prerequisites": prerequisites,
             **identification_context,
             "show_logo": settings.SHOW_LOGO,
             "announcement": get_announcement_message(),

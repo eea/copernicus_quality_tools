@@ -1,0 +1,14 @@
+{% if pending_names %}
+  <section class="module transfer-panel" id="migration-plan" aria-labelledby="migration-plan-heading">
+    <h2 id="migration-plan-heading">{% if migration_initializes_history %}Initial Django migration history to record{% else %}Pending Django migrations{% endif %} ({{ pending_names|length }})</h2>
+    <div class="transfer-panel__body">
+      <p>{% if migration_source_unavailable %}These installed changes are shown for investigation. Resolve the schema or access blockers before preparing a copy.{% elif migration_initializes_history %}The candidate's existing schema must match the supported source exactly before initial history is recorded.{% else %}These changes are included in the installed release. They run in dependency order on a separate restored copy, followed by verification and a separate database switch.{% endif %}</p>
+      <ol class="migration-plan-list">{% for item in migration_pending_rows %}<li>
+        <details><summary><span>{{ item.area }}</span> <code>{{ item.identity }}</code>{% if not item.atomic %} <strong class="migration-badge">Non-atomic</strong>{% endif %}</summary>
+          {% if not item.atomic %}<p class="transfer-warnings"><strong>Non-atomic migration.</strong> Partial changes may remain on the candidate if execution stops. Review the release recovery procedure before continuing.</p>{% endif %}
+          {% if item.operations %}<ul>{% for description in item.operations %}<li>{{ description }}</li>{% endfor %}</ul>{% else %}<p>No operation descriptions are available. Review the release's migration files before proceeding.</p>{% endif %}
+        </details>
+      </li>{% endfor %}</ol>
+    </div>
+  </section>
+  {% endif %}

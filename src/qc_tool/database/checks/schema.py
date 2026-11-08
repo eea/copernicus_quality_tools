@@ -1,4 +1,4 @@
-"""Verify current models on an entirely empty disposable test database.
+"""Verify committed native migrations on an empty disposable test database.
 
 Run in the pinned frontend runtime with QC_TOOL_ENVIRONMENT=test and explicit
 isolated DB settings. This command never resets or upgrades an existing target.
@@ -125,6 +125,17 @@ def verify_declared_constraints_and_indexes():
     SchemaInitializer(connection).check()
 
 
+def verify_native_history():
+    from django.db import connection
+    from qc_tool.database.migration_engine import migration_status
+    from qc_tool.database.policy import MANAGED_APPS
+
+    report = migration_status(connection)
+    if (report["state"] != "ready" or report["pending"]
+            or not set(MANAGED_APPS).issubset({item["app"] for item in report["applied"]})):
+        raise RuntimeError("Fresh native migrations did not establish the complete application/framework history.")
+
+
 def main():
     if os.environ.get("QC_TOOL_ENVIRONMENT", "").strip().casefold() != "test":
         raise RuntimeError("This check requires QC_TOOL_ENVIRONMENT=test.")
@@ -148,6 +159,7 @@ def main():
 
     call_command("database", "apply", verbosity=0)
     verify_declared_constraints_and_indexes()
+    verify_native_history()
     verify_account_bootstrap()
     if (apps.get_model("auth", "User").objects.exists()
             or apps.get_model("dashboard", "Product").objects.exists()):
@@ -171,7 +183,7 @@ def main():
             ))):
         raise RuntimeError("Repeated initialization changed role or permission records.")
     verify_declared_constraints_and_indexes()
-    print(f"{connection.vendor}: current-model schema, synthetic records, read-only repeat apply and roles passed.")
+    print(f"{connection.vendor}: native schema/history, synthetic records, read-only repeat apply and roles passed.")
 
 
 if __name__ == "__main__":

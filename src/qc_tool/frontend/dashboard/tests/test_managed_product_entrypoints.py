@@ -1,5 +1,6 @@
 """Bundled definitions become available only through a managed catalog entry."""
 
+from qc_tool.frontend.dashboard.tests.boundary_fixtures import ready_boundary_package
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -24,6 +25,7 @@ from .catalog_fixtures import managed_definition
 @override_settings(MAINTENANCE_MODE=False)
 class ManagedProductEntrypointTests(TestCase):
     def setUp(self):
+        ready_boundary_package(self)
         self.user = get_user_model().objects.create_superuser(
             username="catalog-admin", email="admin@example.test", password="test-only",
         )

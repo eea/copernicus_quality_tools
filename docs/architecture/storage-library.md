@@ -8,7 +8,8 @@ nav_order: 12
 
 Admin Storage provides read-only libraries over existing domain records and
 immutable files. It does not introduce a version store, alter a specification,
-move directories, infer an approval or change the models-only database policy.
+move directories or infer an approval. Managed database upgrades preserve these
+file identities and retention pins; see the [migration runbook](../../src/qc_tool/database/MIGRATIONS.md).
 
 ## Sources of truth
 

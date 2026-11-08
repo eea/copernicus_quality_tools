@@ -29,14 +29,19 @@ Control maintenance through **Admin → Maintenance mode** or the operator
 manifests need no maintenance setting, and switching modes does not require a
 container restart.
 
+Turning maintenance off through either interface requires the selected database
+to match the installed schema and complete migration history. The shared service
+checks this immediately before reopening. A supported source admitted for upgrade
+recovery stays paused until its candidate is migrated, verified and explicitly
+selected; the operator command cannot bypass that gate.
+
 Deploy the matching frontend and worker source/images together. An old worker
 does not implement the maintenance acknowledgment; it prevents readiness.
-Maintenance itself adds no application-model change. Administrative record
-transfers require the current `qc_database_transfer_receipt` model table; an
-earlier draft database must be preserved and moved through a separately reviewed
-cutover, never repaired at startup. The database policy stays `draft` with no baselines, first-party migration definitions or
-initial snapshots. Keep using `database plan|check|apply` from the
-[database runbook](../../src/qc_tool/database/MIGRATIONS.md).
+Administrative transfers and migrations share this ready maintenance barrier.
+The managed 3.0.0 release requires complete reviewed schema/history; older draft
+databases are never repaired at startup. Exact supported models-only 3.0.0
+adoption is candidate-only. Follow `database plan|check|apply` and the guarded
+upgrade procedure in the [migration runbook](../../src/qc_tool/database/MIGRATIONS.md).
 
 All frontend processes/containers and maintenance commands must share the same
 persistent `WORK_DIR/maintenance` directory, with working cross-process POSIX
@@ -281,15 +286,18 @@ service shutdown. UI readiness is
 application quiescence, not an exclusive PostgreSQL lock or a credential
 revocation. The persisted maintenance flag remains on when the frontend starts
 again. Restart matching services, validate the target and then resume via UI or
-the command below. v3.0.0 never upgrades/repairs a nonempty schema; changed models
-need a separate prepared target. A migration-managed transition belongs to a
-separate reviewed v3.0.1-or-later release.
+the command below. Startup never upgrades/repairs a nonempty schema. Managed
+3.0.0 upgrades use a separate verified restore candidate and installed native
+Django migrations before an explicit switch. SQL migration preserves retained
+file identities; keep backup, old database, journals and file pins.
 
 The Admin native restore instead prepares a separate empty database while the
 serving copy remains intact. Its separately reviewed **Switch active database**
 action keeps maintenance on and retains the previous copy. **Switch back** is
 limited to the same uninterrupted maintenance generation before reopening;
-after ordinary work resumes, use a new reviewed transfer instead. See
+after ordinary work resumes, use a new reviewed recovery decision instead.
+Switch-back also requires compatible installed code; across incompatible schemas
+recover offline using the previous images and retained database/storage. See
 [Import and export records](../user-guide/record-transfers.md).
 
 Process termination may retain incomplete job files or worker-local temporary

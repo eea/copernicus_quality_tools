@@ -1,47 +1,55 @@
-# QC Tool installation record: <version>
+# QC Tool installation and upgrade record: <version>
 
-Record evidence for the exact database copy and application images before manual
-production installation. Store credential references, never secret values.
-See [initialization](MIGRATIONS.md) and [manual restore](MANUAL_RESTORE.md).
-v3.0.0 has no migration history or upgrade machinery.
+Record the exact release, database copy and storage before production installation.
+Store credential references, never secret values. Follow the [migration runbook](MIGRATIONS.md)
+and [manual restore guide](MANUAL_RESTORE.md).
 
-## Identity and source
+## Release and recovery identity
 
 | Item | Value |
 | --- | --- |
-| Owner/operator and planned cutover time | |
-| Version and source commit | |
-| Frontend/worker immutable image digests | |
-| Target PostgreSQL version and new database identity | |
-| Archive filename, SHA-256 and restore evidence | |
-| Source capture dates, provenance and known omissions | |
-| Shared storage backup identities | |
-| Recovery copy and traffic-switch rollback procedure | |
+| Operator and maintenance window | |
+| Source release, commit, schema contract and migration history | |
+| Target release, commit and reviewed graph/hash | |
+| Matching frontend/worker immutable image digests | |
+| PostgreSQL server/client major and source/candidate OIDs | |
+| Maintenance generation and selection revision | |
+| Archive SHA-256, selected/omitted sections and original restore evidence | |
+| Source dates, provenance and missing/external content | |
+| Storage identities, checksums and retention pins | |
+| Private configuration/credentials/globals recovery references | |
+| Independent off-host backup and restore rehearsal | |
+| Previous images/database and compatible or offline recovery procedure | |
 
-## Verification
+## Verification gates
 
-- [ ] Restore archive into an entirely empty isolated target; checksum matches.
-- [ ] `database check` passes with the selected source/image in production mode.
-- [ ] IDs, ownership, timestamps, record counts, foreign keys and sequences match.
-- [ ] Historical submitted filenames reject duplicate admission, including case changes.
-- [ ] Account passwords and permitted product access are explicitly provisioned.
-- [ ] Original specifications/catalog and shared input/report/submission files are available.
-- [ ] Credentials, boundary storage and active worker configuration are verified.
-- [ ] Login, denied/allowed access, new upload, QC, publication and review are verified.
-- [ ] Same-input QC pass/fail agrees with production, except damaged ZIPs.
-- [ ] Source writes/workers and target traffic have a coordinated cutover plan.
+- [ ] Source schema/history matches its explicit supported contract.
+- [ ] Target migrations are committed, reviewed and unchanged.
+- [ ] Maintenance is ready; workers acknowledged and external writers isolated.
+- [ ] Backup covers SQL and retained files; omissions/remote/private requirements are explicit.
+- [ ] Checksum and exact original restoration verify in a separate owned candidate.
+- [ ] Initial adoption, if needed, affects only that strictly verified candidate.
+- [ ] Native migrations complete; target schema/history and administrator access verify.
+- [ ] IDs, passwords, tokens, ownership, timestamps, FKs, sequences and business history reconcile.
+- [ ] Original specifications, ZIPs, boundaries, results and publications retain identities and verified bytes.
+- [ ] Explicit switch retains previous database, backup, journals and file pins.
+- [ ] Login, denied/allowed access, upload, QC, publication, review and readiness pass with the exact images.
+- [ ] Recovery and the point where quick rollback expires are understood.
+- [ ] Operator authorizes reopening and monitors the selected target.
 
-## Ordered manual installation
+## Ordered evidence
 
-| Order | Exact command/action | Expected result | Actual evidence |
+| Order | Action | Expected result | Actual evidence |
 | --- | --- | --- | --- |
-| 1 | Verify target identity, recovery assets and source-write handling | | |
-| 2 | Restore into a new empty target, or initialize a completely new installation | | |
-| 3 | Check schema and reconcile data/files/access | | |
-| 4 | Start the compatible frontend and workers | | |
-| 5 | Run workflow checks and switch traffic | | |
-| 6 | Monitor and retain recovery copy | | |
+| 1 | Rehearse supported source → target on a disposable copy | | |
+| 2 | Verify images, storage, capacity and maintenance | | |
+| 3 | Create and independently retain coordinated backup | | |
+| 4 | Restore and verify a separate candidate | | |
+| 5 | Apply installed migrations; verify schema/files/access | | |
+| 6 | Explicitly select candidate with recovery assets retained | | |
+| 7 | Verify workflows, reopen and monitor | | |
 
-Stop on any failed prerequisite. Existing databases are never reset, faked or
-repaired by the initializer. No production action is implied by preparing this
-record or a private local database copy.
+Stop on failed prerequisites. Never reset, repair or fake history on an occupied
+production/developer database. Retain uncertain candidates and evidence after lost
+acknowledgements. Across incompatible schemas, recover with previous images and
+retained data offline. Reverse migrations cannot reconstruct discarded data/files.

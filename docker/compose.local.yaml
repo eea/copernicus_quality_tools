@@ -55,9 +55,9 @@ services:
       DJANGO_DEBUG: "no"
       DJANGO_SECRET_KEY: development-only-compose-secret
       DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,frontend,testserver"
-      QC_TOOL_BOOTSTRAP_DEMO_USERS: "yes"
-      QC_TOOL_INITIALIZE_ON_STARTUP: "yes"
-      QC_TOOL_DEV_SERVER: "yes"
+      QC_TOOL_BOOTSTRAP_DEMO_USERS: "${QC_TOOL_BOOTSTRAP_DEMO_USERS:-yes}"
+      QC_TOOL_INITIALIZE_ON_STARTUP: "${QC_TOOL_INITIALIZE_ON_STARTUP:-yes}"
+      QC_TOOL_DEV_SERVER: "${QC_TOOL_DEV_SERVER:-yes}"
       # Existing deployment overrides; absent values use application defaults.
       PRODUCT_DIRS:
       QC_TOOL_RESTORE_DATABASE:

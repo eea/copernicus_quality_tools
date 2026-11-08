@@ -2,6 +2,7 @@
 
 from django.db import transaction
 
+from qc_tool.frontend.accounts.services.actors import actor_username
 from qc_tool.frontend.dashboard.access.deliveries import can_manage_delivery
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission
@@ -16,7 +17,6 @@ from .eligibility import latest_successful_job
 from .eligibility import validate_delivery
 from .eligibility import validated_input_digest
 from .eligibility import validated_submitted_product_unit
-from .mapping import actor_username
 from .mapping import reserved_contract
 
 

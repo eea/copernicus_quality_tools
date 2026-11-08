@@ -54,9 +54,10 @@ def overview_directions(request, *, can_manage_users, can_manage_access):
         },
         {
             "key": "maintenance", "label": "Maintenance", "icon": "settings", "tone": "violet",
-            "description": "Turn maintenance on or off, manage backups and restore a reviewed backup.",
+            "description": "Turn maintenance on or off, manage backups and prepare reviewed database upgrades.",
             "url": reverse("admin_maintenance"), "action_label": "Open maintenance",
-            "tasks": [],
+            "tasks": [{"label": "Database migrations", "url": reverse("admin_migrations"),
+                       "description": "Review installed migrations and upgrade a retained database copy", "icon": "columns"}],
         },
     ])
     return directions

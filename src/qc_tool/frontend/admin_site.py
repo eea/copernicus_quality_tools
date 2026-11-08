@@ -50,7 +50,7 @@ class QCAdminSite(AdminSite):
         section = "overview"
         if route.startswith("admin_database"):
             section = "database"
-        if route.startswith(("admin_data_transfer", "admin_maintenance", "admin_backup_")):
+        if route.startswith(("admin_data_transfer", "admin_maintenance", "admin_backup_", "admin_migration")):
             section = "maintenance"
         if route == "admin_user_management":
             section = "users"

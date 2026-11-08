@@ -461,7 +461,7 @@ class PostgreSQLDatabaseControlTests(TransactionTestCase):
                                       destination_confirmation=self.source, confirmed_storage=True)
         enabled = maintenance.enable(self.actor, off["generation"])
         maintenance.advance(enabled["generation"])
-        with self.assertRaisesMessage(TransferError, "Rollback is unavailable"):
+        with self.assertRaisesMessage(TransferError, "Quick recovery expired when maintenance was turned off"):
             service.rollback_database(self.actor, generation=enabled["generation"], revision=activated["revision"],
                                       destination_confirmation=self.source, confirmed_storage=True)
         self.assertEqual(self.current_database(), target)

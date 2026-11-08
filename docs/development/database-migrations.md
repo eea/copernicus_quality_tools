@@ -1,47 +1,39 @@
 ---
-title: Database initialization
+title: Database migrations
 parent: Development
 nav_order: 5
 ---
 
-# Database initialization
+# Database migrations
 
-The [QC Tool database guide](../../src/qc_tool/database/README.md) owns the
-models-only policy, initialization command, schema checks and release evidence
-for the whole application. **3.0.0 contains no migration framework, definitions,
-initial snapshots or legacy converter.** Current Django models define the schema.
+The current QC Tool **3.0.0 includes committed native Django migrations** and
+explicit adoption of the supported history-free schema from earlier installations
+of that same application version. The central [database package](../../src/qc_tool/database/README.md)
+owns validation and the [migration runbook](../../src/qc_tool/database/MIGRATIONS.md)
+owns the procedure. Read them from the same revision as the release image.
 
 | Task | Instructions |
 | --- | --- |
-| Change a model | Change the owning model and verify a new disposable target; initialization does not upgrade existing databases |
-| Inspect an existing database | Run `database plan` and `database check`; both inspect schema without changing data or repairing it |
-| Initialize a new installation | Run `database plan`, then `database apply` against an entirely empty target, followed by `database check` |
-| Use a prepared database copy | Follow the [manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md); validate schema, records and corresponding storage before cutover |
-| Prepare an application release | Record matching source/image identifiers and complete the [release template](../../src/qc_tool/database/RELEASE_TEMPLATE.md) |
-| Deploy or recover an installation | Follow the [deployment guide](../deployment/index.md) and [operations guide](../deployment/operations.md#upgrades) |
+| Change a model | Generate and review a Django migration in development; commit it with the model and upgrade tests |
+| Check committed model state | `manage makemigrations --check --dry-run`; CI never generates files |
+| Inspect a database | Read-only `database plan` and `database check` |
+| Initialize an installation | Explicit `database apply` on an entirely empty target, then `database check` |
+| Upgrade a supported release | Maintenance, full backup, separate restored candidate, installed migrations, verification, explicit switch |
+| Adopt history-free 3.0.0 | Exact supported schema on an operation-owned verified candidate only |
+| Prepare a release | Record source contract, graph, images, storage coverage and recovery evidence in the [release template](../../src/qc_tool/database/RELEASE_TEMPLATE.md) |
 
-`database apply` supports an entirely empty production database. For a complete
-schema matching the current models it performs a read-only no-op. It refuses
-partial or foreign schemas and detected model drift; it never resets a database,
-repairs existing tables or converts legacy records. An empty product catalog does not mean that
-the database is empty.
+Startup never applies pending migrations. Unknown drift/history is refused.
+The project's minor `3.0.x` and major `3.x.0` naming is independent of migration
+graph and storage compatibility.
 
-Readiness inspection compares required managed tables, columns, backend types,
-nullability, primary-key generation, foreign keys, uniqueness, named `Meta`
-CHECK predicates and declared index definitions. It also checks SQLite JSON
-validity. It does not exhaustively compare field-generated positive-integer
-CHECKs, arbitrary additional constraints, triggers or privileges. Schema readiness
-does not prove restored record completeness, account authorization or storage
-availability; verify those against the handoff manifest and application workflows.
+SQL records refer to original specifications, ZIPs, QC results and retained
+publications outside SQL. Transactions cannot roll files back. The upgrade path
+preserves their identities and bytes and retains pins for inactive databases.
+A storage path/format change needs a separate reviewed procedure. Legacy conversion
+stays outside the maintained application.
 
-Legacy conversion and its source archives are private operator work outside the
-maintained application. Restore a validated current-schema artifact into a
-separate target; never restore legacy DDL over an application database.
-
-The first migration definitions may be introduced only in a separately reviewed
-3.0.1-or-later release. That future work must define an explicit transition for
-existing databases; this branch supplies no migration or automatic adoption path.
-
-Read the guide and commands from the same source revision as the pinned release
-image. This page provides navigation; keep the implementation and procedure in
-`src/qc_tool/database/` so they have one owner.
+Use disposable SQLite/PostgreSQL targets for tests. The Admin native backup and
+candidate-switch journey requires PostgreSQL; engine support for SQLite does not
+imply a browser upgrade workflow. See [testing](testing.md),
+[deployment](../deployment/index.md), [maintenance](../deployment/maintenance.md)
+and [operations](../deployment/operations.md#upgrades).

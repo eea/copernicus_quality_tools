@@ -14,7 +14,7 @@ from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.context_processors import maintenance_context
 from qc_tool.frontend.dashboard.services import maintenance
 from qc_tool.frontend.dashboard.services.admin_feedback import busy_context
-from qc_tool.frontend.dashboard.services.database_navigation import maintenance_task_urls
+from qc_tool.frontend.dashboard.services.database_navigation import maintenance_task_urls, maintenance_operation_url
 from qc_tool.frontend.dashboard.services.maintenance.operations import active_operation
 
 
@@ -41,6 +41,7 @@ def _transfer_return_url(request):
         or parsed.path not in {
             reverse("admin_data_transfer"), reverse("admin_database"), reverse("admin_user_management"),
             reverse("admin_backup_export"), reverse("admin_backup_import"),
+            reverse("admin_migrations"),
             reverse("admin_storage"), reverse("admin_storage_file"), reverse("admin_storage_trash"),
         }
     ):
@@ -181,7 +182,7 @@ def maintenance_control(request):
             "busy": action_busy or control_busy,
             "transfer_active": bool(transfer_operation),
             "transfer_url": (
-                reverse("admin_data_transfer") + "?operation=" + transfer_operation["operation_id"]
+                maintenance_operation_url(transfer_operation)
                 if transfer_operation else ""
             ),
         }, status=response_status)
@@ -193,7 +194,7 @@ def maintenance_control(request):
     if transfer_operation or action_busy or control_busy:
         notice_context["can_disable"] = False
         notice_context["resume_blocked_reason"] = (
-            "A database transfer owns maintenance. Complete or recover it before turning maintenance off."
+            "A database operation owns maintenance. Complete or recover it before turning maintenance off."
             if transfer_operation else
             "Another administrator action is still running. Wait for it to finish before turning maintenance off."
         )
@@ -201,7 +202,7 @@ def maintenance_control(request):
         **admin.site.each_context(request),
         **maintenance_task_urls(),
         "title": "Maintenance",
-        "maintenance_page_description": "Turn maintenance on or off, create backups and restore saved ZIPs.",
+        "maintenance_page_description": "Turn maintenance on or off, manage backups and prepare database upgrades.",
         "admin_section": "maintenance",
         "maintenance": {
             **status, **notice_context,
@@ -218,6 +219,7 @@ def maintenance_control(request):
         "busy_message": action_error or "An administrator action is already using maintenance. Wait for it to finish before trying again.",
         "maintenance_unavailable": maintenance_unavailable,
         "transfer_operation": transfer_operation,
+        "maintenance_operation_url": maintenance_operation_url(transfer_operation) if transfer_operation else "",
         "transfer_return_url": _transfer_return_url(request),
         "progress_pending": progress_pending,
     }

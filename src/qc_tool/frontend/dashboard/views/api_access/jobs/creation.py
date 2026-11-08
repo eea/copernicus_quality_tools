@@ -2,6 +2,8 @@
 
 from django.http import JsonResponse
 
+from qc_tool.frontend.dashboard.services.jobs.prerequisites import JobPrerequisiteUnavailable
+
 
 def create_job(
     request,
@@ -75,6 +77,11 @@ def create_job(
                 "message": str(exc),
             },
             status=403,
+        )
+    except JobPrerequisiteUnavailable as exc:
+        return JsonResponse(
+            {"status": "error", "code": exc.code, "message": exc.message},
+            status=exc.status_code,
         )
     except ValueError as exc:
         return JsonResponse(

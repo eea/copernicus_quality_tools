@@ -266,7 +266,7 @@ Never enable these settings in production. Initialize an entirely empty
 production target through an explicit deployment job using the pinned release
 image. Restore a prepared current-schema copy separately; initialization does
 not upgrade existing tables. See
-[Database initialization](../development/database-migrations.md).
+[Database migrations](../development/database-migrations.md).
 
 ## Worker connectivity and debugging
 

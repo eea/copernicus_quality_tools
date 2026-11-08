@@ -15,16 +15,20 @@ and declared constraint/index checks passed on that disposable target. No
 existing development or production database was changed.
 
 This is a reference, not an executable schema snapshot or a second schema owner.
-Models describe the current schema. Initial migration history is reserved for a
-separately reviewed release from **3.0.1 onward**. The SQL definitions below
+Models describe the current schema and committed migrations own its history.
+The [current 3.0.0 release record](releases/3.0.0.md) and
+[migration runbook](MIGRATIONS.md) govern managed initialization and upgrades.
+The [models-only record](releases/3.0.0-models-only.md) preserves the original
+installation evidence. The SQL definitions below
 record PostgreSQL access paths and integrity rules; they are not a script for
 upgrading an existing database. A fresh production installation uses explicit initialization or a manual archive
 restore; full application and artifact verification remain separate release gates.
 
-The current draft also includes the administrative transfer receipt documented
+The field reference also includes the administrative transfer receipt documented
 below (added 2026-10-20). The 2026-10-13 totals are historical evidence and do not
-include that addition; fresh schema verification is required for the current
-model set. This feature does not upgrade an earlier draft database in place.
+include that addition or managed migration history; verify the current schema
+against the committed graph. An earlier draft missing the receipt is not the
+supported history-free source and is never upgraded in place.
 
 ## How to read the columns
 
@@ -1193,10 +1197,11 @@ lacks the table is refused; verification uses a fresh disposable target.
 
 ## Migration history
 
-`django_migrations` is absent from the v3.0.0 models-only schema and is not a
-registered application model. No migration-management or adoption machinery is
-included. Any first migration history in 3.0.1 or later needs a separate reviewed
-transition; do not import or fake legacy migration records.
+`django_migrations` was absent from the historical models-only schema measured
+above and is not a registered application model. The current 3.0.0 build includes
+committed native Django migration history. Its exact supported history-free
+source can be adopted only on a verified separate candidate under the
+[migration runbook](MIGRATIONS.md); do not import or fake legacy migration records.
 
 ## Keeping this reference current
 

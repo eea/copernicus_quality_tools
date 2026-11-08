@@ -546,7 +546,7 @@ def _queue(prepare, generation):
         operation.update(status="queued", generation=generation, queued_at=store.now(),
                          message="Waiting for the dedicated transfer runner.", error="")
         store.save_operation(operation)
-        pin_operation(operation["id"], operation["kind"], generation)
+        pin_operation(operation["id"], "upgrade" if operation.get("upgrade") else operation["kind"], generation)
     _launch(operation)
     return _public(operation)
 
@@ -853,6 +853,8 @@ def start_import(operation_id, actor, plan_hash, generation, confirmed_scope=Fal
     _authorize(actor)
     def prepare():
         operation = store.read_operation(operation_id)
+        if operation.get("upgrade"):
+            raise TransferError("Review and start this upgrade from Database migrations.")
         if (operation["kind"] != "import" or operation["status"] != "planned" or not confirmed_scope
                 or not operation.get("plan") or operation["plan"]["plan_hash"] != plan_hash
                 or not operation["plan"]["can_apply"]):
@@ -1034,6 +1036,9 @@ def run_operation(operation_id):
     with store.execution_lock():
         operation = store.read_operation(operation_id)
         with _ready_guard(operation.get("generation"), owner=operation_id):
+            if operation.get("upgrade"):
+                from qc_tool.database.upgrades import service as upgrades
+                return upgrades.run(operation)
             if operation.get("profile") == "database":
                 return _run_database_operation(operation)
             # A completed journal written before unpinning needs only cleanup.
@@ -1368,6 +1373,8 @@ def _discard_package(operation_id):
 
 def recover_operation(operation_id, actor, action):
     _authorize(actor)
+    if store.read_operation(operation_id).get("upgrade"):
+        raise TransferError("Recover this upgrade from Database migrations; ordinary import retry is not safe for migrations.")
     with store.execution_lock():
         operation = store.read_operation(operation_id)
         if action == "retry":

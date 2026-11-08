@@ -68,7 +68,7 @@ On the first run, this command:
 2. pulls the published worker and PostgreSQL images if necessary;
 3. creates persistent Docker volumes;
 4. waits for PostgreSQL;
-5. initializes an entirely empty database from current models, then collects
+5. initializes an entirely empty database from committed migrations, then collects
    static files;
 6. creates development-only demo users;
 7. starts the frontend and worker health checks.
@@ -77,12 +77,13 @@ The repository is mounted read-only over the source packaged in both
 containers. Frontend Python changes are picked up by Django's development
 server. Restart the worker after changing worker or shared Python code.
 
-v3.0.0 builds its schema directly from models and ships no migration or legacy
-conversion machinery. Initialization does not import products or upgrade existing
-tables. A complete matching database is unchanged; partial or foreign schemas
-and detected model drift are refused. Model changes require a separate fresh development target;
-restarting never resets retained users or records. See
-[Database initialization](../development/database-migrations.md).
+3.0.0 uses committed native Django migration history. Local initialization does
+not import products or upgrade an occupied database at startup. A current managed
+database remains unchanged; unsupported schema/history is refused. Supported
+upgrades use ready maintenance, a verified backup and separate candidate before
+an explicit switch. Restarting never resets retained users or records. The
+supported history-free schema from earlier 3.0.0 installations is adopted only on its strictly verified
+restored copy. See [Database migrations](../development/database-migrations.md).
 
 Normal production startup validates schema read-only. Local Compose enables
 `QC_TOOL_INITIALIZE_ON_STARTUP=yes` for development. Production initialization is

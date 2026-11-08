@@ -5,6 +5,7 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
+from qc_tool.frontend.accounts.services.actors import actor_username
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import ProductRelease
@@ -16,7 +17,6 @@ from qc_tool.frontend.dashboard.services.catalog.sync.locks import lock_catalog_
 from .conflicts.access import require_resolution_scope
 from .errors import SubmissionError
 from .review_history import record_review_decision
-from .reservation.mapping import actor_username
 
 
 def review_submission(

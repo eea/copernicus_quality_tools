@@ -98,27 +98,21 @@ Build tools are upgraded in the final worker environment as well. These changes
 are checked with dependency validation and the affected runtime tests; this is
 not a claim that every system dependency has been security-certified.
 
-## Existing database cutover
+## Managed migration transition
 
-An earlier v3 draft database missing `qc_database_transfer_receipt` is incompatible
-with the current models. The new table supplies atomic import receipts; omitting
-it or bypassing readiness would remove a recovery guarantee.
+Earlier sections retain their recorded verification dates and evidence. They do
+not by themselves verify the 3.0.0 migration-management transition. See the
+[current release record](../../src/qc_tool/database/releases/3.0.0.md) and
+[migration runbook](../../src/qc_tool/database/MIGRATIONS.md) for its supported
+source contract, candidate-only adoption and installation gates.
 
-Under the [v3.0.0 database policy](../../src/qc_tool/database/README.md), `database
-apply` initializes only an entirely empty database. It cannot add a missing table
-to an occupied database. Portable Admin exports require a matching schema;
-complete native PostgreSQL backups can preserve an older schema without altering
-it. Activating a restored copy still requires current-model readiness.
-
-For retained data, preserve a native PostgreSQL backup and matching files/secrets,
-then prepare and verify a separate current-schema target through the reviewed
-manual handoff procedure. Do not restore old DDL over a model-created target.
-For a new installation, initialize a separate empty target explicitly and
-provision accounts, specifications and boundaries before accepting QC work.
-
-Future migration management begins with a separate reviewed v3.0.1-or-later
-transition. The record-transfer reader refuses unknown model contracts rather
-than guessing a conversion from a release version.
+A source missing `qc_database_transfer_receipt`, with unknown drift or unknown
+history is not silently adopted. Native PostgreSQL backup still preserves its
+own schema and all rows. A supported upgrade requires a verified separate
+candidate, installed Django graph, storage/access checks and explicit switch.
+Keep previous images/database, backup, journals and file pins. Across incompatible
+schemas use the old images and retained data under an offline recovery procedure.
+Production restore/release publication remain separately recorded operator actions.
 
 ## Installation checks that remain operator responsibilities
 

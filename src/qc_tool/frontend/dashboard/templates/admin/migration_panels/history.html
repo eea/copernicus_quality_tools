@@ -1,0 +1,9 @@
+<section class="module transfer-panel" aria-labelledby="migration-history-heading"><h2 id="migration-history-heading">Upgrade history</h2><div class="transfer-panel__body">
+    <p>Database copy preparations and upgrade attempts on this installation. A verified copy becomes active only after an explicit switch.</p>
+    {% if migration_operations %}<ul class="migration-history">{% for item in migration_operations %}<li>
+      <div class="migration-history-heading"><a href="{{ item.url }}">{% if item.upgrade.initializes_history %}Initialize migration history{% else %}Database upgrade{% endif %}{% if item.upgrade.target_release %} · QC Tool {{ item.upgrade.target_release }}{% endif %}</a><strong class="migration-badge">{{ item.status_label }}</strong></div>
+      <p class="help">{{ item.created_local|default:'Time not recorded' }} · <a href="{{ item.url }}">View details &amp; available actions</a></p>
+      {% if item.message %}<p>{{ item.message }}</p>{% endif %}
+      {% if item.destination.database %}<p class="migration-history-database">Copy: <code>{{ item.destination.database }}</code></p>{% endif %}
+    </li>{% endfor %}</ul>{% else %}<p>No upgrade copies have been prepared on this installation. Applied Django history is listed separately above.</p>{% endif %}
+  </div></section>

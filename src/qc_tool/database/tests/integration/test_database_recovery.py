@@ -2,7 +2,10 @@
 
 from copy import deepcopy
 from io import StringIO
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
 from pathlib import Path
+from threading import Thread
 from tempfile import TemporaryDirectory
 from unittest import skipUnless
 from unittest.mock import patch
@@ -13,10 +16,16 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.db import connection, connections
 from django.test import SimpleTestCase, TransactionTestCase, override_settings
+from django.test import RequestFactory
+from django.http import HttpResponse
+from django.urls import reverse
 from django.test.utils import CaptureQueriesContext
 
 from qc_tool.database import selection
+from qc_tool.database.policy import MANAGED_APPS
+from qc_tool.database.tests.integration.test_deployment import fresh_sqlite
 from qc_tool.database.transfers import store
+from qc_tool.common import CONFIG
 from qc_tool.frontend.dashboard.services import maintenance
 
 
@@ -113,8 +122,117 @@ class PostgreSQLDatabaseRecoveryTests(TransactionTestCase):
         self.assertEqual(error.exception.returncode, 2)
 
     def test_recovery_refuses_when_maintenance_has_ended(self):
-        self.selected()
+        # End a healthy maintenance window first, then model an unavailable
+        # selected copy. The central guard now correctly refuses reopening an
+        # already unavailable target, so that cannot establish this fixture.
         maintenance.disable(self.administrator, self.generation)
+        self.selected()
         with self.assertRaises(CommandError) as error:
             self.check(allow_maintenance_recovery=True)
         self.assertEqual(error.exception.returncode, 2)
+
+
+@override_settings(MAINTENANCE_MODE=False)
+class ModelsOnlyUpgradeStartupTests(SimpleTestCase):
+    databases = {"default"}
+
+    def test_legacy_upgrade_retains_worker_control_and_requires_fresh_positive_acknowledgment(self):
+        received = []
+
+        class WorkerProtocol(BaseHTTPRequestHandler):
+            def do_PUT(self):
+                command = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                received.append((self.path, self.headers.get("Authorization"), command))
+                raw = json.dumps({**command, "quiescent": self.server.quiescent}).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+
+            def log_message(self, *_args):
+                pass
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), WorkerProtocol)
+        server.quiescent = False
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with fresh_sqlite() as probe, TemporaryDirectory(prefix="qc-upgrade-workers-") as temporary:
+                root = Path(temporary)
+                with override_settings(QC_TOOL_CONFIGURED_DATABASE=deepcopy(probe.settings_dict),
+                                       QC_TOOL_TRANSFER_DIR=root / "transfers", QC_TOOL_MAINTENANCE_DIR=root / "maintenance"), \
+                        patch.dict(CONFIG, worker_port=server.server_address[1]), \
+                        patch("qc_tool.frontend.dashboard.services.maintenance.workers.get_worker_token", return_value="migration-worker-review"):
+                    with override_settings(MIGRATION_MODULES=dict.fromkeys(MANAGED_APPS)):
+                        call_command("migrate", run_syncdb=True, interactive=False, stdout=StringIO())
+                    administrator = get_user_model().objects.create_superuser("worker-upgrade-admin", "", "upgrade-password")
+                    maintenance.register_worker("http://127.0.0.1:%s/" % server.server_address[1])
+                    generation = maintenance.enable(administrator, 0)["generation"]
+                    self.assertEqual(maintenance.advance(generation)["phase"], "stopping")
+                    with self.assertRaises(CommandError):
+                        call_command("database", "check", allow_maintenance_recovery=True, stdout=StringIO(), stderr=StringIO())
+                    server.quiescent = True
+                    self.assertEqual(maintenance.advance(generation)["phase"], "ready")
+                    output = StringIO()
+                    call_command("database", "check", allow_maintenance_recovery=True, stdout=output, stderr=StringIO())
+                    self.assertEqual(output.getvalue().strip(), "maintenance-recovery")
+                    from qc_tool.frontend.dashboard.middleware import MaintenanceModeMiddleware
+                    from qc_tool.frontend.dashboard.views.workers import worker_maintenance
+                    handler = MaintenanceModeMiddleware(worker_maintenance)
+                    before = maintenance.read_status()
+                    with CaptureQueriesContext(probe) as queries:
+                        response = handler(RequestFactory().get(reverse("worker_maintenance"), REMOTE_ADDR="127.0.0.1"))
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(json.loads(response.content), {"enabled": True, "generation": generation})
+                    self.assertEqual(list(queries), [])
+                    self.assertEqual(maintenance.read_status(), before)
+                    self.assertEqual(received[-1][1], "WorkerToken migration-worker-review")
+                    self.assertEqual(received[-1][2], {"enabled": True, "generation": generation})
+                    # A restarted or busy worker revokes prior readiness; a
+                    # timeout or previously accepted acknowledgment is no bypass.
+                    server.quiescent = False
+                    self.assertEqual(maintenance.advance(generation)["phase"], "stopping")
+                    self.assertNotIn("django_migrations", probe.introspection.table_names())
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(2)
+
+    def test_supported_predecessor_starts_only_admin_recovery_in_ready_maintenance(self):
+        with fresh_sqlite() as probe, TemporaryDirectory(prefix="qc-upgrade-startup-") as temporary:
+            root = Path(temporary)
+            with override_settings(QC_TOOL_CONFIGURED_DATABASE=deepcopy(probe.settings_dict),
+                                   QC_TOOL_TRANSFER_DIR=root / "transfers", QC_TOOL_MAINTENANCE_DIR=root / "maintenance"):
+                with override_settings(MIGRATION_MODULES=dict.fromkeys(MANAGED_APPS)):
+                    call_command("migrate", run_syncdb=True, interactive=False, stdout=StringIO())
+                administrator = get_user_model().objects.create_superuser("upgrade-administrator", "", "upgrade-password")
+                self.assertNotIn("django_migrations", probe.introspection.table_names())
+                with self.assertRaises(CommandError):
+                    call_command("database", "check", allow_maintenance_recovery=True, stdout=StringIO(), stderr=StringIO())
+                generation = maintenance.enable(administrator, 0)["generation"]
+                with self.assertRaises(CommandError):
+                    call_command("database", "check", allow_maintenance_recovery=True, stdout=StringIO(), stderr=StringIO())
+                self.assertEqual(maintenance.advance(generation)["phase"], "ready")
+                output = StringIO()
+                before = maintenance.read_status()
+                with CaptureQueriesContext(probe) as queries:
+                    call_command("database", "check", allow_maintenance_recovery=True, stdout=output, stderr=StringIO())
+                self.assertEqual(output.getvalue().strip(), "maintenance-recovery")
+                self.assertEqual(maintenance.read_status(), before)
+                self.assertNotIn("django_migrations", probe.introspection.table_names())
+                self.assertFalse(any(query["sql"].lstrip().upper().startswith(("INSERT ", "UPDATE ", "DELETE ", "CREATE ", "ALTER ", "DROP ")) for query in queries))
+                from qc_tool.frontend.dashboard.middleware import MaintenanceModeMiddleware
+                handler = MaintenanceModeMiddleware(lambda request: HttpResponse("administrator recovery"))
+                requests = RequestFactory()
+                workspace = handler(requests.get(reverse("dashboard_home")))
+                self.assertEqual(workspace.status_code, 503)
+                self.assertIn(reverse("admin_migrations").encode(), workspace.content)
+                self.assertEqual(handler(requests.get(reverse("admin_migrations"))).status_code, 200)
+                self.assertEqual(handler(requests.get("/health")).status_code, 200)
+                with self.assertRaises(CommandError):
+                    call_command("database", "check", stdout=StringIO())
+                administrator.set_unusable_password()
+                administrator.save(update_fields=("password",))
+                with self.assertRaises(CommandError):
+                    call_command("database", "check", allow_maintenance_recovery=True, stdout=StringIO(), stderr=StringIO())

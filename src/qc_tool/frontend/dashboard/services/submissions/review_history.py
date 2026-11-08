@@ -1,10 +1,9 @@
 """Apply a reviewed projection and retain the corresponding decision together."""
 
+from qc_tool.frontend.accounts.services.actors import actor_username
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import ProductRelease
 from qc_tool.frontend.dashboard.models import SubmissionReviewEvent
-
-from .reservation.mapping import actor_username
 
 
 def record_review_decision(submission, *, decision, actor, notes):

@@ -180,7 +180,9 @@ requires verification of that installation's importer/version prerequisites.
 
 `docker/docker-compose.eea.yml` requires both image references and preserves the
 persistent shared storage used by maintenance and transfer recovery. It does not
-upgrade an existing application schema. The v3.0.0 models-only policy still
-requires a matching schema or a separately reviewed fresh-target handoff. Follow
+upgrade an existing application schema at startup. Managed 3.0.0 requires the
+explicit maintenance, full backup, candidate migration and reviewed switch
+procedure; earlier history-free 3.0.0 installations are adopted only through
+their exact supported candidate contract. Follow
 [deployment](index.md) and [operations](operations.md) for that operator stage;
 building or publishing images does not authorize a server cutover.

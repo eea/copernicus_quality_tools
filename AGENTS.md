@@ -12,6 +12,20 @@ Place reusable application and worker functionality in its owning package outsid
 the check folders; extract existing shared functionality when it is needed.
 Preserve check identities, parameters and result semantics when changing imports.
 
+# Application structure
+
+Organize application code into nested packages by responsibility. Prefer small,
+cohesive Python modules, normally below 150 lines, with explicit public imports.
+Treat growing files as a reason to review ownership; do not split a cohesive
+algorithm or immutable migration history merely to meet a line count.
+
+Keep HTTP handling, presentation, domain decisions and persistence operations in
+their owning modules. Share behavior through its domain owner rather than copying
+helpers across workflows or adding unrelated functions to a generic utilities
+module. Reuse existing services before introducing a new abstraction. Avoid
+wildcard exports, dynamic module forwarding and compatibility layers for private
+helpers; update internal callers to the actual owner when moving them.
+
 # Repository hygiene
 
 Keep source, required test fixtures and assets, maintained tooling/configuration,
@@ -38,41 +52,42 @@ product setup, QC execution or submission-review shortcuts to Admin.
 
 # Database changes
 
-QC Tool **v3.0.0 uses a completely new, models-only schema**. Keep its policy
-`draft` with no baselines, first-party migration definitions or initial schema
-snapshots. The first migration-managed release can be **v3.0.1 or later**, with
-an explicit reviewed initialization/adoption procedure for its supported source
-databases. Do not infer a schema freeze from the v3.0.0 version or branch name.
+QC Tool **v3.0.0 includes native Django migration management** as the foundation
+for later releases such as v3.0.1 and v3.1.0. Earlier v3.0.0 installations may
+have a models-only schema without a migration recorder. Distinguish supported
+history-free databases from managed databases by strict schema and recorded
+history, never by their shared release label alone. Preserve the reviewed initial
+migrations and their app identities. Every later model change requires reviewed
+forward Django migrations in the same change; CI checks committed history against
+the models and startup never generates migration files.
 
 Read `src/qc_tool/database/README.md`, `src/qc_tool/database/policy.json`, and
-`src/qc_tool/database/MIGRATIONS.md` before changing persistence or
-deployment behavior. They govern QC Tool as one application, across components.
-
-When `policy.json` declares `draft`, keep no first-party migration definitions
-or baseline snapshots. Change models and architecture directly.
-Fresh databases, including new production installations, are built from current
-models using the whole-app database command. Initialization requires an entirely
-empty database. A matching existing schema is a read-only no-op; a partial,
-foreign or outdated schema is refused. Schema creation does not populate products
-or alter existing tables; use a fresh disposable database after schema changes.
-Do not reset an existing database automatically, even if its product catalog
-is empty: users and other data can still exist.
-
-For v3.0.1 or later, the explicit migration-management transition introduces
-the reviewed schema history and changes the policy in the same reviewed change.
-Keep that transition separate from v3.0.0 feature work.
-The central database package owns the workflow. Model/app ownership may be
-refactored during draft schema development; after freeze, preserve established
-migration identities and account for compatibility explicitly.
-
-After that explicit transition, preserve committed migrations and add reviewed
-forward migrations with model changes. Use staged compatible schema changes,
-resumable backfills, and later cleanup for online PostgreSQL deployments.
+`src/qc_tool/database/MIGRATIONS.md` before changing persistence or deployment
+behavior. The central database package owns the workflow for accounts, catalog,
+deliveries, publication and framework tables together.
 
 Use the application-wide `python3 -m qc_tool.frontend.manage database
-plan|check|apply` workflow. CI and startup must never generate migration files.
-Legacy data conversion is a manual operation outside the maintained codebase.
-Deliver a verified native PostgreSQL copy for manual restore into a fresh target.
-Do not retain legacy converters or prebuild future migration machinery in v3.0.0.
-Do not reset, fake, or migrate an existing production or developer
-database to simulate a cutover. Test against disposable databases only.
+plan|check|apply` workflow for readiness and fresh initialization. Initialization
+requires an entirely empty database and runs committed native migrations. A
+matching existing schema/history is a read-only no-op. Partial, foreign, unknown
+history or unexplained drift is refused without reset, repair or fake adoption.
+
+Existing installations upgrade only through the reviewed administrator workflow:
+ready maintenance, verified native backup and retained-file coverage, restore into
+a distinct operation-owned candidate, supported source/history validation,
+explicit native forward migration, validation, and separate reviewed selection.
+Only an exact supported history-free v3.0.0 restored candidate may adopt the
+reviewed initial graph. Never adopt or migrate the serving database automatically.
+Keep the source database, backups, operation journals and storage references for
+recovery. Django schema migrations do not relocate retained delivery, job,
+specification, boundary or publication files.
+
+Preserve committed migrations and add forward migrations with model changes.
+Use staged compatible schema changes, resumable backfills, and later cleanup for
+PostgreSQL. Release labels alone do not establish schema compatibility. Review
+non-atomic operations and external side effects explicitly; reversing a schema
+migration is not a substitute for a verified backup and retained source copy.
+
+Legacy conversion stays a manual operation outside the maintained codebase.
+Do not reset existing production or developer databases to simulate a cutover.
+Test adoption and upgrades against disposable databases only.

@@ -408,12 +408,13 @@ portable package must never mean executing its SQL or disabling current evidence
 checks. Native archives preserve their source schema; they do not supply a
 cross-version schema-upgrade mechanism.
 
-The v3.0.0 database policy remains `draft` with empty baselines. The new transfer
-receipt is a current Django model, so databases created from an earlier draft
-model set are incompatible. Use a fresh disposable database to verify this work;
-there is no automatic upgrade of an existing development or production database.
-The reviewed migration-management transition belongs to v3.0.1 or later and is a
-separate change. See the [database policy](../../src/qc_tool/database/README.md).
+The current v3.0.0 database policy includes committed native Django migrations.
+The transfer receipt belongs to the initial schema history. An earlier draft
+missing that table is not the supported history-free source; record transfers
+never add it or fake history. Supported adoption and upgrades use the separate
+guarded migration workflow on a verified restored candidate. Startup and record
+imports never upgrade an existing development or production database. See the
+[database policy](../../src/qc_tool/database/README.md).
 
 ## Resource bounds and operation
 

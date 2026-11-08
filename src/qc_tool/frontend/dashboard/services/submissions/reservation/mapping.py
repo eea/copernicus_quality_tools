@@ -1,4 +1,4 @@
-"""Immutable service contracts and actor snapshots for reservation."""
+"""Map retained submission rows to immutable reservation contracts."""
 
 from ..contracts import ReservedSubmission
 
@@ -24,12 +24,3 @@ def reserved_contract(submission, *, already_existed):
         already_existed=already_existed,
         artifact_key=submission.artifact_key,
     )
-
-
-def actor_username(actor):
-    if actor is None:
-        return ""
-    getter = getattr(actor, "get_username", None)
-    return str(getter() if callable(getter) else getattr(actor, "username", ""))[
-        :150
-    ]

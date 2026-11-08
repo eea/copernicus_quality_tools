@@ -1,5 +1,6 @@
 """Browsing stays useful during maintenance without hidden database writes."""
 
+from qc_tool.frontend.dashboard.tests.boundary_fixtures import ready_boundary_package
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -45,6 +46,7 @@ urlpatterns = [
 @override_settings(ROOT_URLCONF=__name__, MAINTENANCE_MODE=False)
 class MaintenanceBrowsingTests(TestCase):
     def setUp(self):
+        ready_boundary_package(self)
         directory = self.enterContext(TemporaryDirectory())
         self.enterContext(override_settings(QC_TOOL_MAINTENANCE_DIR=Path(directory) / "maintenance"))
         self.user = get_user_model().objects.create_superuser(username="maintenance-browse", password="test-password")

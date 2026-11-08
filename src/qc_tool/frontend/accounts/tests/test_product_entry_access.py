@@ -1,5 +1,6 @@
 """Assigned products constrain browser and API delivery entry points."""
 
+from qc_tool.frontend.dashboard.tests.boundary_fixtures import ready_boundary_package
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -22,6 +23,7 @@ from qc_tool.frontend.dashboard.services.tests.test_resumable_uploads import _pa
 @override_settings(MAINTENANCE_MODE=False)
 class ProductEntryAccessTests(TestCase):
     def setUp(self):
+        ready_boundary_package(self)
         self.user = get_user_model().objects.create_user(username="assigned-uploader")
         for ident in ("product-a", "product-b"):
             UserProductGrant.objects.create(user=self.user, product_ident=ident)

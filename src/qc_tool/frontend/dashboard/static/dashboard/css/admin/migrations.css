@@ -1,0 +1,63 @@
+/* Database names and immutable checksums must remain readable on narrow screens. */
+.migration-page code, .migration-page .transfer-scope-summary dd { overflow-wrap: anywhere; }
+.migration-page .transfer-scope-summary > * { min-width: 0; }
+.migration-page .transfer-compatibility { margin-top: 20px; }
+.migration-page .transfer-panel__body > form { margin-top: 20px; }
+.migration-page section[id], .migration-page h2[id] { scroll-margin-top: 24px; }
+.migration-overview > h2 { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.migration-badge { display: inline-block; padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 20px; background: var(--darkened-bg); color: var(--body-fg); font-size: 12px; line-height: 1.5; font-weight: 600; }
+.migration-badge--ready { background: var(--qc-admin-success-soft, #e8f4ed); color: var(--qc-admin-success, #246346); }
+.migration-badge--legacy, .migration-badge--pending { background: var(--qc-admin-warning-soft); color: var(--qc-admin-warning); }
+.migration-badge--incompatible, .migration-badge--unavailable, .migration-badge--empty { color: var(--error-fg); }
+.migration-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 12px 0 22px; }
+.migration-metrics > div { min-width: 0; padding: 14px; border: 1px solid var(--hairline-color); border-radius: 8px; }
+.migration-metrics dt { color: var(--body-quiet-color); font-size: 12px; line-height: 1.6; }
+.migration-metrics dd { margin: 7px 0 0; font-size: 19px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.migration-active { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
+.migration-active code { font-size: 12px; }
+.migration-page-links { display: flex; flex-wrap: wrap; gap: 10px 24px; margin: 20px 0 0; font-size: 13px; }
+.migration-page details > summary { cursor: pointer; color: var(--link-fg); line-height: 1.6; }
+.migration-page details > summary:focus-visible, .migration-page a:focus-visible { outline: 2px solid var(--link-fg); outline-offset: 4px; border-radius: 2px; }
+.migration-page details[open] > summary { margin-bottom: 14px; }
+.migration-next-step { border-inline-start: 4px solid var(--primary); }
+.migration-plan-list { padding-inline-start: 24px; }
+.migration-plan-list > li { padding: 14px 0 14px 8px; border-bottom: 1px solid var(--hairline-color); }
+.migration-plan-list > li:last-child { border: 0; }
+.migration-plan-list summary span { display: block; font-weight: 600; }
+.migration-plan-list code { font-size: 12px; }
+.migration-plan-list li li { line-height: 1.7; }
+.migration-records { margin-top: 16px; }
+.migration-record-table { width: 100%; min-width: 560px; }
+.migration-record-table th, .migration-record-table td { padding: 12px; vertical-align: top; }
+.migration-record-table caption { text-align: left; color: var(--body-quiet-color); line-height: 1.6; font-size: 12px; padding: 8px 0 16px; text-transform: none; letter-spacing: normal; }
+.migration-record-table td:last-child { font-size: 12px; }
+.migration-help > details { padding: 18px 0; border-bottom: 1px solid var(--hairline-color); }
+.migration-help > details:last-child { border: 0; padding-bottom: 0; }
+.migration-help > details > summary { font-weight: 600; }
+.migration-help p, .migration-help li { line-height: 1.7; }
+.migration-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 20px 0 0; padding-left: 24px; }
+.migration-steps li { padding: 12px; border: 1px solid var(--hairline-color, #d4d9dd); border-radius: 4px; }
+.migration-steps li[aria-current="step"] { border-color: var(--link-fg, #176b85); border-width: 2px; }
+.migration-steps strong, .migration-steps span { display: block; }
+.migration-steps span { margin-top: 6px; }
+.migration-storage-scroll { overflow-x: auto; margin: 16px 0; }
+.migration-storage-table { width: 100%; min-width: 440px; }
+.migration-storage-table caption { text-align: left; padding: 8px 0; color: var(--body-quiet-color, #555); }
+.migration-storage-table tr[data-availability="unavailable"], .migration-storage-table tr[data-availability="partial"], .migration-storage-table tr[data-availability="omitted"] { background: var(--message-warning-bg, #fff4df); }
+.migration-page .migration-history { padding: 0; margin: 16px 0 0; list-style: none; }
+.migration-page .migration-history > li { padding: 18px 0; border-bottom: 1px solid var(--hairline-color); overflow-wrap: anywhere; list-style: none; }
+.migration-history li:first-child { padding-top: 0; }
+.migration-history li:last-child { border: 0; padding-bottom: 0; }
+.migration-history-heading { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; }
+.migration-history-heading > a { font-weight: 600; }
+.migration-history li p { margin: 6px 0; }
+.migration-history-database { font-size: 12px; }
+@media (max-width: 800px) { .migration-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .migration-steps { grid-template-columns: 1fr; gap: 8px; } }
+@media (max-width: 400px) {
+  .migration-metrics { gap: 8px; }
+  .migration-metrics > div { padding: 10px; }
+  .migration-metrics dd { font-size: 16px; }
+  .migration-page .transfer-panel__body { padding-inline: 16px; }
+  .migration-page .transfer-panel > h2 { padding-inline: 16px; }
+}

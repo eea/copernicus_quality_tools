@@ -17,7 +17,7 @@ copernicus_quality_tools/
 ├── product_definitions/       # Product-specific JSON QC recipes
 ├── scripts/                   # Purpose-specific operator tools and host tests
 ├── src/qc_tool/
-│   ├── database/             # Models-only initialization, validation and tests
+│   ├── database/             # Native migrations, schema inspection, backups and recovery
 │   ├── frontend/
 │   │   ├── accounts/         # Identity, roles, permissions, grants, admin
 │   │   ├── dashboard/        # Deliveries, jobs, UI, route and object access
@@ -168,92 +168,91 @@ than creating another general helper module.
 
 `src/qc_tool/database/` owns all first-party database lifecycle assets:
 
-Version 3.0.0 contains no migration framework, definitions, initial snapshots or
-legacy converter. Current Django models define the whole application schema.
+The current 3.0.0 includes migration management. Committed native Django migrations
+define history, current models describe the installed schema, and the central
+package coordinates safe candidate upgrades with database/file recovery.
+Earlier history-free 3.0.0 installations remain an explicit strictly supported
+source; their application version alone does not establish schema compatibility.
 
 ```text
 database/
-├── README.md          # Ownership, models-only policy and entry points
-├── SCHEMA.md          # Canonical table ownership and persistence boundaries
-├── TABLES.md          # Table, column, constraint and index reference
-├── MIGRATIONS.md      # Current initialization/validation runbook
-├── MANUAL_RESTORE.md  # Restore a privately prepared current-schema artifact
-├── policy.json        # Models-only source contract
-├── policy.py          # Policy validation and disabled Django migration modules
-├── deployment.py      # Empty-target initialization and read-only validation
-├── apps.py            # Django management-command discovery
-├── management/        # database plan|check|apply command
-├── checks/            # Source-contract gate and disposable schema verification
-└── tests/             # Source-contract and runtime integration tests
+├── README.md          # Ownership, managed policy and entry points
+├── SCHEMA.md          # Model ownership and persistence boundaries
+├── TABLES.md          # Stored-field reference and dated physical evidence
+├── MIGRATIONS.md      # Initialization, candidate upgrades and recovery runbook
+├── MANUAL_RESTORE.md  # Restore a separately prepared native artifact
+├── policy.json        # Managed release and reviewed adoption target graph
+├── policy.py          # Strict policy validation
+├── deployment.py      # Empty initialization and stable schema lock
+├── schema/            # Shared read-only catalog/field/constraint inspection
+│   └── strict/        # Exact supported-source checks, backend defaults and objects
+├── migration_engine/  # Django graph, historical schema and candidate execution
+├── migrations/        # Central app's committed native migration history
+├── upgrades/          # Backup → candidate → migration → explicit switch
+├── transfers/         # Native/portable backups, journals, ownership and file pins
+├── management/        # Whole-application database plan|check|apply command
+├── checks/            # Source gate and disposable schema verification
+└── tests/             # Source, initialization, upgrade and recovery regressions
 ```
 
 The [application schema](../../src/qc_tool/database/SCHEMA.md) maps business
-responsibilities to explicit table names and model modules. Accounts owns its
-tokens and product grants; dashboard discovers the other business models.
-Table prefixes identify domains within one application database and do not
-introduce independent component releases.
+responsibilities to explicit tables and modules. Accounts owns tokens and grants;
+dashboard discovers other domain models. Their conventional `migrations/`
+packages and `qc_database` share Django's graph and recorder. Domain table
+prefixes do not introduce independent database releases.
 
-`database plan|check` inspects the schema read-only. `apply` initializes an
-entirely empty database and leaves a complete matching one unchanged; partial or foreign schemas and
-detected model drift are refused. Model changes require a separate target,
-not automatic alteration of an existing database. Legacy database conversion is
-private manual work outside the codebase. See
-[Database initialization](../development/database-migrations.md) and the
-[manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md).
+`database plan|check` inspects schema/history read-only. `apply` initializes an
+entirely empty database and leaves a current managed target unchanged. Supported
+upgrades migrate an operation-owned restored candidate, verify SQL and retained
+file identities, then require an explicit switch. Unknown drift/history is
+refused. Startup never applies pending migrations. Legacy conversion stays
+private manual work outside the codebase. See [Database migrations](../development/database-migrations.md)
+and the [manual restore guide](../../src/qc_tool/database/MANUAL_RESTORE.md).
 
-Initial migration definitions may be introduced only in a separately reviewed
-3.0.1-or-later release with an explicit existing-database transition plan.
+## Small modules and shared ownership
 
-## Worker and shared security packages
+Prefer cohesive production Python modules below 150 lines. Split a growing file
+when it combines responsibilities; keep released migration files and cohesive
+declarations intact. A package should make its entry points easy to find, with
+explicit imports and no dynamic forwarding or copied implementation behind a
+compatibility layer.
 
-The worker's scheduler, dispatcher, job contracts, and S3 materialization are
-under `src/qc_tool/worker/`. Reusable trust-boundary behavior is intentionally
-outside raster/vector QC modules:
+The migration administration workflow follows these boundaries:
 
-- `product_units.py` normalizes business identifiers and adapts legacy AOI metadata;
-- `archive_security/` validates resource limits and paths before extraction;
-- `product_security/` validates product identifiers and definition files;
-- `s3_security/` canonicalizes and allowlists exact HTTPS origins;
-- `worker_auth/` owns the Authorization header format;
-- `jobs/` owns safe UUID/path components and job-pull contracts without importing
-  worker execution or Django adapters;
-- `boundaries/` owns framework-independent immutable generation resolution;
-- `storage/layout.py` owns configured runtime roots and stable artifact paths;
-- `storage/scratch_retention.py` owns bounded, explicit abandoned-scratch removal;
-- `worker/aoi/` adapts generic naming captures to canonical result metadata;
-- `worker/s3_delivery/` separates client construction, transfer, storage,
-  hashing, policy, and orchestration.
+| Owner | Responsibility |
+| --- | --- |
+| `dashboard/views/admin_migrations/` | HTTP endpoints and action dispatch, one journey decision, presentation and request-local page context |
+| `dashboard/templates/admin/migration_panels/` | Named page panels using the shared Admin shell, forms and transfer progress controls |
+| `database/schema/` | Reusable read-only inspection of fields, keys, indexes and catalog objects |
+| `database/schema/strict/` | Exact source recognition, extra-object rejection and backend default/generated-expression checks |
+| `database/deployment.py` | Explicit empty-target initialization and the unchanged application-wide schema lock |
+| `database/migration_engine/` | Django graph/history, fingerprints, supported-source recognition and owned candidate execution |
+| `database/upgrades/` | Backup review, source/candidate connections, storage evidence, execution receipts, verification and recovery |
+| `accounts/services/actors.py` | One username snapshot contract for job and submission audit records |
 
-## Product and QC ownership
+Initialization reuses the same schema inspector as readiness and historical model
+validation. Upgrade review and execution reuse backup coverage, package identity
+and storage evidence helpers. HTTP handlers use the existing account-owned private
+response-cache policy; they do not implement a second database or recovery engine.
+Keep authorization and durability policies with their owners when extracting
+helpers, even when two implementations look superficially similar.
 
-`product_definitions/` and the `raster/` and `vector/` packages define QC
-behavior. Keep raster and vector algorithms, check-specific parameters and result
-semantics with their checks. Consume original specification bytes without
-rewriting specifications or uploaded snapshots.
+## Remaining refactoring priorities
 
-Reusable execution infrastructure belongs outside the check packages:
+The codebase still has large modules outside these boundaries. The next useful
+changes are responsibility splits with regression coverage, rather than moving
+unchanged blocks into anonymous utilities:
 
-- `worker/inspire.py` owns the INSPIRE service client, polling deadlines and
-  metadata-validation orchestration shared by raster and vector checks;
-- `worker/documents.py` owns shared PDF discovery and readability checks;
-- `worker/archives.py` owns the shared worker archive preparation adapter.
+| Priority | Current owner | Boundary to establish |
+| --- | --- | --- |
+| 1 | `database/transfers/service.py` | Separate admission, snapshots/capacity, operation lifecycle and native/portable runners; replace cross-package private calls with owned capabilities before splitting callers |
+| 2 | `dashboard/views/admin_data_transfer.py` | Split its combined HTTP action/render handler into actions, page context and presentation; reuse the existing transfer service and Admin cache policy |
+| 3 | `database/transfers/artifacts.py` | Separate inventory, package validation, conflict inspection and restore writes while retaining one artifact path/reference contract |
+| 4 | `database/transfers/postgres.py` | Separate connection/tooling, catalog inventory, capture, owned target creation and restore; preserve fingerprint ordering and restore admission |
+| 5 | `worker/scheduler.py` | Separate maintenance admission, HTTP transport/routes, process lifetime and scheduling without weakening worker pause acknowledgement |
 
-The corresponding integration entry points remain thin adapters to these shared
-services and retain their check identities and parameter contracts. Compatibility
-exports in `vector/helper.py` support existing integrations; new reusable code
-should import its owning worker module directly. Worker, frontend, database and maintenance
-infrastructure must not statically import raster/vector check implementations.
-The dispatcher may still load a configured check dynamically when executing a
-product recipe.
-
-Verify refactors with representative fixtures and the relevant domain tests.
-`test_worker_module_boundaries.py` enforces the static dependency direction.
-
-## Runtime files are outside source ownership
-
-The checkout is code and maintained fixtures, not an application data volume.
-The [runtime storage architecture](runtime-storage.md) describes the canonical
-`/mnt/qc-tool/data`, shared state, frontend-private state, logs and worker scratch
-mounts, plus the legacy configuration boundary. A configured path is not a
-portable artifact identity. Moving execution intermediates does not authorize
-moving retained evidence or rewriting original specifications.
+In particular, migration orchestration still calls private transfer/restore
+functions. Small migration modules make that dependency visible; they do not
+remove it. Extract the shared transfer capabilities into real owning modules and
+test their consumers together. Forwarding wrappers that merely rename private
+functions would conceal the dependency rather than simplify it.

@@ -64,7 +64,7 @@ def _administrator(database, actor, username="", password="", *, required=False)
             connections[alias].close()
 
 
-def _application_snapshot(database):
+def _application_snapshot(database, *, allow_legacy=False):
     """Reuse the existing graph and artifact validators without changing data.
 
     The publication/specification validators check all available immutable evidence.
@@ -73,11 +73,39 @@ def _application_snapshot(database):
     Hash every retained file without copying it or applying archive-size limits
     to a database switch. Preserved timestamps never substitute for file bytes.
     """
+    legacy = False
     with selection.database_scope(database):
         try:
             SchemaInitializer(connection).check()
         except CommandError as error:
-            raise TransferError(f"Database {database} does not match the installed models: {error}") from error
+            if not allow_legacy:
+                raise TransferError(f"Database {database} does not match the installed models: {error}") from error
+            from qc_tool.database.migration_engine import inspect_source, migration_status
+            history = migration_status(connection)
+            if history["state"] == "pending":
+                # Historical models verified this managed source. Current ORM
+                # columns may not exist until the candidate migrates, so source
+                # recovery binds complete native SQL plus every retained root.
+                # Current-model reference validation still applies to the target.
+                from . import recovery_files
+                inventory, entries, fingerprint, _size = recovery_files.snapshot(limits=_service()._limits())
+                # Global boundary/configuration warnings are already knowable
+                # from storage. Reuse the artifact collector without a typed
+                # record contract, so it cannot query the source ORM/receipts.
+                configuration = collect_artifacts({"profile": "application", "accounts": [], "records": {}}, include_files=True)
+                return {"fingerprint": digest({"content": fingerprint, "roots": recovery_files.storage_identity()}), "files_count": len(entries),
+                        "warnings": list(dict.fromkeys([*inventory.warnings, *configuration.warnings,
+                                                       *configuration.external_requirements])), "schema_mode": "pending"}
+            # Only the exact reviewed history-free predecessor may remain the
+            # source during first adoption. Its rows must also be readable by
+            # the installed ORM; this is not a future-schema compatibility shim.
+            if inspect_source(connection)["state"] != "ready":
+                raise TransferError(f"Database {database} is not a supported migration source: {error}") from error
+            try:
+                SchemaInitializer(connection, require_history=False).check()
+            except CommandError as current_error:
+                raise TransferError("This source schema needs a separately reviewed offline upgrade with its compatible application image.") from current_error
+            legacy = True
         payload = snapshot_current_application()
         inventory = collect_artifacts(payload, include_files=True)
         files = []
@@ -93,8 +121,11 @@ def _application_snapshot(database):
         fingerprint = digest({"records": {key: value for key, value in payload.items() if key != "created_at"},
                               "files": files, "directories": inventory.directories,
                               "storage": inventory.storage})
-    return {"fingerprint": fingerprint, "files_count": len(files),
-            "warnings": list(inventory.warnings) + list(inventory.external_requirements)}
+    result = {"fingerprint": fingerprint, "files_count": len(files),
+              "warnings": list(inventory.warnings) + list(inventory.external_requirements)}
+    if legacy:
+        result["schema_mode"] = "legacy"
+    return result
 
 
 def _native_snapshot(database):
@@ -259,9 +290,12 @@ def _selection_preview(database, actor, state, operation=None):
                 "already_active": True, "can_apply": False, "requires_credentials": False, "blockers": []}
     identity, operation = _selection_candidate(database, state, operation)
     _isolate(database)
+    # Prior explicit activation permits ordinary application writes. Its
+    # ownership-bound approval remains required, while this new review hashes
+    # current rows/files rather than demanding the initial upgrade snapshot.
     target_files = _application_snapshot(database)
     target_native = _native_snapshot(database)
-    source_files = _application_snapshot(state["active"])
+    source_files = _application_snapshot(state["active"], allow_legacy=True)
     source_native = _native_snapshot(state["active"])
     access = _administrator(database, actor)
     value = {"target_database": database, "source_database": state["active"], "revision": state["revision"],
@@ -334,11 +368,18 @@ def _preview(operation_id, actor):
     receipt_path = _receipt_path(operation)
     if receipt_path.exists() or receipt_path.is_symlink():
         return _selection_preview(database, actor, state, operation)
-    verified = service._verified(operation)
-    _verify_first_restore(operation, database, verified)
+    if operation.get("upgrade"):
+        # The original restore was proven before Django changed the candidate.
+        # Its upgrade receipt now binds the reviewed graph and resulting copy;
+        # comparing it to pre-migration SQL would reject the recorder itself.
+        from qc_tool.database.upgrades.service import verify_candidate
+        verify_candidate(operation)
+    else:
+        verified = service._verified(operation)
+        _verify_first_restore(operation, database, verified)
     target_files = _application_snapshot(database)
     target_native = _native_snapshot(database)
-    source_files = _application_snapshot(state["active"])
+    source_files = _application_snapshot(state["active"], allow_legacy=True)
     source_native = _native_snapshot(state["active"])
     access = _administrator(database, actor)
     value.update(can_apply=True, requires_credentials=access is None,
@@ -441,6 +482,10 @@ def _rollback_blockers(state):
     if (not maintenance["enabled"] or maintenance["generation"] != state.get("maintenance_generation")):
         return ["Quick recovery expired when maintenance was turned off. Both databases remain stored. Review a new switch in Manage databases to use a retained copy."]
     evidence = state.get("activation") or {}
+    source_mode = (evidence.get("source_files") or {}).get("schema_mode")
+    if source_mode in {"legacy", "pending"}:
+        description = ("models-only 3.0.0 history" if source_mode == "legacy" else "an earlier managed schema with pending migrations")
+        return [f"The previous database has {description}. Keep maintenance on and use the retained database with the previous pinned application images under the offline recovery procedure; the installed image cannot reopen that database."]
     if not evidence.get("source_native") or not evidence.get("source_files"):
         return ["The retained copy needs a fresh verification before it can be selected. Both databases remain intact."]
     return []
@@ -468,8 +513,9 @@ def rollback(actor, generation, revision, destination_confirmation, confirmed_st
     with store.execution_lock(), service._ready_guard(generation):
         state = selection.read_state()
         previous = state.get("previous")
-        if not previous or _rollback_blockers(state):
-            raise TransferError("Rollback is unavailable after maintenance ends. Both databases were retained; use Manage databases to review a new switch against their current contents.")
+        blockers = _rollback_blockers(state)
+        if not previous or blockers:
+            raise TransferError(" ".join(blockers) if blockers else "There is no previous database to restore.")
         _confirmation(state, generation, revision, previous, destination_confirmation, confirmed_storage)
         recorded = state.get("activation") or {}
         previous_native = _native_snapshot(previous)
@@ -498,11 +544,20 @@ def validate_resume(actor):
     service = _service()
     service._authorize(actor)
     state = selection.read_state()
+    alias = ("default" if connection.vendor != "postgresql" or state["active"] == selection.current_database()
+             or connection.settings_dict["NAME"] != selection.configured_connection()["NAME"]
+             else selection.alias_for_database(state["active"]))
+    try:
+        SchemaInitializer(connections[alias]).check()
+    except (CommandError, DatabaseError) as error:
+        raise TransferError("The selected database schema or migration history is not ready for the installed release. Keep maintenance on and finish the reviewed candidate upgrade before reopening.") from error
+    finally:
+        if alias != "default":
+            connections[alias].close()
     if (not state["revision"]
             or state.get("maintenance_generation") != read_status()["generation"]):
         return
     proof = (state.get("activation") or {}).get("access") or {}
-    alias = selection.alias_for_database(state["active"])
     try:
         user = get_user_model().objects.using(alias).get(username=proof.get("username", ""))
         fingerprint = hashlib.sha256(user.get_session_auth_hash().encode()).hexdigest()

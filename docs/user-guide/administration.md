@@ -226,11 +226,37 @@ buckets. Keep these directories mounted and backed up separately from PostgreSQL
 ## Check schema compatibility
 
 Use **Database → Overview → Check again** for a read-only
-comparison with the current models. QC Tool v3.0.0 uses a draft, model-based
-schema; it does not offer in-place schema migrations. A partial, outdated or
-foreign schema is refused without repair. A future migration-managed release
-requires its separately reviewed initialization/adoption procedure. See
-[database policy](../development/database-migrations.md).
+comparison with the installed schema and migration history. The current QC Tool
+v3.0.0 includes native Django migrations. **Maintenance → Database migrations**
+(`/admin/maintenance/migrations/`)
+shows applied and pending changes, source compatibility, backup coverage and
+upgrade operations. Administrators pause QC Tool, make a complete backup, prepare
+and verify a separate migrated database copy, then explicitly switch to it and
+reopen the application. Earlier history-free 3.0.0 installations use that same
+guarded copy procedure for strict adoption of the supported schema. Unknown
+drift or history is refused without repair.
+
+The migration page starts with database status, pending/applied counts and the
+next administrator action. When it is up to date, upgrade preparation is hidden;
+you can still create recovery backups. **Applied migration history** shows native
+Django migration identities, application areas and recorded times. Initial history
+adoption records its initialization time, not the original table-creation time.
+**Upgrade history** separately lists copy preparations, failures and database
+switches, with links to their current progress and available recovery actions.
+
+For a pending plan, expand a migration to read the changes declared by Django.
+Non-atomic migrations are identified because partial candidate changes can remain
+after a failure. **Help & administrator intervention** explains schema drift,
+unavailable databases, interrupted execution and storage/rollback boundaries.
+Only the server-approved retry or retain-and-stop actions are offered for a
+stopped operation; uncertain execution cannot be repeated automatically.
+
+**Creating a new migration** is a development and release task. A developer
+generates and reviews migration files with the source change and tests supported
+upgrade paths. The operator installs the reviewed frontend and worker images;
+the administrator then applies that installed plan through the guarded copy
+workflow. Admin does not generate executable migration code or edit history.
+See [Database migrations](../development/database-migrations.md).
 
 ## Add products
 

@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from qc_tool.frontend.accounts.services.actors import actor_username
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import ProductUnit
 from qc_tool.frontend.dashboard.models import SubmissionConflict
@@ -123,7 +124,7 @@ def _apply_resolution(conflict, selected, *, actor, notes):
     conflict.selected_submission = selected
     conflict.resolved_at = timezone.now()
     conflict.resolved_by = actor if getattr(actor, "pk", None) else None
-    conflict.resolved_by_username = _actor_username(actor)
+    conflict.resolved_by_username = actor_username(actor)
     conflict.resolution_notes = str(notes or "")[:5_000]
     conflict.save(
         update_fields=(
@@ -165,7 +166,7 @@ def _append_resolution_event(conflict, selected, *, actor):
         version=conflict.version,
         event_type=SubmissionConflictEvent.EventType.RESOLVED,
         actor=actor if getattr(actor, "pk", None) else None,
-        actor_username=_actor_username(actor),
+        actor_username=actor_username(actor),
         selected_submission=selected,
         notes=conflict.resolution_notes,
     )
@@ -177,12 +178,3 @@ def _resolution_result(conflict, selected):
         version=conflict.version,
         selected_submission_uuid=selected.submission_uuid,
     )
-
-
-def _actor_username(actor):
-    if actor is None:
-        return ""
-    getter = getattr(actor, "get_username", None)
-    return str(getter() if callable(getter) else getattr(actor, "username", ""))[
-        :150
-    ]

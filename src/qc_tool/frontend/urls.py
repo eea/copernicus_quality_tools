@@ -22,6 +22,7 @@ from qc_tool.frontend.accounts.forms.authentication import AccountAdminAuthentic
 from qc_tool.frontend.accounts.views.sessions import AdminLoginView
 
 from qc_tool.frontend.dashboard.views.admin_maintenance import maintenance_control
+from qc_tool.frontend.dashboard.views.admin_migrations import migrations, migration_status
 from qc_tool.frontend.dashboard.views.admin_database import database_record, database_records
 from qc_tool.frontend.dashboard.views.admin_users import user_management
 from qc_tool.frontend.dashboard.views.boundaries import legacy_boundaries_redirect
@@ -62,6 +63,8 @@ urlpatterns = [
     path('admin/maintenance/backups/', admin.site.admin_view(data_transfer), {'default_task': 'backups'}, name='admin_data_transfer'),
     path('admin/maintenance/backups/export/', admin.site.admin_view(data_transfer), {'default_task': 'export', 'workflow': 'export'}, name='admin_backup_export'),
     path('admin/maintenance/backups/import/', admin.site.admin_view(data_transfer), {'default_task': 'import', 'workflow': 'import'}, name='admin_backup_import'),
+    path('admin/maintenance/migrations/', admin.site.admin_view(migrations), name='admin_migrations'),
+    path('admin/maintenance/migrations/<str:operation_id>/status/', admin.site.admin_view(migration_status), name='admin_migration_status'),
     path('admin/users/', admin.site.admin_view(user_management), name='admin_user_management'),
     path('admin/storage/', admin.site.admin_view(storage_home), name='admin_storage'),
     path('admin/storage/file/', admin.site.admin_view(storage_file), name='admin_storage_file'),

@@ -1,5 +1,14 @@
 # Database audit and remaining release work
 
+The sections below retain historical **models-only 3.0.0** audit evidence,
+including the policy and future-release plans recorded at that time. Current
+**3.0.0 includes migration management**: see its [release record](releases/3.0.0.md),
+[policy](policy.json) and [migration runbook](MIGRATIONS.md). The dated
+[models-only installation record](releases/3.0.0-models-only.md) remains preserved.
+Historical test counts, policy statements and handoff evidence below describe
+that earlier source; they do not govern the current managed build or verify a
+production installation.
+
 Updated **2026-10-13** for QC Tool **v3.0.0 models-only initialization and manual
 legacy handoff**. Current models own the whole schema. There are no first-party
 migration packages, retained legacy converters, baseline snapshots, source
@@ -13,7 +22,7 @@ Original product specifications and protected raster/vector checks are unchanged
 ## Remaining release checklist
 
 Use [initialization](MIGRATIONS.md), [manual restore](MANUAL_RESTORE.md) and the
-[release record](releases/3.0.0.md) from the selected source. Complete a gate only
+[historical release record](releases/3.0.0-models-only.md) from that source. Complete a gate only
 when its actual evidence is available.
 
 ### Before publication

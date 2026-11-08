@@ -22,7 +22,7 @@ def active_operation():
             value = json.loads(handle.read(4097))
         if (set(value) != {"operation_id", "kind", "generation"}
                 or str(UUID(value["operation_id"])) != value["operation_id"]
-                or value["kind"] not in {"export", "import"}
+                or value["kind"] not in {"export", "import", "upgrade"}
                 or type(value["generation"]) is not int or value["generation"] < 0):
             raise ValueError
         return value

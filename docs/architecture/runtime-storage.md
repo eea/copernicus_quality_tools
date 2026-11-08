@@ -117,6 +117,56 @@ externally writable input would undermine their independent retention. A future
 immutable blob/location registry is a separate design, described as a proposal in
 [database records, files and recovery](database-storage-lifecycle.md).
 
+## Database upgrades and retained inputs/outputs
+
+A database release and a storage layout are separate compatibility contracts.
+The Admin upgrade restores SQL into an owned database copy, runs the installed
+Django migrations there, and keeps business files at their original physical
+paths. The source database, complete recovery ZIP and private journals remain
+available. Before migration and first selection, review checks original file
+checksums and configured absolute roots, including empty storage areas. Changing
+a configured root path invalidates approval even when it contains identical
+bytes; changing only the directory prefix is not an automatic data handoff.
+Deployment mount identity and durability checks remain the storage guard's
+responsibility; the migration fingerprint is not a physical-disk identifier.
+
+| Input/output location | Upgrade retention boundary |
+| --- | --- |
+| `incoming/<username>/<delivery>.zip` | Durable original upload, including unlinked historical ZIPs discovered by full recovery inventory |
+| `jobs/job_<uuid>/output.d/`, results, reports and specification snapshots | Durable run evidence; kept in place and pinned for the retained database copy |
+| `submissions/.../input.d/<delivery>.zip` and `output.d/` | Durable published evidence; exact inputs and outputs remain covered despite the `input.d` directory name |
+| Worker `/var/tmp/qc-tool/jobs/<uuid>/tmp.d/`, legacy job `input.d/` or `tmp.d/` | Temporary materialization/intermediates; excluded from normal business backup and never treated as the canonical original input |
+| Partial upload chunks, logs and private control state | Separate operational/recovery policy; not evidence that a delivery or QC result is complete |
+
+Retention pins bind physical roots, relative keys, SHA-256 and sizes. A configured
+specification root may also appear in `PRODUCT_DIRS`; matching logical aliases
+pin the same physical file once. Disagreeing checksums/sizes or an incomplete
+source inventory are refused. Storage Admin cannot declare a pinned file
+unreferenced merely because the active database has no row for it. These pins
+remain conservative after failed upgrades or retained-copy deletion; removing
+them requires a separately reviewed retirement decision.
+
+The guarantee is preservation and verified references, not automatic conversion
+of arbitrary future formats. A future path, filename, manifest or binary-format
+change needs a reviewed storage compatibility procedure: supported old/new
+readers, explicit versioning, resumable copy/verification when necessary, and a
+retention period for original bytes. SQL migration cannot recreate an unavailable
+historical input or make an old output format readable by a new parser. Release
+verification must exercise representative deliveries, historical reports,
+publication manifests and exact input hashes with the target images. Original
+specifications and uploaded snapshots are never rewritten.
+
+Installed migrations, including `RunPython`, are trusted reviewed application
+code. The candidate protects serving SQL; it is not an operating-system sandbox
+for arbitrary filesystem or external-service side effects. Post-run checksums
+detect an unsupported shared-file change but cannot transactionally undo it.
+Supported database migrations keep their effects within SQL. Review external
+side effects explicitly and retain an independent coordinated backup/snapshot
+before any separately authorized storage transformation.
+
+See the [migration runbook](../../src/qc_tool/database/MIGRATIONS.md) for native
+history, maintenance, failure recovery and the explicit selection step.
+
 ## Explicit abandoned scratch cleanup
 
 `scratch_storage` defaults to a read-only plan. It neither enables maintenance

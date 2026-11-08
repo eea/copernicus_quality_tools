@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Shared checks run once, before expensive image builds.
+# Native Django model/history drift is checked in the packaged frontend runtime.
 set -euo pipefail
 
 export PYTHONPATH=src

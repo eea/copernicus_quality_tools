@@ -1,0 +1,14 @@
+{% if migration_show_preparation %}
+  <section class="module transfer-panel" aria-labelledby="migration-backup-heading"><h2 id="migration-backup-heading">{% if migration_initializes_history %}Initialize Django history from a backup{% else %}Prepare an upgrade from a backup{% endif %}</h2><div class="transfer-panel__body">
+    <p>First turn on maintenance, wait for workers to stop and create a complete database backup. Review the included files and any missing evidence before preparing a copy.</p>
+    <div class="transfer-actions"><a class="btn-qc-secondary" href="{{ maintenance_url }}">Open maintenance</a><a class="btn-qc-primary" href="{{ export_page_url }}">Create backup</a></div>
+    {% for backup in migration_backups %}<article class="transfer-compatibility{% if not backup.eligible %} transfer-compatibility--blocked{% endif %}" aria-labelledby="backup-{{ forloop.counter }}">
+      <h3 id="backup-{{ forloop.counter }}">{{ backup.label|default:'Complete database backup' }}</h3><p>{% if backup.created_local %}{{ backup.created_local }} · {% endif %}{{ backup.package_bytes|filesizeformat }}</p>
+      {% if backup.coverage %}<p>{{ backup.coverage }}</p>{% endif %}
+      {% if backup.warnings %}<ul class="transfer-warnings">{% for warning in backup.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
+      {% if backup.blockers %}<ul>{% for blocker in backup.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>{% endif %}
+      <form method="post" data-maintenance-exempt data-admin-pending-label="Checking backup…" data-admin-pending-message="Checking this backup and the installed migration plan.">{% csrf_token %}<input type="hidden" name="backup_id" value="{{ backup.id }}"><button type="submit" class="btn-qc-secondary" name="action" value="review"{% if not backup.eligible or not migration_can_prepare %} disabled{% endif %}>{% if migration_initializes_history %}Review history initialization{% else %}Review upgrade{% endif %}</button></form>
+    </article>{% empty %}<p>No completed native backup is available for this migration. Create a backup to begin.</p>{% endfor %}
+  </div></section>
+
+  {% endif %}

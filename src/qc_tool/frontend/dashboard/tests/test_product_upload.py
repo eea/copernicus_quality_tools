@@ -1,5 +1,6 @@
 """Product uploads preserve reviewed scope and publish runnable specifications."""
 
+from qc_tool.frontend.dashboard.tests.boundary_fixtures import ready_boundary_package
 import hashlib
 import json
 from pathlib import Path
@@ -51,6 +52,7 @@ class ProductSpecificationUploadTests(TestCase):
         )
 
     def setUp(self):
+        ready_boundary_package(self)
         temporary = TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)

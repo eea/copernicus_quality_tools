@@ -36,7 +36,7 @@
       {% if maintenance_unavailable %}
         <p>Changes are paused because the maintenance status cannot be read. Reload this page to try again.</p>
       {% elif transfer_operation %}
-        <p>Changes are paused for a backup or restore.</p>
+        <p>Changes are paused for a backup, restore or database upgrade.</p>
       {% elif maintenance.phase == 'ready' %}
         <p>Changes and QC jobs are paused. Turn maintenance off when you are finished. Interrupted jobs do not resume automatically; users must submit them again.</p>
       {% elif maintenance.enabled %}
@@ -64,8 +64,8 @@
     <div class="qc-admin-service__actions">
       {% if transfer_operation %}
         <button type="button" class="btn-qc-primary" disabled aria-describedby="maintenance-transfer-note">Turn off maintenance</button>
-        <p id="maintenance-transfer-note" class="qc-maintenance-action-note">Finish or recover the backup or restore first.</p>
-        <a href="{% url 'admin_data_transfer' %}?operation={{ transfer_operation.operation_id }}">View progress</a>
+        <p id="maintenance-transfer-note" class="qc-maintenance-action-note">Finish or recover the current operation first.</p>
+        <a href="{{ maintenance_operation_url }}">View progress</a>
       {% elif maintenance_unavailable %}
         <a class="btn-qc-secondary" href="{{ request.path }}">Reload page</a>
       {% else %}
@@ -96,6 +96,10 @@
       <article class="qc-admin-panel transfer-task-card"><h3>Create a backup</h3><p>Save the database and your choice of application files in a ZIP.</p><a class="btn-qc-primary" href="{{ area_export_url }}">Create backup &rarr;</a></article>
       <article class="qc-admin-panel transfer-task-card"><h3>Restore from ZIP</h3><p>Upload a backup ZIP and review it before restoring a separate database copy.</p><a class="btn-qc-secondary" href="{{ area_import_url }}">Restore from ZIP &rarr;</a></article>
     </div>
+  </section>
+  <section class="qc-maintenance-backups" aria-labelledby="maintenance-migrations-heading">
+    <h2 id="maintenance-migrations-heading">Database upgrades</h2>
+    <article class="qc-admin-panel transfer-task-card"><h3>Database migrations</h3><p>Review installed Django migrations, prepare an upgraded database copy and verify it before switching.</p><a class="btn-qc-secondary" href="{{ migrations_url }}">Manage migrations &rarr;</a></article>
   </section>
 </div>
 {% endblock %}

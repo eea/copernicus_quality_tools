@@ -64,6 +64,15 @@
             </div>
         </section>
 
+        {% if not qc_prerequisites.available %}
+        <section class="workspace-notice workspace-notice--warning" aria-labelledby="job-prerequisite-title" role="alert">
+            <div>
+                <h3 id="job-prerequisite-title">QC setup needs administrator attention</h3>
+                <p>{{ qc_prerequisites.message }}</p>
+                {% if qc_prerequisites.admin_url %}<p><a href="{{ qc_prerequisites.admin_url }}">Open Admin → Boundaries</a></p>{% endif %}
+            </div>
+        </section>
+        {% endif %}
         {% if identification_notice %}
         <section class="workspace-notice workspace-notice--warning" aria-labelledby="job-identification-title" role="status">
             <div>
@@ -80,7 +89,7 @@
         </section>
         {% endif %}
         <form id="check_form" class="job-setup-form">
-            <fieldset{% if not product_list %} disabled{% endif %}>
+            <fieldset{% if not product_list or not qc_prerequisites.available %} disabled{% endif %}>
                 <legend class="sr-only">Configure quality-control checks</legend>
                 <input id="preselected_product" type="hidden" value="{{ product_ident|default:'' }}">
                 <input id="preselected_file" type="hidden" value="{{ filename|default:'' }}">
@@ -130,7 +139,7 @@
 
                 <div id="product_link_placeholder" class="job-setup-definition-link"></div>
                 <div class="job-setup-actions">
-                    <button id="btn_run" type="submit" class="btn btn-success btn-qc-success" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
+                    <button id="btn_run" type="submit" class="btn btn-success btn-qc-success" data-maintenance-write{% if maintenance.enabled or not qc_prerequisites.available %} disabled{% endif %}>
                         <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="{% static 'dashboard/icons/ui.svg' %}#play"></use></svg>
                         Run QC
                     </button>

@@ -21,7 +21,8 @@ from django.conf import settings
 from django.db import DatabaseError, connection as default_connection
 from django.utils.functional import Promise
 
-from qc_tool.database.deployment import SchemaInitializer, _native_type
+from qc_tool.database.deployment import SchemaInitializer
+from qc_tool.database.schema.columns import AUTH_JOIN_TABLES, native_type
 
 from .contracts import (
     RECORD_FORMAT_WITH_COMPATIBILITY, SUPPORTED_RECORD_FORMATS, canonical_bytes,
@@ -261,12 +262,13 @@ def postgres_model_columns():
     Only public-schema layout is previewed; activation checks remain definitive.
     """
     from django.db.backends.postgresql.base import DatabaseWrapper
+    from django.db.migrations.recorder import MigrationRecorder
 
     backend = DatabaseWrapper({"ENGINE": "django.db.backends.postgresql",
                                "NAME": "schema-preview-only", "OPTIONS": {},
                                "TIME_ZONE": None}, alias="qc_schema_preview")
     result = {}
-    for model in apps.get_models(include_auto_created=True):
+    for model in [*apps.get_models(include_auto_created=True), MigrationRecorder.Migration]:
         if not model._meta.can_migrate(backend):
             continue
         table = model._meta.db_table
@@ -333,7 +335,15 @@ def _native_schema_changes(records):
                     {key: old[key] for key in ("type", "nullable")} if old is not None else None,
                     {key: new[key] for key in ("type", "nullable")} if new is not None else None)
                 continue
-            if _native_type(old["type"], "postgresql") != _native_type(new["type"], "postgresql"):
+            old_type = native_type(old["type"], "postgresql")
+            new_type = native_type(new["type"], "postgresql")
+            # Share the readiness inspector's scoped framework compatibility:
+            # native auth migrations use AutoField for these implicit join IDs,
+            # while retained models-only sources use BigAutoField. No narrowing.
+            native_auth_join_id = (identity[0] == "public" and identity[1] in AUTH_JOIN_TABLES
+                                   and name == "id" and old_type in {"integer", "bigint"}
+                                   and new_type in {"integer", "bigint"})
+            if old_type != new_type and not native_auth_join_id:
                 add("type_changed", field_path + ".type", old["type"], new["type"])
             if old["nullable"] != new["nullable"]:
                 add("nullability_changed", field_path + ".nullable", old["nullable"], new["nullable"])

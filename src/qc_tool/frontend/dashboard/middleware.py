@@ -6,6 +6,7 @@ from django.template.loader import render_to_string
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.conf import settings
 from django.db import DatabaseError
+from django.core.management.base import CommandError
 from django.contrib.auth import BACKEND_SESSION_KEY, HASH_SESSION_KEY, SESSION_KEY
 from django.contrib.auth.models import AnonymousUser
 from django.middleware.csrf import CSRF_SESSION_KEY
@@ -130,6 +131,19 @@ class MaintenanceModeMiddleware:
 
     def _during_maintenance(self, request):
         if is_maintenance_read_request(request) or is_maintenance_login_request(request):
+            if not is_admin_request(request) and not is_maintenance_login_request(request):
+                # A supported predecessor can start only for Admin upgrade
+                # recovery. Do not imply that workspace pages are compatible
+                # with code whose installed migration graph is still pending.
+                from django.db import connection
+                from qc_tool.database.migration_engine import history_status
+                try:
+                    history = history_status(connection)
+                    upgrading = bool(history["pending"] or history["problems"])
+                except (DatabaseError, CommandError):
+                    upgrading = True
+                if upgrading:
+                    return self._unavailable(request, upgrade_required=True)
             return self._browse(request)
         return self._unavailable(request)
 
@@ -157,18 +171,22 @@ class MaintenanceModeMiddleware:
             return self._unavailable(request)
 
     @staticmethod
-    def _unavailable(request):
+    def _unavailable(request, upgrade_required=False):
         if request.path_info.startswith("/api") or request.headers.get("Accept") == "application/json":
-            response = JsonResponse({"error": "maintenance", "code": "maintenance", "message": "Maintenance is in progress. You can browse existing data, but changes are temporarily unavailable."}, status=503)
+            message = ("The database requires an administrator-reviewed upgrade. Workspace access remains closed."
+                       if upgrade_required else
+                       "Maintenance is in progress. You can browse existing data, but changes are temporarily unavailable.")
+            response = JsonResponse({"error": "maintenance", "code": "database_upgrade_required" if upgrade_required else "maintenance", "message": message}, status=503)
         else:
             # This path also handles an ORM write rejected inside an atomic
             # block. Keep the error page independent of DB context processors
             # until the read scope rolls its savepoint back.
             admin_request = is_admin_request(request)
             response = HttpResponse(render_to_string("dashboard/system/maintenance.html", {
-                "return_url": reverse("admin:index" if admin_request else "dashboard_home"),
-                "return_label": "Return to administration" if admin_request else "Return to QC Tool",
+                "return_url": reverse("admin_migrations" if upgrade_required else "admin:index" if admin_request else "dashboard_home"),
+                "return_label": "Open administrator migrations" if upgrade_required else "Return to administration" if admin_request else "Return to QC Tool",
                 "maintenance_url": reverse("admin_maintenance"),
+                "upgrade_required": upgrade_required,
             }), status=503)
         response["Retry-After"] = "60"
         response["Cache-Control"] = "no-store, private"

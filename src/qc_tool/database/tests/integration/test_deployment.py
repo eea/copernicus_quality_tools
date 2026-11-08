@@ -14,7 +14,7 @@ from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.db import connection, connections
+from django.db import connection, connections, transaction
 from django.db.backends.sqlite3.base import DatabaseWrapper
 from django.test import SimpleTestCase, TransactionTestCase, override_settings
 from django.test.utils import CaptureQueriesContext
@@ -55,13 +55,13 @@ class DatabaseInitializationTests(SimpleTestCase):
                 with self.subTest(option=option, value=value), self.assertRaises(CommandError):
                     call_command("database", "apply", skip_checks=True, **{option: value})
 
-    def test_empty_production_target_creates_models_and_roles_without_data_or_history(self):
+    def test_empty_production_target_creates_models_roles_and_native_history_without_business_data(self):
         with fresh_sqlite() as probe:
             call_command("database", "plan", stdout=StringIO(), skip_checks=True)
             self.assertFalse(Path(probe.settings_dict["NAME"]).exists())
             initialize()
             self.assertEqual(SchemaInitializer(probe).check()["state"], "ready")
-            self.assertNotIn("django_migrations", probe.introspection.table_names())
+            self.assertIn("django_migrations", probe.introspection.table_names())
             self.assertFalse(get_user_model().objects.exists())
             self.assertFalse(apps.get_model("dashboard", "Product").objects.exists())
             self.assertTrue(Permission.objects.exists())
@@ -191,6 +191,34 @@ class DatabaseInitializationTests(SimpleTestCase):
 
 
 class DatabaseDeploymentTests(TransactionTestCase):
+    def test_strict_postgres_inspection_refuses_collation_default_and_extra_constraints(self):
+        if connection.vendor != "postgresql":
+            self.skipTest("PostgreSQL schema metadata is backend-specific.")
+        with connection.cursor() as cursor:
+            constraints = connection.introspection.get_constraints(cursor, "execution_delivery")
+        foreign_key = next(name for name, value in constraints.items()
+                           if value.get("columns") == ["user_id"] and value.get("foreign_key"))
+        quoted_fk = connection.ops.quote_name(foreign_key)
+        changes = (
+            ('ALTER TABLE catalog_product ALTER COLUMN name TYPE varchar(200) COLLATE "C"', "collation"),
+            ("ALTER TABLE catalog_product ALTER COLUMN name SET DEFAULT 'unreviewed'", "default expression"),
+            ("ALTER TABLE catalog_product ADD CONSTRAINT probe_extra_unique UNIQUE (name)", "unique/primary"),
+            ("ALTER TABLE catalog_product ADD CONSTRAINT probe_extra_check CHECK (NOT (ident = ''))", "unexpected check"),
+            ("ALTER TABLE execution_delivery ADD CONSTRAINT probe_duplicate_fk FOREIGN KEY (user_id) REFERENCES auth_user(id) DEFERRABLE INITIALLY DEFERRED", "unexpected foreign key"),
+            (f"ALTER TABLE execution_delivery ALTER CONSTRAINT {quoted_fk} NOT DEFERRABLE", "foreign key behavior"),
+            (f"ALTER TABLE execution_delivery DROP CONSTRAINT {quoted_fk}, ADD CONSTRAINT {quoted_fk} FOREIGN KEY (user_id) REFERENCES auth_user(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED", "foreign key behavior"),
+            (f"ALTER TABLE execution_delivery DROP CONSTRAINT {quoted_fk}, ADD CONSTRAINT {quoted_fk} FOREIGN KEY (user_id) REFERENCES auth_user(id) ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED", "foreign key behavior"),
+        )
+        for ddl, message in changes:
+            with self.subTest(ddl=ddl), transaction.atomic():
+                with connection.cursor() as cursor:
+                    cursor.execute(ddl)
+                report = SchemaInitializer(connection, strict=True).inspect()
+                self.assertEqual(report["state"], "incompatible")
+                self.assertIn(message, " ".join(report["problems"]))
+                transaction.set_rollback(True)
+        self.assertEqual(SchemaInitializer(connection, strict=True).check()["state"], "ready")
+
     def test_application_tables_have_explicit_business_domain_names(self):
         tables = set(connection.introspection.table_names())
         prefixes = ("account_", "catalog_", "execution_", "publication_", "storage_")
@@ -202,7 +230,7 @@ class DatabaseDeploymentTests(TransactionTestCase):
                 self.assertTrue(model._meta.db_table.startswith(prefixes))
                 self.assertIn(model._meta.db_table, tables)
         self.assertFalse(any(name.startswith("dashboard_") for name in tables))
-        self.assertNotIn("django_migrations", tables)
+        self.assertIn("django_migrations", tables)
 
     def test_whole_application_readiness_and_repeated_application(self):
         for action in ("plan", "check", "apply", "check"):

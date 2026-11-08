@@ -2,9 +2,12 @@
 
 from io import StringIO
 import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from django.test import SimpleTestCase
+from django.core.management.base import CommandError
+from django.test import SimpleTestCase, override_settings
 
 from qc_tool.frontend.dashboard.management.commands.maintenance import Command
 from qc_tool.frontend.dashboard.services import maintenance
@@ -115,3 +118,49 @@ class MaintenanceCommandTests(SimpleTestCase):
         self.assertEqual(error.exception.code, 1)
         self.assertIn("Maintenance storage is unavailable.", self.stderr.getvalue())
         self.assertNotIn("Traceback", self.stderr.getvalue())
+
+    def test_cli_off_cannot_bypass_selected_schema_or_history_readiness(self):
+        from qc_tool.frontend.dashboard.services.maintenance.state import file_lock, write_status
+
+        with TemporaryDirectory() as directory, override_settings(
+                QC_TOOL_MAINTENANCE_DIR=Path(directory) / "maintenance", MAINTENANCE_MODE=False):
+            enabled = maintenance.enable("operator command", 0)
+            enabled.update(phase="ready", blockers=[], readiness_checked_at="2026-11-06T10:00:00+00:00")
+            with file_lock("control"):
+                write_status(enabled)
+            before = (Path(directory) / "maintenance/state.json").read_bytes()
+            with patch("qc_tool.database.deployment.SchemaInitializer.check", side_effect=CommandError("pending migrations")) as check, \
+                    patch("django.db.connection") as inspected:
+                inspected.vendor = "sqlite"
+                with self.assertRaises(SystemExit) as error:
+                    self.run_command("off", "--generation", str(enabled["generation"]))
+            self.assertEqual(error.exception.code, 1)
+            check.assert_called_once()
+            self.assertEqual((Path(directory) / "maintenance/state.json").read_bytes(), before)
+            self.assertTrue(maintenance.read_status()["enabled"])
+            self.assertIn("Keep maintenance enabled", self.stderr.getvalue())
+
+    def test_cli_off_refuses_a_transaction_still_connected_to_another_database(self):
+        from qc_tool.frontend.dashboard.services.maintenance.state import file_lock, write_status
+
+        with TemporaryDirectory() as directory, override_settings(
+                QC_TOOL_MAINTENANCE_DIR=Path(directory) / "maintenance", MAINTENANCE_MODE=False):
+            enabled = maintenance.enable("operator command", 0)
+            enabled.update(phase="ready", blockers=[], readiness_checked_at="2026-11-06T10:00:00+00:00")
+            with file_lock("control"):
+                write_status(enabled)
+            before = (Path(directory) / "maintenance/state.json").read_bytes()
+            with patch("django.db.connection") as inspected, \
+                    patch("qc_tool.database.selection.current_database", return_value="selected"), \
+                    patch("qc_tool.database.selection.configured_connection", return_value={"NAME": "selected"}), \
+                    patch("qc_tool.database.selection.read_state", return_value={"active": "selected"}), \
+                    patch("qc_tool.database.deployment.SchemaInitializer.check") as check:
+                inspected.vendor = "postgresql"
+                inspected.settings_dict = {"NAME": "selected"}
+                inspected.cursor.return_value.__enter__.return_value.fetchone.return_value = ("previous",)
+                with self.assertRaises(SystemExit) as error:
+                    self.run_command("off", "--generation", str(enabled["generation"]))
+            self.assertEqual(error.exception.code, 1)
+            check.assert_not_called()
+            self.assertEqual((Path(directory) / "maintenance/state.json").read_bytes(), before)
+            self.assertTrue(maintenance.read_status()["enabled"])

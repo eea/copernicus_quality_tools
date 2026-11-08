@@ -1,0 +1,19 @@
+{% if migration_review %}
+  <section class="module transfer-panel" aria-labelledby="migration-review-heading"><h2 id="migration-review-heading">{% if migration_initializes_history %}Review Django history initialization{% else %}Review this upgrade{% endif %}</h2><div class="transfer-panel__body">
+    <dl class="transfer-scope-summary"><dt>Retained source</dt><dd><code>{{ migration_review.source_database }}</code> · {{ migration_review.source_release }}</dd><dt>Target release</dt><dd>{{ migration_review.target_release }}</dd><dt>Backup checksum</dt><dd><code>{{ migration_review.backup_sha256 }}</code></dd></dl>
+    {% if migration_review.storage_summary %}<p>{{ migration_review.storage_summary }}</p>{% endif %}
+    <h3>Retained data and storage</h3>
+    <p>Original delivery ZIPs, specifications, boundaries, saved QC outputs and publications keep their existing paths. Worker input and temporary directories are disposable and are rebuilt from retained ZIPs. Preparing this copy does not relocate shared files.</p>
+    {% if migration_review.storage_areas %}<div class="migration-storage-scroll" tabindex="0" role="region" aria-label="Retained storage inventory"><table class="migration-storage-table"><caption>Inventory checked for this review; candidate compatibility is verified after migration.</caption><thead><tr><th scope="col">Storage area</th><th scope="col">Availability</th><th scope="col">Files</th><th scope="col">Size</th></tr></thead><tbody>{% for area in migration_review.storage_areas %}<tr data-availability="{{ area.status }}"><th scope="row">{{ area.label }}</th><td>{{ area.status_label }}</td><td>{{ area.files_count }}</td><td>{{ area.byte_count|filesizeformat }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+    {% if migration_review.storage_exclusions %}<details class="transfer-details"><summary>Recovery material outside this storage inventory</summary><ul>{% for exclusion in migration_review.storage_exclusions %}<li>{{ exclusion }}</li>{% endfor %}</ul></details>{% endif %}
+    {% if migration_review.blockers %}<ul class="errornote" role="alert">{% for blocker in migration_review.blockers %}<li>{{ blocker }}</li>{% endfor %}</ul>{% endif %}
+    {% if migration_review.warnings %}<ul class="transfer-warnings">{% for warning in migration_review.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
+    {% if migration_review.pending_names %}<h3>Installed migration plan</h3><ol>{% for name in migration_review.pending_names %}<li><code>{{ name }}</code></li>{% endfor %}</ol>{% endif %}
+    <p>The runner restores the reviewed backup into a separate owned database, {% if migration_initializes_history %}initializes its Django migration history after strict schema verification{% else %}applies installed Django migrations there{% endif %} and verifies the result. Database migrations do not move delivery archives or other retained files. Switching databases is a separate action after verification.</p>
+    {% if preparation_form %}<form method="post" data-maintenance-exempt data-admin-pending-label="Preparing migration…" data-admin-pending-message="Queuing the reviewed database copy and migration checks in the background.">
+      {% csrf_token %}{{ preparation_form.non_field_errors }}{% for field in preparation_form.hidden_fields %}{{ field }}{{ field.errors }}{% endfor %}
+      <div class="form-row transfer-checkbox">{{ preparation_form.confirmed_backup }}{{ preparation_form.confirmed_backup.label_tag }}{{ preparation_form.confirmed_backup.errors }}</div>
+      <button type="submit" class="btn-qc-primary" name="action" value="start"{% if not migration_review.can_apply %} disabled{% endif %}>{% if migration_initializes_history %}Initialize history on a copy{% else %}Prepare upgraded copy{% endif %}</button>
+    </form>{% endif %}
+  </div></section>
+  {% endif %}

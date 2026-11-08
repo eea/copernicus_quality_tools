@@ -1,0 +1,26 @@
+<section class="module transfer-panel" id="migration-help" aria-labelledby="migration-help-heading">
+    <h2 id="migration-help-heading">Help &amp; administrator intervention</h2>
+    <div class="transfer-panel__body migration-help">
+      <details id="migration-create-help"><summary>Creating a new migration</summary>
+        <p>A developer creates migration files with a model or data change, reviews them and ships them with a QC Tool release. As administrator, you apply that installed plan through this page.</p>
+        <ol><li><strong>Develop and review.</strong> Generate native Django migrations in development, commit them with the change and test the supported upgrade paths on disposable copies.</li><li><strong>Install the reviewed release.</strong> The deployment operator installs the matching frontend and worker images under maintenance. New pending migrations then appear here.</li><li><strong>Apply through a verified copy.</strong> Pause work, create a complete backup, prepare and verify a copy, then explicitly switch. Finish checks before reopening.</li></ol>
+        <p>A release with no schema or data migration reuses the existing history. The version number alone does not require a database update.</p>
+      </details>
+      <details{% if migration_source_unavailable %} open{% endif %}><summary>Schema drift, missing history or database unavailable</summary>
+        <p>Keep maintenance on and preserve the source, backup and operation journals. Read the specific blockers above; an unexpected schema is not an ordinary pending migration.</p>
+        <p>The deployment operator can run the read-only whole-application <code>database plan</code> and <code>database check</code> commands to investigate. Have the release maintainer review unsupported differences before continuing. Do not reset tables, fake migration history or edit applied migration files to bypass a blocker.</p>
+        <div class="transfer-actions"><a class="btn-qc-secondary" href="{{ database_manager_url }}">Inspect databases</a><a href="{{ maintenance_url }}">Open maintenance</a></div>
+      </details>
+      <details><summary>Interrupted upgrade or failed verification</summary>
+        <p>Open the upgrade attempt above. Use <strong>Verify and retry</strong> only when the server offers it. If migration execution is uncertain, retain the failed copy and stop the upgrade through the guarded action; then prepare a fresh copy from a verified backup.</p>
+        <p>Preparation continues in the background if you leave this page. A lost browser connection is not proof that the migration stopped or rolled back. Keep maintenance on until the operation is complete or recovered.</p>
+        {% if operation %}<p><a href="#migration-operation-heading">Go to this operation's progress &amp; recovery</a></p>{% endif %}
+      </details>
+      <details><summary>Delivery files, storage compatibility &amp; rollback</summary>
+        <p>Migration preparation retains the original database and shared delivery archives, specifications, boundaries, QC outputs and publications at their existing paths. Review file coverage and missing or external content in the backup and candidate checks. Keep an independent recovery copy outside the runtime storage.</p>
+        <p>A database migration does not relocate or convert files. A future storage-format change needs its own reviewed procedure. Reversing a schema migration does not recover discarded data or files.</p>
+        <p>Quick switch-back is limited to the same maintenance window before normal work resumes. Once new work has been accepted, an older database can lose that work. Recovery may require the previous pinned application images and an offline operator procedure.</p>
+        <div class="transfer-actions"><a class="btn-qc-secondary" href="{% url 'admin_storage' %}">Inspect retained files</a><a href="{{ backup_files_url }}">Saved backups</a><a href="{{ database_manager_url }}">Manage databases</a></div>
+      </details>
+    </div>
+  </section>

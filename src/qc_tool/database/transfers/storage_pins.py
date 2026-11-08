@@ -99,7 +99,12 @@ def _validate(document, operation_id):
 
 def pin_restore_files(operation, restore_plan):
     """Persist exact restore/reuse retention before any files are published."""
-    entries = tuple(restore_plan.archive.entries)
+    return pin_files(operation, restore_plan.archive.entries, restore_plan.roots)
+
+
+def pin_files(operation, entries, roots):
+    """Protect exact existing or restored bytes through the same durable contract."""
+    entries = tuple(entries)
     if not entries:
         return None
     operation_id = _operation_id(operation.get("id"))
@@ -109,7 +114,7 @@ def pin_restore_files(operation, restore_plan):
     document = _validate({
         "version": VERSION, "operation_id": operation_id,
         "destination_database": destination,
-        "roots": {name: _absolute_root(Path(path)) for name, path in restore_plan.roots.items()},
+        "roots": {name: _absolute_root(Path(path)) for name, path in roots.items()},
         "files": [{key: entry[key] for key in ("root", "key", "sha256", "size")} for entry in entries],
     }, operation_id)
     path = store.operation_dir(operation_id) / FILENAME
@@ -122,6 +127,56 @@ def pin_restore_files(operation, restore_plan):
     except OSError as error:
         raise TransferError("The retained database's files could not be protected durably. No new files may be published.") from error
     return document
+
+
+def pin_existing_files(operation, sources, entries):
+    """Pin source bytes at their original physical identities without publication.
+
+    Native restore may translate legacy archive identities into managed layouts.
+    An upgrade on shared storage must retain the original paths instead.
+    """
+    by_identity = {}
+    for source in sources:
+        identity = (source.root, source.key)
+        if identity in by_identity:
+            raise TransferError("The retained source inventory repeats a logical file identity.")
+        by_identity[identity] = source
+    sources = by_identity
+    physical = sorted({str(source.storage_root) for source in sources.values()})
+    roots = {f"retained-{index}": value for index, value in enumerate(physical)}
+    names = {value: name for name, value in roots.items()}
+    locations = {}
+    for source in sources.values():
+        path, root = Path(source.path), Path(source.storage_root)
+        try:
+            key = path.relative_to(root).as_posix()
+        except ValueError as error:
+            raise TransferError("The retained source file inventory does not match its physical storage.") from error
+        preference = (len(root.parts), str(root))
+        if path not in locations or preference < locations[path][0]:
+            locations[path] = (preference, names[str(root)], key)
+    retained, logical = {}, set()
+    for entry in entries:
+        try:
+            identity = (entry["root"], entry["key"])
+            if identity in logical:
+                raise TransferError("The retained source inventory repeats a logical file identity.")
+            logical.add(identity)
+            source = sources[identity]
+            _preference, root, key = locations[Path(source.path)]
+        except (KeyError, ValueError) as error:
+            raise TransferError("The retained source file inventory does not match its physical storage.") from error
+        destination = (root, key)
+        value = {"root": destination[0], "key": destination[1],
+                 "sha256": entry["sha256"], "size": entry["size"]}
+        if destination in retained and retained[destination] != value:
+            raise TransferError("Logical file aliases disagree about the retained physical file's checksum or size.")
+        # A configured PRODUCT_DIRS entry can also be the dedicated uploaded
+        # specification root. Both logical archive identities protect one file.
+        retained[destination] = value
+    if logical != set(sources):
+        raise TransferError("The retained source inventory omits a physical source file.")
+    return pin_files(operation, [retained[key] for key in sorted(retained)], roots)
 
 
 def _current_root(area_key):

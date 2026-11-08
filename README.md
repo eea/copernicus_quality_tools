@@ -66,22 +66,21 @@ experiments, and lists proposed removals. See the [testing guide](docs/developme
 for the host, worker and frontend suites.
 
 The application-wide database package lives in
-[`src/qc_tool/database/`](src/qc_tool/database/README.md). It owns the committed
-models-only policy, initialization command and schema checks.
-**v3.0.0 contains no migration framework, definitions, initial snapshots or legacy
-converter.** `database plan|check` inspects the current schema without changing it.
-`database apply` initializes an entirely empty database from current models,
-including in production, and leaves a complete matching database unchanged.
-It refuses partial or foreign schemas and detected model drift. Schema changes
-require a new target and a separately reviewed data transfer; startup does not upgrade or
-reset existing databases.
+[`src/qc_tool/database/`](src/qc_tool/database/README.md). **The current 3.0.0 includes migration management**, with committed native
+Django migrations and an explicit candidate-only transition from the exact
+supported history-free schema of earlier 3.0.0 installations. Future 3.0.1 and
+3.1.0 releases extend this history with reviewed forward migrations. `database plan|check` inspect readiness without modifying it;
+`database apply` initializes an entirely empty target and leaves a current managed
+schema unchanged. Startup never applies pending migrations.
 
-Legacy conversion is a private manual cutover operation outside the application.
-Use the [manual restore guide](src/qc_tool/database/MANUAL_RESTORE.md) for a prepared
-database artifact, and the [database guide](src/qc_tool/database/README.md) before
-changing models, selecting persistent volumes or deploying. Initial migration
-definitions may be introduced only in a separately reviewed **v3.0.1-or-later**
-release with an explicit transition plan.
+Admin migrations follow ready maintenance, full backup, separate restored
+candidate, installed migrations, verification and explicit switch. Database
+records and retained specification/delivery/report/publication files are verified
+together; files keep their original bytes and identities. Previous database,
+backup and file pins remain available for recovery. See the
+[migration runbook](src/qc_tool/database/MIGRATIONS.md) before changing models,
+selecting persistent volumes or deploying. Legacy conversion remains private
+manual operator work outside the maintained application.
 
 
 # Demo installation

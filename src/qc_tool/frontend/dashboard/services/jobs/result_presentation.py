@@ -15,6 +15,7 @@ from qc_tool.frontend.dashboard.access import can_manage_delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission, Job
 from qc_tool.frontend.dashboard.services.artifacts import ArtifactUnavailable, open_job_report
 from qc_tool.frontend.dashboard.services.deliveries.product_links import add_delivery_product_links
+from .failure_presentation import setup_failure_outcome
 
 
 _FILTERS = (
@@ -73,7 +74,7 @@ def build_result_presentation(job, report, account_access, selected_filter=""):
     status = report.get("status") or job.job_status
     return {
         "summary": _summary(job, report, account_access, status),
-        "outcome": _outcome(status, aborted),
+        "outcome": setup_failure_outcome(report, status, account_access) or _outcome(status, aborted),
         "counters": counters,
         "filters": filters,
         "steps": visible_steps,

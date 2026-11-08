@@ -1,0 +1,14 @@
+<section class="module transfer-panel migration-next-step" aria-labelledby="migration-next-heading">
+    <h2 id="migration-next-heading">{{ migration_next_title }}</h2>
+    <div class="transfer-panel__body"><p>{{ migration_next_description }}</p>
+      {% if migration_database.state == 'legacy' %}<p>The existing v3.0.0 database was created without Django migration history. Initialize history on a verified copy to manage future updates. This keeps QC Tool at v3.0.0 and preserves the original database and retained files.</p>{% endif %}
+      {% if migration_blockers and migration_database.state != 'ready' %}<div class="transfer-compatibility transfer-compatibility--blocked"><h3>What needs attention</h3><ul>{% for problem in migration_blockers %}<li>{{ problem }}</li>{% endfor %}</ul></div>{% endif %}
+      <div class="transfer-actions"><a class="btn-qc-primary" href="{{ migration_next_url }}">{{ migration_next_label }}</a>{% if migration_database.state == 'ready' %}<a class="btn-qc-secondary" href="{{ export_page_url }}">Create backup</a>{% endif %}</div>
+      {% if migration_source_unavailable %}<p><a href="{{ database_manager_url }}">Manage databases</a> · <a href="{{ maintenance_url }}">Open maintenance</a></p>{% endif %}
+      {% if migration_current_step %}<ol class="migration-steps" aria-label="{% if migration_initializes_history %}History initialization stages{% else %}Upgrade stages{% endif %}">
+        <li{% if migration_current_step == 1 %} aria-current="step"{% endif %}><strong>Pause and back up</strong><span>Review source and retained files.</span></li>
+        <li{% if migration_current_step == 2 %} aria-current="step"{% endif %}><strong>Prepare and verify a copy</strong><span>Run the installed migration plan.</span></li>
+        <li{% if migration_current_step == 3 %} aria-current="step"{% endif %}><strong>Review switch and reopen</strong><span>Select the copy, then finish checks.</span></li>
+      </ol>{% endif %}
+    </div>
+  </section>

@@ -371,4 +371,4 @@ release requires a new database or a validated copy prepared manually outside
 the codebase; these commands do not convert or transfer legacy records. `apply`
 initializes only an entirely empty target or leaves a complete matching schema
 unchanged; it refuses partial or foreign schemas and detected model drift. See
-[Database initialization](../development/database-migrations.md).
+[Database migrations](../development/database-migrations.md).

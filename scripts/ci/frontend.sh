@@ -42,6 +42,8 @@ case "${1:-}" in
         # One container retains SQLite's schema across these commands. The schema
         # probe refuses nonempty targets; PostgreSQL must also be disposable.
         run_frontend bash -euc '
+            # Detect model/history drift without generating migration files.
+            python3 -m qc_tool.frontend.manage makemigrations --check --dry-run
             python3 -m qc_tool.database.checks.schema
             python3 -m qc_tool.frontend.manage check
             python3 -m qc_tool.frontend.manage database check

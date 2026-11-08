@@ -12,13 +12,21 @@ in-place schema change, storage move, deletion or production deployment.
 
 ## Implementation update
 
-The first implementation extends the existing transfer service with records-only
-and records-with-available-files packages, a validated artifact-reference ledger
-in existing atomic SQL receipts, semantic portable format 3, source/target schema
-comparison, original-package retention on unsupported contracts, and optional
-retained local files alongside a complete native PostgreSQL backup. The Admin
-Database page checks model readiness on each authorized visit. Legacy portable
-formats retain their strict readers. No schema or first-party migration was added.
+The portable transfer service provides records-only and records-with-available-files
+packages, a validated artifact-reference ledger in atomic SQL receipts, semantic
+portable format 3, source/target contract comparison, and original-package
+retention on unsupported contracts. Legacy portable formats retain their strict
+readers. Native PostgreSQL backups separately preserve complete SQL schema/data,
+with explicit optional business-file, deployment-configuration and global-role
+sections. The Admin Database page checks installed model readiness on each
+authorized visit.
+
+In 3.0.0, native Django history and the guarded Admin migration workflow upgrade
+only a separate owned SQL copy. The serving database and original physical file
+paths are retained. Migration review binds checksums and configured absolute
+business roots, including empty storage areas; logical archive paths remain
+portable. A future storage path/format transformation requires its own reviewed
+compatibility procedure and is not inferred from a database version label.
 
 The dedicated artifact/blob/location tables, unrestricted file-attachment wizard,
 selective per-job graph export, object-store copying, scheduled production backup
@@ -64,14 +72,31 @@ alone cannot recover an externally deleted ZIP.
 | Immutable evidence | Published manifests, input hashes and specification bytes are retained. Imported integer IDs are translated in provenance; original documents are not rewritten. |
 | File/SQL crash recovery | [`transfers/service.py`](../../src/qc_tool/database/transfers/service.py), [`artifacts.py`](../../src/qc_tool/database/transfers/artifacts.py) and the private operation store coordinate maintenance, exclusive file publication, a filesystem journal and a receipt committed with SQL rows. |
 | Protected storage administration | [`storage_admin/references.py`](../../src/qc_tool/frontend/dashboard/services/storage_admin/references.py) protects linked paths; [`trash.py`](../../src/qc_tool/frontend/dashboard/services/storage_admin/trash.py) provides journaled quarantine for eligible unreferenced files. |
-| Native database preservation | [`transfers/postgres.py`](../../src/qc_tool/database/transfers/postgres.py) preserves database schema/data, sequences and large objects. The current native backup excludes external files and deployment secrets. |
+| Native database preservation | [`transfers/postgres.py`](../../src/qc_tool/database/transfers/postgres.py) preserves complete database schema/data, sequences and large objects. Optional selected sections preserve available specifications, boundaries, deliveries, job artifacts, publications, supported deployment configuration and PostgreSQL globals. Remote/unconfigured objects and private runtime journals need independent recovery copies; omitted or unavailable sections remain explicit. |
+| Migration/storage compatibility | [`database/upgrades`](../../src/qc_tool/database/upgrades/service.py) uses existing native backup/restore and selection services around Django migrations. [`recovery_files.py`](../../src/qc_tool/database/transfers/recovery_files.py) binds source content plus configured absolute root paths; [`storage_pins.py`](../../src/qc_tool/database/transfers/storage_pins.py) protects original physical bytes needed by the retained copy. The supported orchestration does not import or reorganize shared business files. |
 
-**Important gaps:** the records UI currently offers “QC records and delivery
-files” only. Active local ZIPs, original specification versions and complete
-published inventories are required by the portable artifact contract. Missing
-job working artifacts may be warnings. There is no general artifact/location
-registry, records-only profile, arbitrary legacy-file attachment, file repair
-package, selective job export or future-schema conversion reader.
+**Current boundaries:** portable account/application packages follow their explicit
+record and artifact contracts; they are separate from native full-recovery backups
+and migration copies. Excluded, unavailable and unverified references remain
+explicit, and missing historical job artifacts can remain warnings. There is no
+general artifact/location registry, arbitrary legacy-file attachment wizard,
+file-repair package or selective per-job export. Portable readers do not convert
+unknown future record schemas. Reviewed native Django upgrades handle only their
+supported source schema/history and installed application contract.
+
+Durable inputs are original incoming ZIPs and exact publication inputs, including
+`submissions/.../input.d/<delivery>.zip`. Job results/reports and durable
+`output.d/` files remain retained evidence. Worker scratch and legacy job
+`input.d/`/`tmp.d/` materialization are temporary, not a replacement for an
+original ZIP; neither SQL history nor a new reader can recreate unavailable
+historical bytes. See [runtime storage](runtime-storage.md#database-upgrades-and-retained-inputsoutputs)
+for the physical-root contract and future path/format handoff requirements.
+
+The isolated database is a SQL protection boundary, not a sandbox for installed
+`RunPython` code. Supported database migrations limit effects to SQL. A checksum
+failure can detect a shared-file side effect but cannot undo it as part of a SQL
+rollback; external/storage changes need separate reviewed, resumable procedures
+and an independent coordinated recovery snapshot.
 
 These are contract changes, not reasons to disable existing checksum or
 publication checks. The existing [additive import design](additive-record-import.md)
@@ -442,12 +467,12 @@ is unsupported. Original source metadata remains audit-only unless a typed
 reader explicitly understands it. No release-number guess, dropped field,
 silent default or SQL execution is a schema-conversion strategy.
 
-The current [`draft` database policy](../../src/qc_tool/database/README.md) remains
-unchanged. Artifact models would be direct draft-model changes tested on fresh
-disposable databases, not tables patched into existing v3.0.0 installations.
-Do not introduce baselines/migrations, legacy converters or automatic adoption
-for this feature. A migration-managed 3.0.1-or-later release needs its own reviewed
-initialization/adoption transition. Package readers do not upgrade target schemas.
+This design originally targeted history-free, models-only installations. The
+[current 3.0.0 migration workflow](../../src/qc_tool/database/releases/3.0.0.md) owns
+native Django history and exact supported-source candidate adoption. Future
+artifact model changes require committed forward migrations and disposable
+upgrade verification. Package readers do not authorize target-schema upgrades;
+storage changes still require their own checksum-verified lifecycle procedure.
 
 ## Delivery sequence and acceptance criteria
 

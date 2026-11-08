@@ -11,7 +11,7 @@ from qc_tool.frontend.dashboard.services.maintenance.state import MaintenanceErr
 
 
 class Command(BaseCommand):
-    help = "Inspect current-model readiness or explicitly initialize an empty database."
+    help = "Inspect native schema/history readiness or explicitly initialize an empty database."
 
     def add_arguments(self, parser):
         parser.add_argument("action", choices=("plan", "check", "apply"))

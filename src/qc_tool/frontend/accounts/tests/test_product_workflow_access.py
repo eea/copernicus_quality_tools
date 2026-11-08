@@ -1,5 +1,6 @@
 """QC creation enforces reusable product policy beneath browser/API adapters."""
 
+from qc_tool.frontend.dashboard.tests.boundary_fixtures import ready_boundary_package
 from dataclasses import replace
 from unittest.mock import patch
 
@@ -18,6 +19,7 @@ from qc_tool.frontend.dashboard.models import (
 
 class ProductWorkflowAccessTests(TestCase):
     def setUp(self):
+        ready_boundary_package(self)
         self.user = get_user_model().objects.create_user(username="scoped-qc-owner")
         for ident in ("first_product", "second_product"):
             UserProductGrant.objects.create(user=self.user, product_ident=ident)

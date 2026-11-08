@@ -143,6 +143,22 @@ def database_scope(name):
         _database.reset(token)
 
 
+def pinned_connection_settings(name):
+    """Copy Django's normalized defaults while pinning one physical database.
+
+    QC_TOOL_CONFIGURED_DATABASE is the original operator configuration and may
+    omit TIME_ZONE, AUTOCOMMIT and other defaults added by ConnectionHandler.
+    Dynamic aliases must inherit the normalized wrapper settings instead.
+    This creates configuration only; callers still own admission and identity.
+    """
+    if not _valid_name(name):
+        raise DatabaseSelectionError("Choose a valid PostgreSQL database name.")
+    value = deepcopy(connections["default"].settings_dict)
+    value.update(NAME=name, CONN_MAX_AGE=0)
+    value["TEST"] = {**value.get("TEST", {}), "MIRROR": None}
+    return value
+
+
 def alias_for_database(name):
     """Return a pinned same-cluster alias; no credential enters the pointer."""
     config = configured_connection()
@@ -160,11 +176,9 @@ def alias_for_database(name):
     alias = "qc_database_" + sha256(identity).hexdigest()[:24]
     with _alias_lock:
         if alias not in connections.databases:
-            value = deepcopy(source.settings_dict)
-            value.update(NAME=name, CONN_MAX_AGE=0)
+            value = pinned_connection_settings(name)
             options = dict(value.get("OPTIONS", {}))
             options["options"] = (options.get("options", "") + " -c default_transaction_read_only=on").strip()
             value["OPTIONS"] = options
-            value["TEST"] = {**value.get("TEST", {}), "MIRROR": None}
             connections.databases[alias] = value
     return alias

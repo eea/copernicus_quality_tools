@@ -44,6 +44,75 @@ class RecoveryFileTests(SimpleTestCase):
                                  "size": metadata()["dump_bytes"]}, *entries])
         return inspect_archive(path)
 
+    def test_migration_storage_identity_binds_an_empty_physical_root_not_just_file_contents(self):
+        old = recovery_files.snapshot(limits=ArchiveLimits(), roots=self.roots)[2]
+        replacement = self.root / "new-boundaries"
+        replacement.mkdir()
+        moved = {**self.roots, "boundaries": replacement}
+        new = recovery_files.snapshot(limits=ArchiveLimits(), roots=moved)[2]
+        # Portable archives have the same empty boundary namespace, while an
+        # approved deployment must not silently start using a different mount.
+        self.assertEqual(old, new)
+        self.assertNotEqual(recovery_files.storage_identity(roots=self.roots),
+                            recovery_files.storage_identity(roots=moved))
+
+    def test_migration_storage_identity_is_order_independent_and_does_not_create_or_resolve_roots(self):
+        absent = self.root / "not-created"
+        configured = {**self.roots, "specifications": absent}
+        with patch.object(Path, "resolve", side_effect=AssertionError("followed a root")), \
+                patch.object(Path, "mkdir", side_effect=AssertionError("created a root")):
+            identity = recovery_files.storage_identity(roots=configured)
+            repeated = recovery_files.storage_identity(roots=dict(reversed(list(configured.items()))))
+        self.assertEqual(identity, repeated)
+        self.assertEqual(identity["specifications"], str(absent))
+        self.assertFalse(absent.exists())
+
+    def test_migration_storage_identity_refuses_relative_or_parent_traversal_roots(self):
+        for value in ("relative/jobs", self.root / "jobs/../elsewhere"):
+            with self.subTest(value=value), self.assertRaisesMessage(TransferError, "explicit absolute"):
+                recovery_files.storage_identity(roots={"work": value})
+
+    def test_changed_physical_mapping_invalidates_upgrade_storage_hash_with_identical_bytes(self):
+        from qc_tool.database.upgrades import storage as upgrade_storage
+
+        inventory, entries, fingerprint, size = recovery_files.snapshot(limits=ArchiveLimits(), roots=self.roots)
+        replacement = self.root / "new-empty-boundaries"
+        replacement.mkdir()
+        moved = {**self.roots, "boundaries": replacement}
+        with patch.object(recovery_files, "snapshot", return_value=(inventory, entries, fingerprint, size)):
+            with patch.object(recovery_files, "storage_roots", return_value=self.roots):
+                before = upgrade_storage.inventory()["fingerprint"]
+            with patch.object(recovery_files, "storage_roots", return_value=moved):
+                after = upgrade_storage.inventory()["fingerprint"]
+        self.assertNotEqual(before, after)
+
+    def test_durable_published_input_and_outputs_are_preserved_while_materialized_inputs_are_excluded(self):
+        job_key = "job_" + "a" * 32
+        job = self.roots["work"] / job_key
+        evidence = {
+            job / "output.d" / "result.gpkg": b"durable output bytes",
+            job / "result.json": b'{"fixture": "retained QC result"}',
+            job / "original-product.json": b'{"fixture": "original specification snapshot"}',
+            self.roots["submissions"] / "release-1-fixture/unit-1/submission-fixture.d/input.d/original.zip": b"published exact input bytes",
+            self.roots["submissions"] / "release-1-fixture/unit-1/submission-fixture.d/output.d/result.gpkg": b"published exact output bytes",
+        }
+        temporary = {
+            job / "input.d" / "materialized.bin": b"temporary unpacked input",
+            job / "tmp.d" / "intermediate.bin": b"temporary intermediate",
+        }
+        for target, content in {**evidence, **temporary}.items():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+        inventory, entries, _fingerprint, _size = recovery_files.snapshot(limits=ArchiveLimits(), roots=self.roots)
+        paths = {source.path for source in inventory.sources}
+        self.assertTrue(set(evidence) <= paths)
+        self.assertTrue(set(temporary).isdisjoint(paths))
+        # The file bytes are snapshotted, not reorganized or regenerated.
+        self.assertEqual({target: target.read_bytes() for target in evidence}, evidence)
+        by_identity = {(entry["root"], entry["key"]): entry for entry in entries}
+        self.assertIn(("work", job_key + "/output.d/result.gpkg"), by_identity)
+        self.assertIn(("submissions", "release-1-fixture/unit-1/submission-fixture.d/input.d/original.zip"), by_identity)
+
     def test_inventory_preserves_old_unlinked_zip_and_reports_without_private_runtime_files(self):
         archive = self.package()
         self.assertEqual({(entry["root"], entry["key"]) for entry in archive.entries}, {

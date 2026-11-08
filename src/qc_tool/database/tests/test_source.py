@@ -8,13 +8,13 @@ from qc_tool.database.checks.source import check_source
 from qc_tool.database.policy import DatabasePolicyError, parse_policy
 
 
-class ModelsOnlySourceTests(unittest.TestCase):
+class NativeMigrationSourceTests(unittest.TestCase):
     def test_current_application_source(self):
         check_source()
 
-    def test_component_migration_package_is_rejected(self):
+    def test_unowned_migration_package_is_rejected(self):
         with TemporaryDirectory() as directory:
-            (Path(directory) / "frontend/dashboard/migrations").mkdir(parents=True)
+            (Path(directory) / "frontend/foreign/migrations").mkdir(parents=True)
             with self.assertRaises(DatabasePolicyError):
                 check_source(directory)
 
@@ -31,7 +31,7 @@ class ModelsOnlySourceTests(unittest.TestCase):
             with self.assertRaises(DatabasePolicyError):
                 check_source(directory)
 
-    def test_only_models_only_configuration_is_supported(self):
+    def test_only_reviewed_managed_configuration_is_supported(self):
         for document in (
             '{"phase": "released", "baselines": {}}',
             '{"phase": "draft", "baselines": {"accounts": "0001_initial"}}',

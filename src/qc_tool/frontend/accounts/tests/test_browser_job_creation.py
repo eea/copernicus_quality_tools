@@ -1,3 +1,4 @@
+from qc_tool.frontend.dashboard.tests.boundary_fixtures import ready_boundary_package
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -14,6 +15,7 @@ from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 
 class BrowserJobCreationTests(TestCase):
     def setUp(self):
+        ready_boundary_package(self)
         self.user = get_user_model().objects.create_user(username="job-owner")
         UserProductGrant.objects.create(user=self.user, product_ident="product")
         self.client.force_login(self.user)

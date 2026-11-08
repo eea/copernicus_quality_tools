@@ -4,13 +4,10 @@ Use the admission decision already made by middleware. Opening the overview
 must never poll workers, inspect/repair schemas, or advance an operation.
 """
 
-from urllib.parse import urlencode
-
-from django.urls import reverse
-
 from qc_tool.frontend.accounts.authorization import access_for_request
 from .maintenance.operations import active_operation
 from .maintenance.state import MaintenanceError
+from .database_navigation import maintenance_operation_url
 
 
 def overview_context(request):
@@ -25,7 +22,7 @@ def overview_context(request):
     try:
         operation = active_operation()
         if operation:
-            transfer_url = reverse("admin_data_transfer") + "?" + urlencode({"operation": operation["operation_id"]})
+            transfer_url = maintenance_operation_url(operation)
     except MaintenanceError:
         transfer_error = True
         phase = "unavailable"
