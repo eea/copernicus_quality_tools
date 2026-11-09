@@ -126,7 +126,8 @@ The EEA Compose profile maps its `QC_TOOL_POSTGRES_PASSWORD` substitution into
 
 The supported application server, frontend native backup clients and CI use
 PostgreSQL major **17**. `POSTGRES_CLIENT_MAJOR` defaults to `17` in both frontend
-Dockerfiles. It is an image build argument, not a runtime switch. Native
+Dockerfiles and selects the Debian `postgresql-client-<major>` package. It is
+an image build argument, not a runtime switch. Native
 operations require matching client/server majors; `psycopg2-binary` does not
 supply `pg_dump` or `pg_restore`. New Compose storage names intentionally avoid
 opening a former PostgreSQL 14 cluster. Use a separate verified logical restore

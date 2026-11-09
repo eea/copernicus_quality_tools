@@ -32,16 +32,16 @@ from qc_tool.frontend.dashboard.services.maintenance.operations import active_op
 
 
 def metadata(data=b"PGDMPfixture"):
-    source = {"oid": 123, "database": "source_database", "server_version": "14.24",
-              "server_major": 14, "encoding": "UTF8", "collation": "C", "ctype": "C",
-              "dump_version": "pg_dump (PostgreSQL) 14.24", "restore_version": "pg_restore (PostgreSQL) 14.24"}
+    source = {"oid": 123, "database": "source_database", "server_version": "17.11",
+              "server_major": 17, "encoding": "UTF8", "collation": "C", "ctype": "C",
+              "dump_version": "pg_dump (PostgreSQL) 17.11", "restore_version": "pg_restore (PostgreSQL) 17.11"}
     inventory = {"tables": [], "sequences": [], "large_objects": [], "total_rows": 0,
                  "schema_sha256": hashlib.sha256(b"").hexdigest()}
     created = "2026-10-21T12:00:00+00:00"
     return {"format": postgres.FORMAT, "version": 1, "created_at": created,
             "source": source, "inventory": inventory, "review_hash": digest({"source": source, "inventory": inventory}),
             "counts": {"tables": 0, "rows": 0},
-            "source_details": {"app_version": "3.0.0", "postgresql_version": "14.24",
+            "source_details": {"app_version": "3.0.0", "postgresql_version": "17.11",
                                "source_database": source["database"], "exported_at": created},
             "dump_sha256": hashlib.sha256(data).hexdigest(), "dump_bytes": len(data)}
 
@@ -223,7 +223,7 @@ class NativePostgresSafetyTests(SimpleTestCase):
         self.assertEqual(postgres.restore_database_name(str(operation)), "qc_restore_" + operation.hex)
         with self.assertRaises(TransferError):
             postgres.restore_database_name("postgresql://untrusted/target")
-        self.assertEqual(postgres._archive_locale(metadata()["source"])["locale_provider"], "libc")
+        self.assertEqual(postgres._archive_locale({**metadata()["source"], "server_major": 14})["locale_provider"], "libc")
         with self.assertRaisesMessage(TransferError, "locale provider"):
             postgres._archive_locale({**metadata()["source"], "server_major": 15})
 

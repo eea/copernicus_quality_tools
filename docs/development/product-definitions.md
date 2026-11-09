@@ -436,7 +436,7 @@ their catalog records to retire a recipe.
 
 ## Query definitions in pgAdmin
 
-The following read-only examples target PostgreSQL 14. Definition identifiers
+The following read-only examples target PostgreSQL 17. Definition identifiers
 are stored in `product_ident`; that field identifies the recipe, while business
 product identity lives in `catalog_product.ident`. Filter through current release
 links when reporting current configuration. Selecting the latest `imported_at`

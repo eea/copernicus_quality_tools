@@ -133,10 +133,10 @@ succeed; a privilege error cannot silently produce an incomplete global backup.
 Remote objects, arbitrary host files, worker scratch/logs and private
 maintenance/transfer control journals remain outside the package.
 
-The frontend image packages reviewed PostgreSQL 14 clients from the signed PGDG
-Trixie repository for AMD64 and ARM64. Native operations require client/server
-major agreement; a newer client is not assumed to produce a dump restorable into
-an older target. Build arguments pin the client major and package version.
+The frontend image packages PostgreSQL 17 clients from the Debian Trixie repository.
+Native operations require client/server major agreement; a newer client is not
+assumed to produce a dump restorable into an older target. The
+`POSTGRES_CLIENT_MAJOR` build argument selects the client major.
 
 Native import accepts the QC Tool package contract from a trusted administrator.
 `pg_restore` executes schema SQL, so a checksum is corruption detection rather
