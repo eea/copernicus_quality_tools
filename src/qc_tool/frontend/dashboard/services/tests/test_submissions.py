@@ -1096,7 +1096,8 @@ class ConcurrentSubmissionTests(TransactionTestCase):
             product_release=release,
             qc_definition=definition,
         )
-        job_root = self.jobs_root / str(job.job_uuid)
+        # The fixture uses the legacy layout (job_<hex32>, output.d, no job.json).
+        job_root = self.jobs_root / ("job_" + job.job_uuid.hex)
         (job_root / "output.d").mkdir(parents=True)
         (job_root / "result.json").write_text("{}", encoding="utf-8")
         return user, delivery, job_root
