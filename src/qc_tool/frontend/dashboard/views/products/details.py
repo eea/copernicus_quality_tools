@@ -11,10 +11,12 @@ from django.urls import reverse
 
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard.models import (
-    DeliverySubmission, ProductReleaseDefinition, ProductUnit, QcDefinition,
+    DeliverySubmission, ProductUnit,
 )
 from qc_tool.frontend.dashboard.services.catalog.readiness import product_readiness
+from qc_tool.frontend.dashboard.services.catalog.version_identity import release_version_identity
 from qc_tool.frontend.dashboard.services.products import build_product_detail
+from qc_tool.frontend.dashboard.services.products.specification_history import specification_history
 from qc_tool.frontend.dashboard.services.products.lookup import (
     MAX_CURRENT_RELEASES, product_release_queryset,
 )
@@ -61,23 +63,10 @@ def product_detail(request, product_ident):
         has_completed_products=bool(readiness and readiness.is_ready),
     ):
         navigation_workflow = ProductWorkflow.ACTIVE
-    current_digests = set(ProductReleaseDefinition.objects.filter(
-        product_release__in=delivery_plans,
-    ).values_list("qc_definition__digest", flat=True)) if product_is_active else set()
-    versions = QcDefinition.objects.filter(product_ident=product_ident).only(
-        "product_ident", "digest", "imported_at"
-    ).order_by("-imported_at", "-pk")
-    # A recipe grant authorizes that recipe's stored versions, not a separate
-    # parent definition merely because it shares the browsable catalog page.
-    if not account_access.can_access_product_snapshot(product_ident):
-        versions = versions.none()
-    version_page = Paginator(versions, 20).get_page(request.GET.get("versions_page"))
-    specification_versions = tuple({
-        "ident": version.product_ident,
-        "digest": version.digest,
-        "imported_at": version.imported_at,
-        "is_current": version.digest in current_digests,
-    } for version in version_page)
+    version_page, specification_versions = specification_history(
+        product_ident, account_access, page_number=request.GET.get("versions_page"),
+        is_active=product_is_active,
+    )
     visible_readiness = readiness if can_view_coverage else None
     detail_plans = tuple(
         _plan_context(request, release, detail, account_access, can_view_coverage)
@@ -159,6 +148,12 @@ def _plan_context(request, release, detail, account_access, can_view_coverage):
         units_page = Paginator(units, REMAINING_UNIT_PAGE_SIZE).get_page(request.GET.get(parameter))
     return {
         "detail": detail, "id": release.pk,
+        "version": release_version_identity(release),
+        "approved_deliveries_url": "{}?{}".format(
+            reverse("submission_queue"), urlencode({
+                "state": "accepted", "product": release.product.ident, "release": release.pk,
+            }),
+        ) if account_access.can_review_product_submission(release.product.ident) else "",
         "label": release.description or release.release_key,
         "status_label": {
             "authoritative": "Approved", "draft": "Draft",

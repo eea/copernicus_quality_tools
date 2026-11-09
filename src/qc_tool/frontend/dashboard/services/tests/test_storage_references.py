@@ -203,7 +203,7 @@ class StorageReferenceTests(TestCase):
         with self.assertNumQueries(0):
             links = record_storage_links(resource, self.job)
         self.assertEqual([item["area"] for item in links], ["jobs", "incoming"])
-        self.assertEqual(links[0]["path"], "job_" + self.job.pk.hex)
+        self.assertEqual(links[0]["path"], str(self.job.pk))
         self.assertEqual(links[1]["path"], self.path)
         for link in links:
             self.assertTrue(urlsplit(link["url"]).path.startswith("/admin/storage/"))

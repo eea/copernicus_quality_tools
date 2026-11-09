@@ -92,27 +92,53 @@ class VerificationEvidenceTests(unittest.TestCase):
             system_error = False
             worker_status = "ok"
             wrong_worker_hash = False
+            canonical = False
+
+            def observed_worker(command, **kwargs):
+                if "from qc_tool.jobs" not in command[5]:
+                    return str(10**12)
+                job_uuid = command[-3]
+                job = root / "work" / (job_uuid if canonical else "job_" + uuid.UUID(job_uuid).hex)
+                roles = {
+                    "directory": job, "result": job / "result.json",
+                    "specification": job / "specification/product.json" if canonical else job / "product.json",
+                    "outputs": job / ("outputs" if canonical else "output.d"),
+                }
+                return json.dumps({name: str(path.relative_to(root / "work")) for name, path in roles.items()})
+
             def worker(command, **kwargs):
                 self.assertNotIn("--skip-steps", command)
                 job_uuid = command[command.index("--job-uuid") + 1]
-                job = root / "work" / ("job_" + uuid.UUID(job_uuid).hex)
+                job = root / "work" / (job_uuid if canonical else "job_" + uuid.UUID(job_uuid).hex)
                 job.mkdir()
-                (job / "product.json").write_bytes(spec.read_bytes())
-                (job / "product_report.pdf").write_bytes(b"%PDF report")
+                specification = job / "specification" if canonical else job
+                reports = job / "reports" if canonical else job
+                if canonical:
+                    specification.mkdir()
+                    reports.mkdir()
+                (specification / "product.json").write_bytes(spec.read_bytes())
+                (reports / "product_report.pdf").write_bytes(b"%PDF report")
                 (job / "result.json").write_text(json.dumps({"status": worker_status, "hash": sha256_file(archive) if wrong_worker_hash is False else wrong_worker_hash, "steps": [{"check_ident": step["check_ident"], "status": "ok"} for step in recipe["steps"]]}))
                 if system_error:
-                    (job / "output.d").mkdir()
-                    (job / "output.d/input_inspire_report.html").write_text('<div class="FailureMessage"><textarea>System error in the Executable Test Suite. Remote resource unavailable.</textarea></div>')
+                    output = job / ("outputs" if canonical else "output.d")
+                    output.mkdir()
+                    (output / "input_inspire_report.html").write_text('<div class="FailureMessage"><textarea>System error in the Executable Test Suite. Remote resource unavailable.</textarea></div>')
                 return Mock(returncode=0)
-            with patch("scripts.testing.legacy_qc.subprocess.check_output", return_value=str(10**12)), patch("scripts.testing.legacy_qc.subprocess.run", side_effect=worker) as launched:
+            with patch("scripts.testing.legacy_qc.subprocess.check_output", side_effect=observed_worker), patch("scripts.testing.legacy_qc.subprocess.run", side_effect=worker) as launched:
                 record = run_case(case, args, {"fingerprint": "source", "revision": "revision"})
             self.assertEqual(launched.call_count, 1)
             self.assertFalse(record["historical_input_identity_confirmed"])
             self.assertTrue(record["passes_all_checks"])
             self.assertEqual(record["current_check_outcome"], "passed")
             self.assertEqual(record["parity_outcome"], "inconclusive")
+            canonical = True
+            with patch("scripts.testing.legacy_qc.subprocess.check_output", side_effect=observed_worker), patch("scripts.testing.legacy_qc.subprocess.run", side_effect=worker):
+                new_layout = run_case(case, args, {"fingerprint": "source", "revision": "revision"})
+            self.assertTrue(new_layout["passes_all_checks"])
+            self.assertTrue(new_layout["worker_specification_matches_original_bytes"])
+            self.assertTrue(any("/reports/" in item["path"] for item in new_layout["artifacts"]))
             system_error = True
-            with patch("scripts.testing.legacy_qc.subprocess.check_output", return_value=str(10**12)), patch("scripts.testing.legacy_qc.subprocess.run", side_effect=worker):
+            with patch("scripts.testing.legacy_qc.subprocess.check_output", side_effect=observed_worker), patch("scripts.testing.legacy_qc.subprocess.run", side_effect=worker):
                 infrastructure = run_case(case, args, {"fingerprint": "source", "revision": "revision"})
             self.assertFalse(infrastructure["passes_all_checks"])
             self.assertEqual(infrastructure["current_check_outcome"], "inconclusive")
@@ -121,7 +147,7 @@ class VerificationEvidenceTests(unittest.TestCase):
             worker_status = "failed"
             for invalid_hash in ("incorrect", None):
                 wrong_worker_hash = invalid_hash
-                with patch("scripts.testing.legacy_qc.subprocess.check_output", return_value=str(10**12)), patch("scripts.testing.legacy_qc.subprocess.run", side_effect=worker):
+                with patch("scripts.testing.legacy_qc.subprocess.check_output", side_effect=observed_worker), patch("scripts.testing.legacy_qc.subprocess.run", side_effect=worker):
                     wrong_hash = run_case(case, args, {"fingerprint": "source", "revision": "revision"})
                 self.assertFalse(wrong_hash["input_hash_matches_worker"])
                 self.assertEqual(wrong_hash["current_check_outcome"], "inconclusive")

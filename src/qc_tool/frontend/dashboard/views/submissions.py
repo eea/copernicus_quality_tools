@@ -27,12 +27,16 @@ from qc_tool.frontend.dashboard.services.submissions.access import (
 )
 from qc_tool.frontend.dashboard.services.submissions.artifacts import submission_inventory, open_submission_file
 from qc_tool.frontend.dashboard.services.submissions.detail_presentation import submission_detail_presentation
+from qc_tool.frontend.dashboard.services.submissions.detail_summary import submission_summary
+from qc_tool.frontend.dashboard.services.submissions.status import submission_status
+from qc_tool.frontend.dashboard.services.catalog.version_identity import release_version_identity
 from qc_tool.frontend.dashboard.services.submissions.bulk_review import (
     MAX_BULK_APPROVALS, annotate_bulk_approval_eligibility,
     bulk_approval_block_reason, bulk_approve_submissions,
 )
 from qc_tool.frontend.dashboard.services.submissions.presentation import correction_context, current_review_feedback
 from qc_tool.frontend.dashboard.services.submissions.review import review_submission
+from .submission_scope import scoped_submission_queue
 
 
 def submission_queue(request):
@@ -49,22 +53,22 @@ def submission_queue(request):
         if state != "all":
             queryset = queryset.filter(review_state=state)
     product = request.GET.get("product", "")
-    if product:
-        queryset = queryset.filter(product_release__product__ident=product)
     delivery = request.GET.get("delivery", "")
-    if delivery:
-        queryset = queryset.filter(delivery_id=int(delivery)) if delivery.isdecimal() and len(delivery) < 19 else queryset.none()
+    release = request.GET.get("release", "")
+    queryset = scoped_submission_queue(queryset, request.GET)
     selected_product_name = ""
     if product:
         selected_product_name = reviewable_submissions(access).filter(
             product_release__product__ident=product,
         ).values_list("product_release__product__name", flat=True).first() or ""
     page = Paginator(
-        annotate_bulk_approval_eligibility(queryset).order_by("requested_at", "pk"),
+        annotate_bulk_approval_eligibility(queryset).prefetch_related("review_events").order_by("requested_at", "pk"),
         MAX_BULK_APPROVALS,
     ).get_page(request.GET.get("page"))
     eligible_count = 0
     for item in page:
+        item.version_identity = release_version_identity(item.product_release, item.job.qc_definition)
+        item.review_status = submission_status(item, events=item.review_events.all())
         item.bulk_block_reason = bulk_approval_block_reason(item)
         item.bulk_selection = ""
         if not item.bulk_block_reason:
@@ -73,6 +77,7 @@ def submission_queue(request):
     return render(request, "dashboard/submissions/index.html", {
         "review_items": page, "selected_state": state, "selected_product": product,
         "selected_delivery": delivery, "selected_product_name": selected_product_name,
+        "selected_release": release,
         "bulk_action_url": _submission_queue_url(request.GET, route="submission_bulk_approve"),
         "bulk_eligible_count": eligible_count,
         "can_review": True,
@@ -80,7 +85,7 @@ def submission_queue(request):
 
 
 def _submission_queue_url(query, *, route="submission_queue"):
-    filters = {key: query[key] for key in ("state", "product", "delivery", "page") if query.get(key)}
+    filters = {key: query[key] for key in ("state", "product", "release", "delivery", "page") if query.get(key)}
     return reverse(route) + ("?" + urlencode(filters) if filters else "")
 
 
@@ -95,7 +100,8 @@ def submission_bulk_approve(request):
     valid = form.is_valid()
     if "selection" in form.cleaned_data and "intent" in form.cleaned_data:
         ids = [ident for ident, _version in form.selections]
-        items = list(annotate_bulk_approval_eligibility(reviewable_submissions(access)).filter(
+        scoped = scoped_submission_queue(reviewable_submissions(access), request.GET)
+        items = list(annotate_bulk_approval_eligibility(scoped).filter(
             pk__in=ids,
         ).order_by("requested_at", "pk"))
         versions = dict(form.selections)
@@ -105,6 +111,7 @@ def submission_bulk_approve(request):
             status = 403
         else:
             for item in items:
+                item.version_identity = release_version_identity(item.product_release, item.job.qc_definition)
                 item.bulk_block_reason = bulk_approval_block_reason(item)
                 if item.review_version != versions[item.pk]:
                     item.bulk_block_reason = "The review changed. Return to the list and select the deliveries again."
@@ -214,37 +221,20 @@ def submission_review(request, submission_id):
     events = list(submission.review_events.select_related("actor").order_by("created_at", "pk"))
     detail = submission_detail_presentation(
         submission, can_review=can_review, storage_available=storage_available,
-        files=files, conflict=conflict,
+        files=files, conflict=conflict, events=events,
     )
-    summary = {
-        "kind": "Submitted delivery", "icon": "file",
-        "reference": "#{}".format(submission.delivery_id),
-        "title": submission.delivery.filename,
-        "description_label": "Product",
-        "description": submission.product_release.product.name,
-        "description_url": reverse("product_detail", args=(submission.product_release.product.ident,)),
-        "status_label": "Review status", "status": detail["status"],
-        "status_description": detail["status"]["message"],
-        "facts": [
-            {"label": "Product unit", "value": submission.product_unit_code},
-            {"label": "Submitted by", "value": submission.submitted_by_username},
-            {"label": "Submitted on", "datetime": submission.requested_at},
-            {"label": "QC result", "value": "Passed" if submission.job.job_status == "ok" else "Not passed"},
-            {"label": "Delivery plan", "value": "Revision {}".format(submission.product_release.revision)},
-        ],
-    }
     return render(request, "dashboard/submissions/detail.html", {
         **_submission_workspace_navigation(access, submission),
         "submission": submission, "form": form, "can_review": can_review,
         "can_decide": detail["decision"]["can_decide"],
-        "detail": detail, "submission_summary": summary,
+        "detail": detail, "submission_summary": submission_summary(submission, detail["status"]),
         "conflict": conflict,
         "candidates": visible_submissions(access).filter(
             product_unit=submission.product_unit, publication_state="published",
         ).exclude(pk=submission.pk).order_by("requested_at") if can_review else [],
         "events": events,
         "review_feedback": current_review_feedback(submission, events=events),
-        "correction": correction_context(submission, access, events=events),
+        "correction": None if detail["approval"]["previously_approved"] else correction_context(submission, access, events=events),
         "files": files, "storage_available": storage_available,
     })
 

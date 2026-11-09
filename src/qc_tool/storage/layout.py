@@ -1,8 +1,9 @@
-"""Runtime path ownership without filesystem discovery or application imports.
+"""Configured runtime roots and access to versioned job artifact locations.
 
 ``QC_TOOL_DATA_ROOT`` explicitly selects the canonical layout. Without it the
-historical environment and path contracts remain in force. Merely constructing
-this object never creates, moves, or searches for stored application data.
+historical environment and path contracts remain in force. Constructing roots
+never creates or moves files. Job-specific resolution checks only the two
+supported directory names beneath the configured jobs root.
 """
 
 from dataclasses import dataclass
@@ -10,7 +11,7 @@ import os
 from pathlib import Path
 from typing import Mapping
 
-from qc_tool.jobs import compact_job_uuid, normalize_job_uuid
+from qc_tool.jobs import compact_job_uuid, resolve_job_paths
 
 
 def _optional_path(value):
@@ -77,16 +78,21 @@ class RuntimePaths:
     def maintenance_dir(self):
         return self.shared_state_dir / "maintenance"
 
+    def job_paths(self, job_uuid, *, require_exists=False):
+        return resolve_job_paths(self.jobs_dir, job_uuid, require_exists=require_exists)
+
     def job_dir(self, job_uuid):
-        compact = compact_job_uuid(job_uuid)
-        return self.jobs_dir / ("job_" + compact)
+        return self.job_paths(job_uuid).directory
 
     def job_stdout_path(self, job_uuid):
-        return self.jobs_dir / ("job." + normalize_job_uuid(job_uuid) + ".stdout")
+        return self.job_paths(job_uuid).console_log_path
 
     def job_scratch_dir(self, job_uuid):
         if self.scratch_dir is None:
-            return self.job_dir(job_uuid) / "tmp.d"
+            paths = self.job_paths(job_uuid)
+            if paths.legacy:
+                return paths.directory / "tmp.d"
+            return Path("/var/tmp/qc-tool/jobs") / compact_job_uuid(job_uuid)
         return self.scratch_dir / compact_job_uuid(job_uuid)
 
 

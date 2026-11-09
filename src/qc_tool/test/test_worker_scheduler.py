@@ -1,6 +1,8 @@
 from unittest import TestCase
 from io import BytesIO
 from subprocess import PIPE
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock
 from unittest.mock import mock_open
 from unittest.mock import patch
@@ -59,6 +61,12 @@ class SchedulerPullJobTests(TestCase):
 
 class JobControllerCredentialTests(TestCase):
     def setUp(self):
+        from qc_tool.worker.scheduler import CONFIG
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        config = patch.dict(CONFIG, {"work_dir": Path(directory.name)})
+        config.start()
+        self.addCleanup(config.stop)
         self.job_args = {
             "job_uuid": "00000000-0000-0000-0000-000000000001",
             "product_ident": "product",

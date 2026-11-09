@@ -127,7 +127,7 @@ class SubmissionFixtureMixin:
             requested_by_username=username,
             request_source="browser",
         )
-        job_root = self.jobs_root / str(job.job_uuid)
+        job_root = self.jobs_root / ("job_" + job.job_uuid.hex)
         output = job_root / "output.d"
         output.mkdir(parents=True)
         (job_root / "result.json").write_text(
@@ -467,7 +467,7 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
         )
         self.submission_root.mkdir()
         release_directory = self.submission_root / (
-            "release-{}-test-release-2026".format(self.release.pk)
+            "product-{}-test-definition".format(self.product.pk)
         )
         release_directory.write_text("not a directory", encoding="utf-8")
 

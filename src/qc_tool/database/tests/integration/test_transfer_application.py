@@ -13,7 +13,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from qc_tool.common import CONFIG, compose_job_dir
+from qc_tool.common import CONFIG
 from qc_tool.database.models import TransferReceipt
 from qc_tool.database.transfers import service, store
 from qc_tool.database.transfers.artifacts import ArtifactRestorePlan, collect_artifacts
@@ -30,6 +30,18 @@ from qc_tool.frontend.dashboard.services.catalog.manifest.definitions import par
 from qc_tool.frontend.dashboard.services.submissions.artifacts import open_submission_file
 from qc_tool.frontend.dashboard.services.submissions.contracts import ReservedSubmission
 from qc_tool.frontend.dashboard.services.submissions.publication import publish_reserved_submission
+
+
+def write_legacy_job_artifacts(fixture, job):
+    """Write authentic legacy evidence for services reusing the graph fixture."""
+    job_dir = fixture.source_config["work_dir"] / ("job_" + job.pk.hex)
+    job_dir.mkdir()
+    (job_dir / "output.d").mkdir()
+    (job_dir / "output.d" / "attachment.txt").write_bytes(b"verified attachment")
+    (job_dir / "report.pdf").write_bytes(b"%PDF-1.4 integration report")
+    (job_dir / "result.json").write_text(json.dumps({"report_filename": "report.pdf"}))
+    (job_dir / "transfer-product.json").write_bytes(fixture.specification)
+    (job_dir / "job.log").write_bytes(b"immutable published QC log")
 
 
 class ApplicationTransferIntegrationTests(TestCase):
@@ -95,7 +107,7 @@ class ApplicationTransferIntegrationTests(TestCase):
         result["product_dirs"] = []
         return result
 
-    def make_graph(self):
+    def make_graph(self, *, write_job_artifacts=None):
         self.specification = json.dumps({"description": "Transfer integration product", "steps": [{
             "check_ident": "qc_tool.vector.naming", "required": True,
             "parameters": {"reference_year": "2026", "aoi_codes": ["CZ"]},
@@ -125,19 +137,16 @@ class ApplicationTransferIntegrationTests(TestCase):
         job = Job.objects.create(delivery=delivery, product_ident=definition.product_ident, product_description=definition.description,
             job_status="ok", product_release=release, qc_definition=definition, input_sha256=self.input_digest,
             requested_by=self.owner, requested_by_username=self.owner.username, request_source="browser")
-        job_dir = compose_job_dir(job.job_uuid)
-        job_dir.mkdir()
-        (job_dir / "output.d").mkdir()
-        (job_dir / "output.d" / "attachment.txt").write_bytes(b"verified attachment")
-        (job_dir / "report.pdf").write_bytes(b"%PDF-1.4 integration report")
-        (job_dir / "result.json").write_text(json.dumps({"report_filename": "report.pdf"}))
-        (job_dir / "transfer-product.json").write_bytes(self.specification)
-        (job_dir / "job.log").write_bytes(b"immutable published QC log")
+        if write_job_artifacts is None:
+            write_legacy_job_artifacts(self, job)
+        else:
+            write_job_artifacts(job)
         self.submission = DeliverySubmission.objects.create(delivery=delivery,
             job=job, product_release=release, product_unit=unit, product_unit_code=unit.product_unit_code,
             verified_product_unit_code=unit.product_unit_code, submitted_by=self.owner, submitted_by_username=self.owner.username,
             request_channel="browser", input_digest=self.input_digest, review_state="accepted", review_version=1)
         reserved = ReservedSubmission(submission_uuid=self.submission.pk, delivery_id=delivery.pk, job_uuid=job.pk,
+            product_id=product.pk, product_ident=product.ident, release_revision=release.revision, definition_digest=definition.digest,
             product_release_id=release.pk, product_unit_id=unit.pk, release_key=release.release_key,
             product_unit_code=unit.product_unit_code, verified_product_unit_code=unit.product_unit_code,
             username=self.owner.username, filename=delivery.filename, is_s3=False,
@@ -186,7 +195,7 @@ class ApplicationTransferIntegrationTests(TestCase):
         self.assertTrue(plan["can_apply"], plan["blockers"])
         return service.start_import(staged["id"], self.actor, plan["plan_hash"], self.generation, True)
 
-    def assert_restored(self):
+    def assert_restored_records(self):
         # Additive restoration allocates local integer identities even when the
         # disposable target is empty; all other source values remain intact.
         receipt = TransferReceipt.objects.filter(profile="application").latest("pk")
@@ -209,6 +218,10 @@ class ApplicationTransferIntegrationTests(TestCase):
         restored = DeliverySubmission.objects.get(pk=self.submission.pk)
         self.assertEqual(restored.review_events.get().decision, "approved")
         self.assertEqual(restored.selected_for_conflicts.get().events.get().selected_submission_id, restored.pk)
+        return restored
+
+    def assert_restored(self):
+        restored = ApplicationTransferIntegrationTests.assert_restored_records(self)
         with open_submission_file(restored, "input.d/fixture.zip") as stream:
             self.assertEqual(stream.read(), self.input_bytes)
         with open_submission_file(restored, "output.d/attachment.txt") as stream:

@@ -18,6 +18,9 @@ from .artifacts import ArtifactInventory, ArtifactRestorePlan, _safe_directory, 
 from .components import FILE_COMPONENTS, COMPONENT_LABELS as _COMPONENT_LABELS
 from .contracts import digest
 from .locations import storage_location
+from .job_artifacts import collect_job_artifacts
+from .job_locations import prepare_job_roots
+from qc_tool.jobs import recognize_job_directory
 
 
 VERSION = 2
@@ -104,7 +107,7 @@ def allowed(root, key, directory=False):
         return len(parts) == 1 if directory else (len(parts) == 2 and parts[-1].lower().endswith(".zip"))
     if root == "work":
         if _JOB.fullmatch(parts[0]):
-            if len(parts) > 1 and parts[1] in {JOB_INPUT_DIRNAME, JOB_TMP_DIRNAME}:
+            if len(parts) > 1 and parts[1] in {JOB_INPUT_DIRNAME, JOB_TMP_DIRNAME, "logs"}:
                 return False
             return directory or not parts[-1].lower().endswith((".log", ".stdout", ".pre"))
         if parts[0] == "product_definitions":
@@ -193,6 +196,15 @@ def collect(*, roots=None, limits=None, components=None, report=None):
                     # A dedicated mount is authoritative. Do not discover or
                     # re-read it through an unselected legacy job-side folder.
                     continue
+                identity = recognize_job_directory(entry.name) if name == "work" else None
+                if identity is not None and "artifacts" in selected:
+                    found, folders = collect_job_artifacts(root, identity, native=True)
+                    sources.extend(found)
+                    directories.extend(folders)
+                    visited += len(found) + len(folders)
+                    if visited > limits.max_members * 4 or len(sources) + len(directories) >= limits.max_members - 2:
+                        raise TransferArchiveError("Retained storage exceeds the configured backup inventory limit.")
+                    continue
                 visit(name, root, entry.name)
     summary = {}
     for component in COMPONENTS:
@@ -276,6 +288,8 @@ def validate(archive):
                 or not isinstance(contract["component_summary"], dict)
                 or set(contract["component_summary"]) != set(COMPONENTS)):
             raise TransferArchiveError("The native backup file selection is invalid.")
+    from .job_contract import validate_canonical_job_folders
+    validate_canonical_job_folders(archive)
     for is_directory, items in ((False, archive.entries), (True, archive.directories)):
         for item in items:
             if item["root"] == "database" and not is_directory:
@@ -345,6 +359,7 @@ def plan_restore(archive, *, journal_path, include_files=True, roots=None):
     entries = tuple(translated.values())
     directories = tuple(destination(entry) for entry in archive.directories if not entry["root"].startswith("product-")) if include_files else ()
     selected = replace(archive, entries=entries, directories=directories, storage={})
+    roots = prepare_job_roots(roots, selected)
     create, reuse = [], []
     for directory, values in ((False, entries), (True, directories)):
         for entry in values:

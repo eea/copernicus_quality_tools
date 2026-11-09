@@ -81,8 +81,9 @@ definition in one release stream; grouped specifications and multiple streams
 require the reviewed manifest workflow. Queued or running jobs block uploads
 and removal so the recipe cannot change during their execution.
 
-Uploaded bytes are retained in shared
-`WORK_DIR/product_definitions/.versions/<ident>/<digest>.json`; an atomic
+Uploaded bytes are retained in the configured shared specification root
+(`data/specifications/` in the canonical layout), under
+`.versions/<ident>/<digest>.json`; an atomic
 `.state/<ident>.json` selects the current version. Catalog records are committed
 before switching runtime state, and new QC requests verify that the active
 digest matches the uploaded catalog revision. The page reports success only
@@ -192,6 +193,51 @@ SHA-256 digest. Files and directory entries are synchronized before the database
 records success. Retries of finalized submissions also check the stored manifest
 digest against the database receipt. A mismatch produces an integrity error and
 leaves the retained files in place for investigation.
+
+New publication directories group explicitly configured business identities:
+
+```text
+submissions/
+└── product-<id>-<product-ident>/
+    └── specification-<release-id>-<series-key>-r<revision>-<definition-sha256>/
+        └── product-unit-<id>-<unit-code>/
+            └── submission-<uuid>.d/
+                ├── input.d/<original-delivery-name>.zip
+                ├── job.json
+                ├── result.json
+                ├── specification/<original-specification-name>.json
+                ├── reports/<original-report-name>.pdf
+                ├── outputs/<original-check-attachment-names>
+                ├── SUBMITTED
+                └── submission-manifest.json
+```
+
+This tree has no reference-period level. Product, specification series and unit
+names are explicit catalog values; filenames are never parsed to invent product
+families or versions. Folder labels are bounded safe names; catalog IDs and the
+full definition SHA-256 distinguish their immutable identities. A specification
+set revision can change expected coverage while keeping the same executable
+recipe bytes. Parallel specification series can each have a current revision.
+The shared version presenter labels that scope explicitly; upload date alone
+does not determine the current specification.
+
+New-layout job artifacts retain their nested specification, report and output
+namespaces. Original bytes and names stay unchanged, including specifications
+called `job.json` or `result.json`; those names cannot collide with execution
+metadata. Diagnostics are excluded from new publications. Publication checks
+the specification's bytes against producer provenance and the job's catalog
+definition before exposing the directory. Original legacy jobs retain their
+existing root-file and `output.d` publication contract. Recorded historical
+`release-.../product-unit-...` and `release-.../aoi-...` keys remain authoritative,
+and manifest versions 1 and 2 are verified without rewriting retained bytes.
+
+Approved and unapproved submissions share this immutable tree. Approval changes
+review records and appends events; it does not move files into a `final` folder.
+Product plans link to approved deliveries filtered by exact release ID. Review
+lists and receipts show the series, revision, exact definition fingerprint and
+current/historical selection. An accepted historical delivery does not satisfy
+a newer revision. A replaced approval remains visible with its earlier decision
+and retained files; it is no longer presented as the selected final delivery.
 
 The database and filesystem form a recoverable saga:
 

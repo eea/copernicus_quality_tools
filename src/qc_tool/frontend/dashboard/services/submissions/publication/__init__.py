@@ -11,7 +11,7 @@ from ..errors import PublicationError
 from ..storage import artifact_key_for_directory
 from .delivery_input import copy_delivery_input
 from .job_artifacts import copy_job_artifacts
-from .layout import discard_owned_staging
+from .directories import discard_owned_staging
 from .layout import publication_layout
 from .manifest import build_manifest
 from .manifest import MANIFEST_FILENAME

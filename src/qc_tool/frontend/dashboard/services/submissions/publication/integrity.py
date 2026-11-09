@@ -8,7 +8,7 @@ import re
 import stat
 
 from qc_tool.common import JOB_INPUT_DIRNAME
-from qc_tool.common import JOB_OUTPUT_DIRNAME
+from .job_layout import retained_output_directory
 
 
 MAX_MANIFEST_FILES = 20_000
@@ -36,7 +36,11 @@ def verify_publication_inventory(
         manifest_filename=manifest_filename,
         expected_count=len(expected),
     )
-    if actual != expected or JOB_OUTPUT_DIRNAME not in directories:
+    try:
+        output_directory = retained_output_directory(root, manifest, directories)
+    except (OSError, ValueError) as exc:
+        raise PublicationIntegrityError from exc
+    if actual != expected or output_directory not in directories:
         raise PublicationIntegrityError
     # A remote object checksum without retained input bytes is insufficient
     # evidence for a final publication. The ZIP archive must match the QC hash.

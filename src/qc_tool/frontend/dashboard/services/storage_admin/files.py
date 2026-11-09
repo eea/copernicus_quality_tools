@@ -19,13 +19,13 @@ from django.conf import settings
 
 from qc_tool.common import CONFIG, uploaded_definition_root
 from qc_tool.storage.layout import runtime_paths
+from qc_tool.jobs import recognize_job_directory
 from qc_tool.frontend.dashboard.services.boundaries.layout import TRASH_DIRECTORY_NAME as BOUNDARY_TRASH_DIRECTORY
 
 
 MAX_SCAN_ENTRIES = 10_000
 MAX_PATH_DEPTH = 32
 TRASH_DIRECTORY = ".qc-tool-trash"
-_JOB = re.compile(r"job_[0-9a-f]{32}\Z")
 _STDOUT = re.compile(r"job\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.stdout\Z")
 # These hidden directories hold immutable content, rather than runtime state.
 # Recognize their real configured paths through every physical browser alias.
@@ -195,7 +195,7 @@ def _parts(area, path="", *, allow_empty=True):
     ):
         raise StorageError("Choose a valid relative storage path; hidden files and traversal are unavailable.",
                            code="invalid_path", status_code=400)
-    if area == "jobs" and not (_JOB.fullmatch(parts[0]) or (len(parts) == 1 and _STDOUT.fullmatch(parts[0]))):
+    if area == "jobs" and not (recognize_job_directory(parts[0]) is not None or (len(parts) == 1 and _STDOUT.fullmatch(parts[0]))):
         raise StorageError("Only reviewed QC job directories and stdout files are available.", code="invalid_path", status_code=404)
     if area == "jobs":
         target = Path(CONFIG["work_dir"]) / parts[0]
@@ -291,7 +291,7 @@ def _entry(area, path, status):
     if _content_path(_configuration(area)[1], tuple(path.split("/"))) and not directory:
         raise StorageError("This retained content location must be a real directory.")
     if area == "jobs" and "/" not in path and (
-        (_JOB.fullmatch(path) and not directory) or (_STDOUT.fullmatch(path) and not regular)
+        (recognize_job_directory(path) is not None and not directory) or (_STDOUT.fullmatch(path) and not regular)
     ):
         raise StorageError("The QC job storage entry does not match its reviewed layout.")
     return {"name": path.rsplit("/", 1)[-1], "path": path,
@@ -471,7 +471,9 @@ def quarantine_reason(area, path, entry):
         return "" if parts[-1].casefold().endswith(".zip") else "Only delivery ZIP files can be moved to trash here."
     if len(parts) == 1 and _STDOUT.fullmatch(parts[0]):
         return ""
-    if len(parts) >= 3 and parts[1] == "output.d":
+    if len(parts) >= 3 and parts[1] in {"output.d", "outputs"}:
+        return ""
+    if len(parts) >= 3 and parts[1] in {"reports", "logs"}:
         return ""
     report_name = parts[-1].casefold()
     if len(parts) == 2 and (parts[1] == "job.log" or report_name == "report.pdf"

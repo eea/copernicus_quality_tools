@@ -6,6 +6,8 @@ import signal
 import subprocess
 import sys
 from threading import Event
+from tempfile import TemporaryDirectory
+from pathlib import Path
 from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import MagicMock, mock_open, patch
@@ -17,6 +19,11 @@ from qc_tool.worker import scheduler
 class WorkerMaintenanceTests(TestCase):
     def setUp(self):
         self.state = scheduler.WorkerMaintenance()
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        config = patch.dict(scheduler.CONFIG, {"work_dir": Path(directory.name)})
+        config.start()
+        self.addCleanup(config.stop)
 
     def test_starts_closed_and_rejects_stale_or_conflicting_unpause(self):
         self.assertFalse(self.state.begin_pull())

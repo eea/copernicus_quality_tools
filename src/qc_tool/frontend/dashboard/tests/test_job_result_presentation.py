@@ -12,7 +12,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from qc_tool.common import CONFIG, JOB_ERROR, compose_job_dir
+from qc_tool.common import CONFIG, JOB_ERROR
 from qc_tool.frontend.accounts.models import UserProductGrant
 from qc_tool.frontend.accounts.services.api_tokens import issue_personal_access_token
 from qc_tool.frontend.dashboard.models import Delivery
@@ -143,7 +143,8 @@ class HistoricalSpecificationResultTests(TestCase):
             product_description="Historical specification", job_status="failed",
             date_finished=timezone.now(),
         )
-        job_directory = compose_job_dir(self.job.pk)
+        # This fixture represents retained jobs written before the versioned layout.
+        job_directory = root / ("job_" + self.job.pk.hex)
         job_directory.mkdir()
         snapshot = json.dumps({
             "description": "Historical specification",
@@ -204,3 +205,20 @@ class HistoricalSpecificationResultTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assert_historical_report(response.json()["data"])
+
+    def test_unrecognized_canonical_storage_is_unavailable_without_server_error(self):
+        root = Path(CONFIG["work_dir"])
+        # A renamed legacy tree has no canonical provenance marker. Never guess
+        # its layout or substitute the current executable specification.
+        (root / ("job_" + self.job.pk.hex)).rename(root / str(self.job.pk))
+        for endpoint in ("show_result", "job_report_json"):
+            with self.subTest(endpoint=endpoint):
+                response = self.client.get(reverse(endpoint, args=(self.job.pk,)))
+                self.assertEqual(response.status_code, 404)
+        token = issue_personal_access_token(self.user, "Unavailable report test")
+        response = self.client.get(
+            reverse("api_job_result", args=(self.job.pk,)),
+            HTTP_AUTHORIZATION=f"Bearer {token.raw_token}",
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("failed its integrity check", response.json()["message"])

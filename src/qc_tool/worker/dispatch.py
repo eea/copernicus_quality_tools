@@ -24,7 +24,7 @@ from qc_tool.common import JOB_OK
 from qc_tool.common import JOB_PARTIAL
 from qc_tool.common import JOB_REPORT_FILENAME_TPL
 from qc_tool.common import JOB_STEP_SKIPPED
-from qc_tool.common import load_product_definition
+from qc_tool.common import load_product_definition_from_job
 from qc_tool.common import QCException
 from qc_tool.common import TIME_FORMAT
 from qc_tool.common import store_job_result
@@ -37,6 +37,10 @@ from qc_tool.worker.manager import create_connection_manager
 from qc_tool.worker.manager import create_jobdir_manager
 from qc_tool.boundaries import resolve_boundary_generation
 from qc_tool.jobs.failures import public_job_failure
+from qc_tool.storage.layout import runtime_paths
+from qc_tool.worker.provenance import (
+    boundary_provenance, downloaded_zip_provenance, finish_provenance, start_provenance,
+)
 
 
 log = logging.getLogger(__name__)
@@ -105,10 +109,9 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
     task_timeout = get_timeout()
     with ExitStack() as exit_stack:
         # Prepare job variables.
-        product_definition = load_product_definition(product_ident)
-        validate_skip_steps(skip_steps, product_definition)
         jobdir_manager = exit_stack.enter_context(create_jobdir_manager(job_uuid))
-        job_report_filepath = jobdir_manager.job_dir.joinpath(JOB_REPORT_FILENAME_TPL.format(filepath.stem))
+        artifacts = runtime_paths(CONFIG).job_paths(job_uuid, require_exists=True)
+        job_report_filepath = artifacts.report_path(JOB_REPORT_FILENAME_TPL.format(filepath.stem))
         # Initialize the public result before any fallible setup so finalization
         # never masks the original failure with an unbound local variable.
         job_result = {"job_uuid": job_uuid,
@@ -124,12 +127,20 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
         try:
             # Make duplicate of product definition in job dir.
             copy_product_definition_to_job(job_uuid, product_ident)
+            # Execute the frozen original bytes, not a second read of a current
+            # specification pointer that could change during this run.
+            product_definition = load_product_definition_from_job(job_uuid, product_ident)
+            validate_skip_steps(skip_steps, product_definition)
 
             if s3_params:
                 # FIXME make correct signature also in case of S3 files.
                 pass
             else:
                 job_result["hash"] = make_signature(filepath)
+            start_provenance(
+                artifacts, job_result, is_s3=bool(s3_params),
+                original_zip_sha256=job_result.get("hash") if not s3_params else None,
+            )
 
             # Store initial job result.
             # This way we announce that the job has started.
@@ -141,6 +152,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
             boundary_generation = resolve_boundary_generation(
                 CONFIG["boundary_dir"]
             )
+            boundary_provenance(artifacts, boundary_generation)
 
             # Prepare initial job params.
             job_params = {}
@@ -217,6 +229,8 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
 
                 merge_step_aoi_metadata(job_params, check_status)
                 merge_step_product_unit_metadata(job_params, check_status)
+                if s3_params:
+                    downloaded_zip_provenance(artifacts, check_status)
 
                 step_result["status"] = check_status.status
                 step_result["messages"] = check_status.messages
@@ -279,6 +293,7 @@ def dispatch(job_uuid, user_name, filepath, product_ident, skip_steps=tuple(), s
             else:
                 job_result["status"] = JOB_OK
             store_job_result(job_result)
+            finish_provenance(artifacts, job_result)
             log.info("Job result has been completed.")
             generate_pdf_report(job_report_filepath, job_uuid)
             log.info("Job report has been generated.")

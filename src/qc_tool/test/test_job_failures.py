@@ -3,12 +3,14 @@
 from contextlib import nullcontext
 from copy import deepcopy
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import patch
 
 from qc_tool.boundaries.errors import BoundaryGenerationUnavailable, BoundaryPackageConfigurationError
 from qc_tool.jobs.failures import BOUNDARY_UNAVAILABLE_MESSAGE, UNEXPECTED_JOB_ERROR, public_job_failure
+from qc_tool.jobs import create_job_paths
 
 
 class PublicJobFailureTests(TestCase):
@@ -36,7 +38,9 @@ class DispatchSetupFailureTests(TestCase):
         manager = SimpleNamespace(job_dir=Path("/unused/job"))
         saved = []
         error = BoundaryGenerationUnavailable("legacy boundary directories are incomplete")
-        with (patch.object(dispatch, "load_product_definition", return_value={"steps": []}),
+        with (TemporaryDirectory() as temporary,
+              patch.dict(dispatch.CONFIG, {"work_dir": Path(temporary)}),
+              patch.object(dispatch, "load_product_definition_from_job", return_value={"steps": []}),
               patch.object(dispatch, "create_jobdir_manager", return_value=nullcontext(manager)),
               patch.object(dispatch, "copy_product_definition_to_job"),
               patch.object(dispatch, "make_signature", return_value="a" * 64),
@@ -46,6 +50,7 @@ class DispatchSetupFailureTests(TestCase):
               patch.object(dispatch, "generate_pdf_report"),
               self.assertLogs(dispatch.log, level="ERROR"),
               self.assertRaises(BoundaryGenerationUnavailable)):
+            create_job_paths(temporary, "01234567-89ab-cdef-0123-456789abcdef")
             dispatch.dispatch("01234567-89ab-cdef-0123-456789abcdef", "test-user", Path("sample.zip"), "test")
         database.assert_not_called()
         self.assertEqual(saved[-1]["status"], "error")

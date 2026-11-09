@@ -14,14 +14,14 @@ from django.db import DatabaseError
 from django.db.models import Q
 from django.urls import reverse
 
-from qc_tool.common import JOB_INPUT_DIRNAME
+from qc_tool.common import CONFIG, JOB_INPUT_DIRNAME
+from qc_tool.jobs import recognize_job_directory, resolve_job_paths
 from qc_tool.database.transfers.errors import TransferError
 from qc_tool.frontend.dashboard.models import Delivery, DeliverySubmission, Job
 
 
 MAX_REFERENCE_LINKS = 50
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
-_JOB_DIRECTORY = re.compile(r"job_([0-9a-f]{32})\Z")
 _JOB_STDOUT = re.compile(r"job\.([0-9a-f-]{36})\.stdout\Z")
 _IMMUTABLE_AREAS = frozenset({"published", "submissions", "boundaries", "specifications"})
 
@@ -137,9 +137,9 @@ def _incoming(result, parts, evidence, is_directory):
 
 
 def _job_id(parts):
-    match = _JOB_DIRECTORY.fullmatch(parts[0])
-    if match:
-        return UUID(hex=match[1])
+    identity = recognize_job_directory(parts[0])
+    if identity is not None:
+        return UUID(str(identity))
     match = _JOB_STDOUT.fullmatch(parts[0]) if len(parts) == 1 else None
     if match:
         try:
@@ -298,7 +298,7 @@ def record_storage_links(resource, obj):
             if link:
                 links.append(link)
         elif isinstance(obj, Job):
-            links.append(_storage_link("QC job files", "jobs", "job_" + obj.pk.hex, directory=True))
+            links.append(_storage_link("QC job files", "jobs", resolve_job_paths(CONFIG["work_dir"], obj.pk).directory.name, directory=True))
             link = _delivery_link(obj.delivery)
             if link:
                 links.append(link)

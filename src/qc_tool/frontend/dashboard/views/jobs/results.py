@@ -1,11 +1,11 @@
 """Rendered and JSON QC result endpoints."""
 
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 
-from qc_tool.common import compile_job_report_data
+from qc_tool.common import QCException, compile_job_report_data
 from qc_tool.frontend.accounts.authorization import access_for_request
 from qc_tool.frontend.dashboard import models
 from qc_tool.frontend.dashboard.access import require_job_view
@@ -56,7 +56,9 @@ def _get_authorized_job(request, job_uuid):
 
 
 def _serialized_report(job, job_uuid):
-    return serialize_job_report(
-        compile_job_report_data(job_uuid, job.product_ident),
-        job,
-    )
+    try:
+        return serialize_job_report(
+            compile_job_report_data(job_uuid, job.product_ident), job,
+        )
+    except (OSError, ValueError, QCException) as exc:
+        raise Http404("The retained QC result or specification is unavailable or failed its integrity check.") from exc

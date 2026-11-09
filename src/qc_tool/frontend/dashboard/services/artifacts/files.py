@@ -5,8 +5,8 @@ from pathlib import Path
 import stat
 import unicodedata
 
-from qc_tool.common import compose_job_dir
-from qc_tool.common import JOB_OUTPUT_DIRNAME
+from qc_tool.common import CONFIG
+from qc_tool.jobs import resolve_job_paths
 from qc_tool.common import load_job_result
 
 from .errors import ArtifactUnavailable
@@ -18,14 +18,18 @@ DEFAULT_TEXT_ARTIFACT_BYTES = 10 * 1024 * 1024
 def open_job_attachment(job_uuid, filename):
     """Open one regular file directly below a job's output directory."""
 
-    output_root = compose_job_dir(str(job_uuid)) / JOB_OUTPUT_DIRNAME
-    return open_regular_artifact(output_root, filename)
+    try:
+        output_root = resolve_job_paths(CONFIG["work_dir"], job_uuid).output_dir
+        return open_regular_artifact(output_root, filename)
+    except (OSError, ValueError) as exc:
+        raise ArtifactUnavailable from exc
 
 
 def open_job_report(job_uuid):
     """Open the report named by trusted job state, confined to the job root."""
 
     try:
+        paths = resolve_job_paths(CONFIG["work_dir"], job_uuid)
         job_result = load_job_result(str(job_uuid))
     except (OSError, TypeError, ValueError) as exc:
         raise ArtifactUnavailable from exc
@@ -33,7 +37,7 @@ def open_job_report(job_uuid):
         raise ArtifactUnavailable
     report_filename = job_result.get("report_filename", "report.pdf")
     return (
-        open_regular_artifact(compose_job_dir(str(job_uuid)), report_filename),
+        open_regular_artifact(paths.reports_dir, report_filename),
         report_filename,
     )
 

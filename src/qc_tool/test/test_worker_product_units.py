@@ -10,6 +10,8 @@ from uuid import uuid4
 
 from qc_tool.worker.status import CheckStatus
 from qc_tool.worker.product_units import merge_step_product_unit_metadata
+from qc_tool.jobs import create_job_paths
+from qc_tool.common import CONFIG
 
 
 class WorkerProductUnitTests(TestCase):
@@ -57,16 +59,19 @@ class WorkerProductUnitTests(TestCase):
             root = Path(directory)
             source = root / "unit.zip"
             source.write_bytes(b"input")
+            job_uuid = str(uuid4())
+            stack.enter_context(patch.dict(CONFIG, {"work_dir": root}))
+            create_job_paths(root, job_uuid)
             manager = SimpleNamespace(job_dir=root, tmp_dir=root, output_dir=root)
             definition = {"product_units": ["007"], "steps": [{"check_ident": "custom.naming", "required": True} for _ in values]}
             observations = iter(values)
             def run_check(params, status):
                 status.set_status_property("product_unit_code", next(observations))
             replacements = {
-                "load_product_definition": definition,
+                "load_product_definition_from_job": definition,
                 "create_jobdir_manager": nullcontext(manager),
                 "create_connection_manager": nullcontext(object()),
-                "resolve_boundary_generation": SimpleNamespace(path=root, generation_id="test"),
+                "resolve_boundary_generation": SimpleNamespace(path=root, generation_id="test", managed=True),
                 "import_module": SimpleNamespace(run_check=run_check),
                 "get_timeout": {"seconds": 60},
                 "get_qc_tool_version": "test",
@@ -75,4 +80,4 @@ class WorkerProductUnitTests(TestCase):
                 stack.enter_context(patch(prefix + name, return_value=value))
             for name in ("copy_product_definition_to_job", "store_job_result", "generate_pdf_report", "signal", "alarm"):
                 stack.enter_context(patch(prefix + name))
-            return dispatch(str(uuid4()), "owner", source, "sample")
+            return dispatch(job_uuid, "owner", source, "sample")

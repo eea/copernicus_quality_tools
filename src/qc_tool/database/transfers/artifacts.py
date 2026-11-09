@@ -18,6 +18,10 @@ from uuid import UUID
 
 from qc_tool.storage.layout import runtime_paths
 from .locations import storage_location, storage_path
+from .job_artifacts import collect_job_artifacts
+from .job_contract import job_artifact_allowed, validate_canonical_job_folders
+from .job_locations import archive_job_contexts, initialize_job_directories, job_target, prepare_job_roots
+from .publication_layout import publication_archive_output_directory
 from qc_tool.common import CONFIG, JOB_INPUT_DIRNAME, JOB_OUTPUT_DIRNAME, JOB_TMP_DIRNAME
 from qc_tool.product_security import canonical_product_ident
 from qc_tool.frontend.dashboard.services.boundaries.resolver import resolve_boundary_generation
@@ -165,26 +169,11 @@ def collect_artifacts(payload, *, roots=None, include_files=None):
             raise TransferArchiveError("A retained delivery ZIP differs from its database record.")
         sources.append(source)
     for job in _rows(payload, "jobs"):
-        key = "job_" + UUID(job["job_uuid"]).hex
-        directory = _safe_directory(roots["work"], key, required=False)
-        if directory is None:
+        found, folders = collect_job_artifacts(roots["work"], job["job_uuid"])
+        if not folders:
             warnings.append("Job {} has no retained working artifacts; its database history remains available.".format(job["job_uuid"]))
-            continue
-        # Retain report/result/spec snapshots and attachments. Worker input and
-        # scratch directories can contain secrets, temporary database exports or
-        # downloaded remote objects and are deliberately outside this contract.
-        directories.append({"root": "work", "key": key})
-        for entry in sorted(os.scandir(directory), key=lambda item: item.name):
-            if entry.name == JOB_OUTPUT_DIRNAME:
-                _tree(roots["work"], key + "/" + entry.name, sources, directories, root_name="work")
-            elif entry.is_symlink():
-                raise TransferArchiveError("A retained job artifact is a symbolic link.")
-            elif entry.is_file(follow_symlinks=False):
-                if entry.name.lower().endswith((".log", ".stdout", ".pre")):
-                    continue
-                sources.append(ArtifactSource("work", key + "/" + entry.name, Path(entry.path), roots["work"]))
-            elif not entry.is_dir(follow_symlinks=False):
-                raise TransferArchiveError("A retained job artifact is a special file.")
+        sources.extend(found)
+        directories.extend(folders)
     for submission in _rows(payload, "submissions"):
         if submission["publication_state"] != "published":
             continue
@@ -275,10 +264,11 @@ def _verify_receipt(manifest, submission, payload=None):
         raise TransferArchiveError(str(exc)) from exc
 
 
-def _allowed_paths(archive):
+def _allowed_paths(archive, *, contexts=None, reference_only=False):
     """Bind destination namespaces to the already validated business records."""
 
     payload = archive.records
+    contexts = ({} if reference_only else validate_canonical_job_folders(archive)) if contexts is None else contexts
     accounts = {int(item["key"]): item["username"] for item in payload.get("accounts", [])}
     uploads = {accounts.get(row["user_id"], "") + "/" + row["filename"] for row in _rows(payload, "deliveries") if row["s3_id"] is None}
     jobs = {"job_" + UUID(row["job_uuid"]).hex for row in _rows(payload, "jobs")}
@@ -294,9 +284,8 @@ def _allowed_paths(archive):
                 return _spec_directory(key) if directory else _spec_path(key) and _spec_ident(key) in identifiers
             if parts[0] not in jobs:
                 return False
-            if directory:
-                return len(parts) == 1 or parts[1] == JOB_OUTPUT_DIRNAME
-            return (len(parts) == 2 and not parts[1].lower().endswith((".log", ".stdout", ".pre"))) or (len(parts) > 2 and parts[1] == JOB_OUTPUT_DIRNAME)
+            return job_artifact_allowed(key, directory=directory,
+                context=contexts.get(str(UUID(hex=parts[0][4:]))), reference_only=reference_only)
         if root == "submissions":
             return any(key == item or key.startswith(item + "/") for item in submissions)
         if root == "boundaries":
@@ -421,7 +410,13 @@ def _validate_package_artifacts(archive):
             if stated is None or stated["sha256"] != item["sha256"] or stated["size"] != item["size"]:
                 raise TransferArchiveError("A publication is missing files from its immutable inventory.")
         actual = {key for root, key in files if root == "submissions" and key.startswith(prefix)}
-        if (actual - wanted or (not optional and (actual != wanted or prefix + "SUBMITTED" not in wanted or ("submissions", prefix[:-1] + "/" + JOB_OUTPUT_DIRNAME) not in dirs))):
+        publication_directories = {key[len(prefix):] for root, key in dirs
+                                   if root == "submissions" and key.startswith(prefix)}
+        output_directory = publication_archive_output_directory(
+            archive, prefix, manifest, files, publication_directories,
+        )
+        if (actual - wanted or (not optional and (actual != wanted or prefix + "SUBMITTED" not in wanted
+                                                or output_directory not in publication_directories))):
             raise TransferArchiveError("A publication inventory has missing or unexpected files.")
     definitions = {item["digest"]: item for item in _rows(archive.records, "definitions")}
     found = set()
@@ -656,6 +651,7 @@ class ArtifactRestorePlan:
                 if (metadata.st_dev, metadata.st_ino) != (device, inode) or not stat.S_ISDIR(metadata.st_mode):
                     raise TransferArchiveError("A staged directory was replaced after interruption.")
                 os.chmod(path, 0o750)
+            initialize_job_directories(self)
             for entry in self.archive.directories:
                 self._directory(storage_path(self.roots, entry["root"], entry["key"]))
             for entry in self.archive.entries:
@@ -908,7 +904,7 @@ def additive_archive(archive, included):
         from .artifact_references import filter_references
         storage["references"] = filter_references(archive.storage["references"], included)
     selected = replace(archive, records=payload, entries=(), directories=(), storage=storage)
-    allowed = _allowed_paths(selected)
+    allowed = _allowed_paths(selected, contexts=archive_job_contexts(archive))
     entries = {}
     definitions = _rows(payload, "definitions")
     definition_digests = {row["digest"] for row in definitions}
@@ -1002,9 +998,10 @@ def inspect_retained_artifact_conflicts(archive, *, roots=None):
         try:
             if root not in roots:
                 raise TransferArchiveError("Required retained storage is not configured.")
-            _preflight_retained_trees(branch, roots)
+            branch_roots = prepare_job_roots(roots, branch)
+            _preflight_retained_trees(branch, branch_roots)
             for entry in entries:
-                physical_root, physical_key = storage_location(roots, root, entry["key"])
+                physical_root, physical_key = storage_location(branch_roots, root, entry["key"])
                 path = physical_root / physical_key
                 _safe_directory(physical_root, str(Path(physical_key).parent), required=False)
                 if os.path.lexists(path):
@@ -1065,7 +1062,23 @@ def _preflight_retained_trees(archive, roots):
         key = "job_" + UUID(job["job_uuid"]).hex
         if "references" in archive.storage and not any(root == "work" and child.startswith(key + "/") for root, child in payload_files):
             continue
-        if "work" not in roots or not os.path.lexists(roots["work"] / key):
+        if "work" not in roots:
+            continue
+        physical = storage_path(roots, "work", key)
+        if not os.path.lexists(physical):
+            continue
+        if physical.name != key:
+            sources, directories = collect_job_artifacts(roots["work"], job["job_uuid"],
+                                                        target=job_target(roots, job["job_uuid"]))
+            for item in directories:
+                if ("work", item["key"]) not in expected_directories:
+                    raise TransferArchiveError("Existing retained job storage contains a directory outside the package inventory.")
+            for source in sources:
+                identity = ("work", source.key)
+                if identity not in expected_files:
+                    raise TransferArchiveError("Existing retained job storage contains a file outside the package inventory.")
+                if identity in reference_files:
+                    _require_matching(source.path, roots["work"], reference_files[identity])
             continue
         stack = [(key, False)]
         while stack:
@@ -1094,7 +1107,7 @@ def plan_artifact_restore(archive, *, roots=None, journal_path=None):
     """Perform read-only conflict and namespace checks before any file writes."""
 
     _validate_package_artifacts(archive)
-    roots = {key: Path(value) for key, value in (roots or storage_roots()).items()}
+    roots = prepare_job_roots(roots or storage_roots(), archive)
     _preflight_retained_trees(archive, roots)
     create, reuse = [], []
     for directory, entries in ((False, archive.entries), (True, archive.directories)):

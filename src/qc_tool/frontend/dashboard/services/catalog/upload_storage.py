@@ -72,7 +72,7 @@ def validate_existing_file(target, payload):
                 raise OSError("Stored specification version has changed")
 
 
-def publish_specification(staged, directory, ident, digest, payload):
+def publish_specification(staged, directory, ident, digest, payload, *, original_filename=None):
     """Retain immutable bytes, then switch one atomic active-version pointer."""
 
     versions = directory / ".versions" / ident
@@ -87,7 +87,10 @@ def publish_specification(staged, directory, ident, digest, payload):
     _sync_directory(target.parent)
     _sync_directory(target.parent.parent)
     _sync_directory(directory)
-    publish_specification_state(directory, ident, {"active": True, "digest": digest})
+    state = {"active": True, "digest": digest}
+    if original_filename is not None:
+        state["original_filename"] = original_filename
+    publish_specification_state(directory, ident, state)
 
 
 def publish_specification_state(directory, ident, state):

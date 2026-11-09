@@ -5,11 +5,10 @@ import logging
 import sys
 import time
 from argparse import ArgumentParser
-from logging.handlers import TimedRotatingFileHandler
-from pathlib import Path
 
 from qc_tool.common import CONFIG
 from qc_tool.common import create_job_dir
+from qc_tool.storage.layout import runtime_paths
 from qc_tool.worker.jobs import JobIdentifierError
 from qc_tool.worker.jobs import normalize_job_uuid
 from qc_tool.worker.jobs import validate_path_component
@@ -44,6 +43,8 @@ def init_logging(job_dir, log_filename=LOG_FILENAME):
     # Every job has its own log located in its job dir.
     handler = logging.FileHandler(job_dir.joinpath(log_filename))
     handler.setFormatter(formatter)
+    logging.getLogger().addHandler(handler)
+    logging.getLogger().setLevel(logging.INFO)
 
 
 def main():
@@ -146,10 +147,11 @@ def main():
         skip_steps = tuple(int(i) for i in pargs.skip_steps[0].split(","))
 
     # Create job dir.
-    job_dir = create_job_dir(job_uuid)
+    create_job_dir(job_uuid)
 
     # Set up logging.
-    init_logging(job_dir)
+    log_path = runtime_paths(CONFIG).job_paths(job_uuid).worker_log_path
+    init_logging(log_path.parent, log_path.name)
     log.info("Logging of the job {:s} has been started.".format(job_uuid))
 
     # Run the checks.

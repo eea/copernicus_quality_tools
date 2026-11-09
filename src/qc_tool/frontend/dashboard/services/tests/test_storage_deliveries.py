@@ -129,7 +129,8 @@ class StorageDeliveryInventoryTests(TestCase):
         self.assertTrue(entry["is_approved"])
         self.assertFalse(entry["release_is_current"])
         self.assertEqual(entry["approval_scope"], "Earlier delivery plan")
-        self.assertIn("earlier delivery plan", entry["status_message"])
+        self.assertIn("historical specification-set revision", entry["status_message"])
+        self.assertIn("No approval is implied for another revision", entry["status_message"])
 
     def test_historical_records_never_infer_approval_or_historical_byte_identity(self):
         self.historical()

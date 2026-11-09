@@ -23,6 +23,11 @@ validates that configuration; it does not create the runtime. See the
 [full verification procedure](../../docs/development/legacy-qc-parity.md) for
 the evidence layout, selection, runtime guards, exit statuses and limitations.
 
+Artifact collection asks the verified worker's shared job resolver for its
+retained paths. Both legacy `job_<compact-uuid>/output.d` evidence and the new
+UUID directories with `specification/`, `reports/` and `outputs/` are supported;
+the runner does not guess a specification filename or duplicate layout rules.
+
 This is a repeatable integration tool, not an automatically executed unit test.
 Archived comparisons are diagnostics. Strict production/v3 compatibility
 requires paired reference/candidate results on identical input bytes, original

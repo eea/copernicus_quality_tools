@@ -23,6 +23,7 @@
         <li>
             <a href="{% url 'submission_review' item.pk %}" target="_blank" rel="noopener">{{ item.delivery.filename }}<span class="sr-only"> (opens in a new tab)</span></a>
             <p>{{ item.product_release.product.name }} · Product unit <strong>{{ item.product_unit_code }}</strong> · Submitted by {{ item.submitted_by_username }}</p>
+            <p>{{ item.version_identity.label }} · {{ item.version_identity.selection_label }}{% if item.version_identity.definition_available %}<br><span title="SHA-256 {{ item.version_identity.definition_digest }}">{{ item.version_identity.definition_ident }} · {{ item.version_identity.definition_digest|slice:':12' }}</span>{% endif %}</p>
             {% if item.bulk_block_reason %}<p class="submission-bulk-preview__issue">{{ item.bulk_block_reason }}</p>{% endif %}
         </li>
         {% endfor %}
@@ -33,7 +34,7 @@
 <form method="post" class="workspace-card review-form" data-maintenance-write>
 <fieldset class="qc-maintenance-fields" data-maintenance-write{% if maintenance.enabled %} disabled{% endif %}>
     {% csrf_token %}{{ form.selection }}<input type="hidden" name="intent" value="approve">
-    <header class="workspace-card__header"><div><h2>Confirm approval</h2><p>These deliveries will count as accepted product units in their delivery plans. Completing a product remains a separate manager action.</p></div></header>
+    <header class="workspace-card__header"><div><h2>Confirm approval</h2><p>These deliveries will be the approved selections for the exact product units and specification-set revisions shown above. Files remain in their original publication locations. Completing a product remains a separate manager action.</p></div></header>
     <div class="workspace-card__body">
         <div class="review-form__field"><label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label><p id="bulk-notes-help">{{ form.notes.help_text }}</p>{{ form.notes }}{{ form.notes.errors }}</div>
         <div class="review-actions">

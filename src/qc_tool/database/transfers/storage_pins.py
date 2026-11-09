@@ -99,7 +99,19 @@ def _validate(document, operation_id):
 
 def pin_restore_files(operation, restore_plan):
     """Persist exact restore/reuse retention before any files are published."""
-    return pin_files(operation, restore_plan.archive.entries, restore_plan.roots)
+    from .locations import storage_location
+    roots = dict(restore_plan.roots)
+    entries = []
+    for original in restore_plan.archive.entries:
+        physical_root, key = storage_location(restore_plan.roots, original["root"], original["key"])
+        name = original["root"]
+        if Path(roots[name]) != physical_root:
+            name = next((n for n, root in roots.items() if Path(root) == physical_root), None)
+            if name is None:
+                name = "retained-" + str(len(roots))
+                roots[name] = physical_root
+        entries.append({**original, "root": name, "key": key})
+    return pin_files(operation, entries, roots)
 
 
 def pin_files(operation, entries, roots):

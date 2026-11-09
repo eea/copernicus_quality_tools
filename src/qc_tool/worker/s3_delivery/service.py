@@ -89,6 +89,7 @@ def download_s3_delivery(
                 digest=digest,
                 hash_files=(archive_path.name,),
                 processing_dir=extraction_dir,
+                original_zip_sha256=digest,
             )
 
         return S3DownloadResult(
@@ -139,6 +140,7 @@ def do_s3_download(
         status.aborted(S3DownloadError.public_message)
         return
 
+    status.original_zip_sha256 = result.original_zip_sha256
     if not status.params.get("hash"):
         status.set_status_property("hash", result.digest)
         status.set_status_property("hash_files", list(result.hash_files))

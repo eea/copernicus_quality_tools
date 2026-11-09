@@ -29,6 +29,8 @@ import time
 import uuid
 import zipfile
 
+from scripts.testing.artifacts import retained_worker_paths
+
 GIB = 1024**3
 PROVENANCE_MODULES = (
     "qc_tool.common", "qc_tool.worker.cmd", "qc_tool.worker.dispatch",
@@ -447,8 +449,10 @@ def run_case(case: dict, args: argparse.Namespace, source: dict) -> dict:
         process = subprocess.run(cli, stdout=output, stderr=subprocess.STDOUT, check=False)
     record["elapsed_seconds"] = round(time.monotonic() - started, 3)
     record["worker_exit_code"] = process.returncode
-    job_dir = root / "work" / ("job_" + uuid.UUID(job_uuid).hex)
-    result_path = job_dir / "result.json"
+    retained = retained_worker_paths(
+        args.container, job_uuid, root / "work", case["product_ident"], recipe_path.name,
+    )
+    job_dir, result_path = retained["directory"], retained["result"]
     result = None
     if result_path.is_file():
         result = json.loads(result_path.read_text())
@@ -463,7 +467,7 @@ def run_case(case: dict, args: argparse.Namespace, source: dict) -> dict:
                 artifacts.append({"path": str(artifact.relative_to(root)), "bytes": artifact.stat().st_size, "sha256": sha256_file(artifact)})
     record["artifacts"] = artifacts
     record["pdf_report_present"] = any(artifact["path"].endswith("_report.pdf") for artifact in artifacts)
-    job_specification = job_dir / (case["product_ident"].lower() + ".json")
+    job_specification = retained["specification"]
     record["worker_specification_matches_original_bytes"] = job_specification.is_file() and sha256_file(job_specification) == recipe_hash
     if not record["pdf_report_present"] or process.returncode != 0 or not record["worker_specification_matches_original_bytes"]:
         record["passes_all_checks"] = False
@@ -471,7 +475,7 @@ def run_case(case: dict, args: argparse.Namespace, source: dict) -> dict:
     messages = [str(message) for step in ((result or {}).get("steps") or []) for message in (step.get("messages") or [])]
     attachment_errors = []
     if job_dir.is_dir():
-        for attachment in (job_dir / "output.d").glob("*inspire_report.html"):
+        for attachment in retained["outputs"].glob("*inspire_report.html"):
             attachment_errors.extend(inspire_infrastructure_errors(attachment.read_text(errors="replace")))
     record["inspire_infrastructure_errors"] = attachment_errors
     infrastructure_gap = (

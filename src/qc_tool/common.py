@@ -15,15 +15,17 @@ from os import environ
 from pathlib import Path
 from secrets import compare_digest
 from secrets import token_urlsafe
-from shutil import copyfile
 from urllib.error import URLError
 from urllib.request import build_opener
 from urllib.request import HTTPRedirectHandler
 from urllib.request import ProxyHandler
 from urllib.request import Request
 
-from qc_tool.jobs import compact_job_uuid
 from qc_tool.jobs import normalize_job_uuid
+from qc_tool.jobs import create_job_paths
+from qc_tool.jobs.files import publish_job_bytes, read_regular_bytes
+from qc_tool.jobs.paths import safe_artifact_name
+from qc_tool.jobs.specifications import read_specification_snapshot, snapshot_specification
 from qc_tool.product_security import UnsafeProductDefinition
 from qc_tool.product_security import normalize_product_ident
 from qc_tool.product_security import validate_executable_product_configuration
@@ -480,22 +482,28 @@ def compose_job_stdout_filepath(job_uuid):
     return runtime_paths(CONFIG).job_stdout_path(job_uuid)
 
 def compose_job_log_filepath(job_uuid):
-    job_dir = compose_job_dir(job_uuid)
-    return job_dir.joinpath("job.log")
+    return runtime_paths(CONFIG).job_paths(job_uuid).worker_log_path
 
 def create_job_dir(job_uuid):
-    job_dir = compose_job_dir(job_uuid)
-    job_dir.mkdir(parents=True)
-    return job_dir
+    return create_job_paths(CONFIG["work_dir"], job_uuid, exist_ok=True).directory
 
 def copy_product_definition_to_job(job_uuid, product_ident):
     src_filepath = locate_product_definition(product_ident)
-    # Uploaded definitions are stored under their content digest. Job readers
-    # identify the snapshot by product, independently of its source filename.
-    dst_filepath = compose_job_dir(job_uuid).joinpath(
-        normalize_product_ident(product_ident) + ".json"
+    ident = normalize_product_ident(product_ident)
+    payload = _read_regular_specification_file(src_filepath, 1024 * 1024)
+    source_name = src_filepath.name
+    state = current_product_specification_state(ident)
+    if state is not None:
+        if not state["active"] or hashlib.sha256(payload).hexdigest() != state["digest"]:
+            raise QCException("The active specification changed while preparing the job. Retry QC.")
+        if "original_filename" in state:
+            source_name = safe_artifact_name(state["original_filename"])
+            if not source_name.lower().endswith(".json") or normalize_product_ident(source_name[:-5]) != ident:
+                raise QCException("The original specification filename is invalid.")
+    return snapshot_specification(
+        runtime_paths(CONFIG).job_paths(job_uuid, require_exists=True),
+        source_name, payload, ident,
     )
-    copyfile(str(src_filepath), str(dst_filepath))
 
 def load_product_definition_from_job(job_uuid, product_ident):
     """Read the job's own snapshot, including older digest-named copies."""
@@ -503,26 +511,10 @@ def load_product_definition_from_job(job_uuid, product_ident):
     ident = normalize_product_ident(product_ident)
     if ident is None:
         raise QCException("Product definition identifier is invalid.")
-    job_dir = compose_job_dir(job_uuid)
-    json_filepaths = list(job_dir.glob("*.json"))
-    candidates = [path for path in json_filepaths if path.stem.lower() == ident]
-    digest_named = not candidates
-    if digest_named:
-        # Older workers copied the immutable source filename verbatim. Only
-        # accept one verifiable snapshot; never use today's active definition.
-        candidates = [
-            path for path in json_filepaths
-            if re.fullmatch(r"[a-f0-9]{64}", path.stem)
-        ]
-    if not candidates:
-        raise QCException("Product definition file {:s}.json has not been found in the job working directory.".format(product_ident))
-    if len(candidates) != 1:
-        raise QCException("The job's product definition snapshot is ambiguous.")
-    filepath = candidates[0]
     try:
-        payload = _read_regular_specification_file(filepath, 1024 * 1024)
-        if digest_named and hashlib.sha256(payload).hexdigest() != filepath.stem:
-            raise ValueError("Specification snapshot digest does not match")
+        payload = read_specification_snapshot(
+            runtime_paths(CONFIG).job_paths(job_uuid, require_exists=True), ident,
+        )
         product_definition = json.loads(payload.decode("utf-8"))
         validate_executable_product_configuration(product_definition)
     except (OSError, UnicodeError, ValueError) as exc:
@@ -532,32 +524,24 @@ def load_product_definition_from_job(job_uuid, product_ident):
 
 def get_job_report_filepath(job_uuid):
     job_result = load_job_result(job_uuid)
-    job_dir = compose_job_dir(job_uuid)
 
     # FIXME:
     # Old version of qc_tool still uses "report.pdf", and there is no "report_filename" in result.json.
     # This part should be cleaned after old jobs using "report.pdf" are removed by service providers.
-    job_report_filepath = job_dir.joinpath(job_result.get("report_filename", "report.pdf"))
+    job_report_filepath = runtime_paths(CONFIG).job_paths(job_uuid).report_path(
+        job_result.get("report_filename", "report.pdf")
+    )
     return job_report_filepath
 
 def load_job_result(job_uuid):
-    job_dir = compose_job_dir(job_uuid)
-    job_result_filepath = job_dir.joinpath(JOB_RESULT_FILENAME)
-    job_result = job_result_filepath.read_text()
-    job_result = json.loads(job_result)
-    return job_result
+    # A queued job may not have reached the worker yet. Preserve absence for
+    # callers rendering its blueprint; malformed retained storage still refuses.
+    path = runtime_paths(CONFIG).job_paths(job_uuid).result_path
+    return json.loads(read_regular_bytes(path, limit=64 * 1024 * 1024))
 
 def store_job_result(job_result):
-    job_result_data = json.dumps(job_result)
-    job_dir = compose_job_dir(job_result["job_uuid"])
-    # The job result is repeatedly rewritten every job step.
-    # In order to eliminate distortion of job result just being read
-    # we write the new content into adjacent file which we
-    # then rename.
-    job_result_filepath = job_dir.joinpath(JOB_RESULT_FILENAME)
-    job_result_filepath_pre = job_dir.joinpath(JOB_RESULT_FILENAME + ".pre")
-    job_result_filepath_pre.write_text(job_result_data)
-    job_result_filepath_pre.rename(job_result_filepath)
+    paths = runtime_paths(CONFIG).job_paths(job_result["job_uuid"], require_exists=True)
+    publish_job_bytes(paths.result_path, json.dumps(job_result).encode("utf-8"), replace=True)
 
 def get_check_description(check_ident):
     """Returns short description of the check.
@@ -706,9 +690,7 @@ def check_running_job(job_uuid, worker_url, timeout):
 
 
 def compose_attachment_filepath(job_uuid, filename):
-    job_dir = compose_job_dir(job_uuid)
-    filepath = job_dir.joinpath(JOB_OUTPUT_DIRNAME).joinpath(filename)
-    return filepath
+    return runtime_paths(CONFIG).job_paths(job_uuid).output_dir / safe_artifact_name(filename)
 
 def setup_config():
     """

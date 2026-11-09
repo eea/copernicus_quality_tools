@@ -3,12 +3,13 @@
     <header class="workspace-card__header">
         <div>
             <div class="product-detail__plan-heading"><h3 id="plan-title-{{ plan.id }}">{{ plan.label }}</h3><span class="product-detail__status product-detail__status--{{ plan.detail.release.coverage_state }}">{{ plan.status_label }}</span></div>
-            <p class="product-detail__plan-meta">Revision {{ plan.detail.release.revision }}{% if plan.detail.release.approved_at %} <span aria-hidden="true">·</span> Approved <time datetime="{{ plan.detail.release.approved_at|date:'c' }}">{{ plan.detail.release.approved_at|date:"j M Y, H:i T" }}</time>{% endif %}</p>
+            <p class="product-detail__plan-meta">{{ plan.version.revision_label }} <span aria-hidden="true">·</span> {{ plan.version.selection_label }}{% if plan.detail.release.approved_at %} <span aria-hidden="true">·</span> Plan approved <time datetime="{{ plan.detail.release.approved_at|date:'c' }}">{{ plan.detail.release.approved_at|date:"j M Y, H:i T" }}</time>{% endif %}</p>
         </div>
         {% if plan.edit_url %}<a class="btn btn-qc-secondary btn-qc--compact" href="{{ plan.edit_url }}">{% if plan.detail.release.coverage_state == 'authoritative' %}Update delivery plan{% else %}Set up delivery plan{% endif %}</a>{% endif %}
     </header>
     <div class="product-detail__plan-body">
         {% if can_view_coverage %}
+            <p class="product-detail__plan-note">A final delivery is explicitly approved for this specification set and product unit. Approvals from earlier revisions remain in history and do not fulfil this revision.{% if plan.approved_deliveries_url %} <a href="{{ plan.approved_deliveries_url }}">View approved deliveries for this revision</a>.{% endif %}</p>
             {% if plan.detail.coverage.expected is not None %}
                 {% if release_count > 1 or not overview.show_progress %}
                 <div class="product-detail__plan-progress"><span><strong>{{ plan.detail.coverage.accepted }} / {{ plan.detail.coverage.expected }}</strong> product units accepted</span><span>{{ plan.detail.coverage.completion_percentage|floatformat:"-2" }}%</span></div>

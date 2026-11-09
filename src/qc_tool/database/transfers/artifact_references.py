@@ -10,6 +10,7 @@ import hashlib
 import os
 from pathlib import Path
 from .locations import storage_location
+from .job_artifacts import collect_job_artifacts
 import re
 from uuid import NAMESPACE_URL, UUID, uuid5
 
@@ -100,6 +101,7 @@ def collect_optional_artifacts(payload, *, roots, include_files):
     roots = {name: Path(value) for name, value in roots.items()}
     context = {**payload, "_reference_namespace": _legacy_namespace(payload)}
     sources, directories, items, warnings, external = {}, {}, [], [], []
+    job_contexts = {}
     accounts = {int(row["key"]): row["username"] for row in payload.get("accounts", [])}
     deliveries = {str(row["id"]): row for row in _rows(payload, "deliveries")}
 
@@ -112,7 +114,8 @@ def collect_optional_artifacts(payload, *, roots, include_files):
                        inclusion="external" if ref["root"] == "" else "unavailable")
             return ref
         if ref["kind"] == "tree":
-            present = _safe_directory(roots[ref["root"]], ref["key"], required=False) is not None
+            physical_root, physical_key = storage_location(roots, ref["root"], ref["key"])
+            present = _safe_directory(physical_root, physical_key, required=False) is not None
             ref.update(availability="unverified" if present else "missing",
                        inclusion="excluded" if present else "unavailable")
             return ref
@@ -163,19 +166,14 @@ def collect_optional_artifacts(payload, *, roots, include_files):
             input_reference("jobs", key, "job_input", delivery, row.get("input_sha256"))
         prefix = "job_" + UUID(key).hex
         observe(_reference(context, "jobs", key, "job_artifacts", "work", prefix, kind="tree"))
-        if "work" not in roots or _safe_directory(roots["work"], prefix, required=False) is None:
+        if "work" not in roots:
             continue
-        found, found_dirs = [], []
-        for entry in sorted(os.scandir(roots["work"] / prefix), key=lambda value: value.name):
-            relative = prefix + "/" + entry.name
-            if entry.name == JOB_OUTPUT_DIRNAME:
-                _tree(roots["work"], relative, found, found_dirs, root_name="work")
-            elif entry.is_symlink():
-                raise TransferArchiveError("A retained job artifact is a symbolic link.")
-            elif entry.is_file(follow_symlinks=False) and not entry.name.lower().endswith((".log", ".stdout", ".pre")):
-                found.append(ArtifactSource("work", relative, Path(entry.path), roots["work"]))
-            elif not entry.is_dir(follow_symlinks=False) and not entry.is_file(follow_symlinks=False):
-                raise TransferArchiveError("A retained job artifact is a special file.")
+        found, found_dirs = collect_job_artifacts(roots["work"], key)
+        if found_dirs:
+            from qc_tool.jobs import read_job_context, resolve_job_paths
+            job_context = read_job_context(resolve_job_paths(roots["work"], key))
+            if job_context:
+                job_contexts[key] = job_context
         for source in found:
             observe(_reference(context, "jobs", key, "job_output", "work", source.key))
         if include_files:
@@ -270,7 +268,7 @@ def collect_optional_artifacts(payload, *, roots, include_files):
             directories[(root, parent)] = {"root": root, "key": parent}
     from types import SimpleNamespace
     from .artifacts import _allowed_paths
-    allowed = _allowed_paths(SimpleNamespace(records=payload, storage={"boundaries": boundary}))
+    allowed = _allowed_paths(SimpleNamespace(records=payload, storage={"boundaries": boundary}), contexts=job_contexts)
     directories = {key: value for key, value in directories.items() if allowed(key[0], key[1], True)}
     refs = {"version": VERSION, "mode": "available_files" if include_files else "records_only", "items": items}
     refs = merge_retained_references(refs, payload, retained_references(payload))
@@ -290,7 +288,9 @@ def _validate_items(value, payload, *, entries=None):
     index, identifiers, identities = _index(payload), set(), set()
     from .artifacts import _allowed_paths
     from types import SimpleNamespace
-    allowed = _allowed_paths(SimpleNamespace(records=payload, storage={"boundaries": {}}))
+    allowed = _allowed_paths(
+        SimpleNamespace(records=payload, storage={"boundaries": {}}), reference_only=True,
+    )
     accounts = {int(account["key"]): account["username"] for account in payload.get("accounts", [])}
     # Boundary references describe configured historical storage, not activation.
     for item in value["items"]:
@@ -646,7 +646,8 @@ def inspect_optional_delivery_files(archive, *, roots):
             item.update(status="packaged", file_status="packaged", message="Original ZIP is included; existing files will never be overwritten.")
         if ref["root"] in roots and ref["key"]:
             try:
-                observed = _safe_file(Path(roots[ref["root"]]), ref["key"])
+                physical_root, physical_key = storage_location(roots, ref["root"], ref["key"])
+                observed = _safe_file(physical_root, physical_key)
                 if observed is not None:
                     _source, digest, size = observed
                     expected = ref["expected_sha256"] or ref["observed_sha256"]

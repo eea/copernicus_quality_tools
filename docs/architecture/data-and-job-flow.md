@@ -132,8 +132,11 @@ flag alone does not authorize erasing its history.
 | Worker scratch | `QC_TOOL_SCRATCH_DIR` worker-only volume | worker job only |
 | Worker QC database | worker PostGIS job schemas | worker job only |
 
-Normal job directories retain JSON, specification snapshots, PDF reports, logs
-and `output.d`. The original ZIP remains in incoming storage during QC; the
+New jobs retain `job.json` provenance and `result.json` directly under the dashed
+job UUID, with original specification snapshots in `specification/`, PDF reports
+in `reports/`, check attachments in `outputs/` and diagnostics in `logs/`.
+Readers also support retained `job_<compact-uuid>/` jobs and their `output.d`
+without moving history. The original ZIP remains in incoming storage during QC; the
 publication workflow later copies it to submission `input.d` and verifies its
 hash. Extraction and intermediate files use a separately owned leased scratch
 child. Normal context exit cleans that child; debugging retention and interrupted

@@ -17,7 +17,7 @@ from django.db import connection, connections
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
-from qc_tool.common import CONFIG, compose_job_dir
+from qc_tool.common import CONFIG
 from qc_tool.database import selection
 from qc_tool.database.transfers import postgres, service, store
 from qc_tool.database.transfers.errors import TransferError
@@ -163,7 +163,9 @@ class PostgreSQLDatabaseControlTests(TransactionTestCase):
         delivery = Delivery.objects.create(user=self.actor, filename="fixture.zip", size_bytes=len(data), content_sha256=digest)
         job = Job.objects.create(delivery=delivery, job_status="ok", product_ident="fixture-product",
                                  input_sha256=digest, date_finished=timezone.now())
-        directory = compose_job_dir(job.pk)
+        # This minimal retained report predates producer metadata and the
+        # canonical role directories; keep its legacy namespace explicit.
+        directory = CONFIG["work_dir"] / ("job_" + job.pk.hex)
         directory.mkdir()
         report = directory / "report.pdf"
         report.write_bytes(b"original retained report")

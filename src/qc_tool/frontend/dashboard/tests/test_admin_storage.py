@@ -812,7 +812,7 @@ class AdminStorageTests(TestCase):
         self.assertContains(response, "Server files")
         links = response.context["record_storage_links"]
         self.assertEqual([item["area"] for item in links], ["jobs", "incoming"])
-        self.assertEqual(links[0]["path"], "job_" + job.pk.hex)
+        self.assertEqual(links[0]["path"], str(job.pk))
         self.assertEqual(links[1]["path"], self.relative_path)
         for link in links:
             self.assertTrue(urlsplit(link["url"]).path.startswith(reverse("admin_storage")))

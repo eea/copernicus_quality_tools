@@ -16,12 +16,13 @@
     <header class="workspace-card__header">
         <div>
             <h2 id="submission-list-heading">{% if selected_product_name %}{{ selected_product_name }}{% else %}Deliveries submitted for review{% endif %}</h2>
-            <p>{{ review_items.paginator.count }} submission{{ review_items.paginator.count|pluralize }} in this view.{% if selected_delivery %} Filtered to delivery #{{ selected_delivery }}.{% endif %}</p>
+            <p>{{ review_items.paginator.count }} submission{{ review_items.paginator.count|pluralize }} in this view.{% if selected_delivery %} Filtered to delivery #{{ selected_delivery }}.{% endif %}{% if selected_release %} Filtered to specification set #{{ selected_release }}.{% endif %}</p>
         </div>
     </header>
     <form method="get" class="review-filters">
         {% if selected_product %}<input type="hidden" name="product" value="{{ selected_product }}">{% endif %}
         {% if selected_delivery %}<input type="hidden" name="delivery" value="{{ selected_delivery }}">{% endif %}
+        {% if selected_release %}<input type="hidden" name="release" value="{{ selected_release }}">{% endif %}
         <label for="submission-state">Review status</label>
         <select name="state" id="submission-state" class="form-control">
             <option value="pending"{% if selected_state == 'pending' %} selected{% endif %}>Awaiting review</option>
@@ -65,11 +66,12 @@
                         {% else %}<span aria-label="Not eligible for bulk approval" title="{{ item.bulk_block_reason }}">—</span>{% endif %}
                     </td>
                     <td><a class="submission-queue-table__filename" href="{% url 'submission_review' item.pk %}">{{ item.delivery.filename }}</a></td>
-                    <td>{{ item.product_release.product.name }}<br><span class="submission-unit">{{ item.product_unit_code }}</span></td>
+                    <td>{{ item.product_release.product.name }}<br><span class="submission-unit">Product unit {{ item.product_unit_code }}</span><br><span class="submission-unit">{{ item.version_identity.label }}</span><br><span class="submission-unit">{{ item.version_identity.selection_label }}</span>{% if item.version_identity.definition_available %}<br><span class="submission-unit" title="SHA-256 {{ item.version_identity.definition_digest }}">{{ item.version_identity.definition_ident }} · {{ item.version_identity.definition_digest|slice:':12' }}</span>{% endif %}</td>
                     <td>{{ item.submitted_by_username }}</td>
                     <td><time datetime="{{ item.requested_at|date:'c' }}">{{ item.requested_at|date:"j M Y, H:i T" }}</time></td>
                     <td>
-                        <span class="review-status review-status--{{ item.review_state }}">{% if item.review_state == 'rejected' %}Rejected{% else %}{{ item.get_review_state_display }}{% endif %}</span>
+                        <span class="review-status review-status--{{ item.review_state }}">{{ item.review_status.label }}</span>
+                        {% if item.review_state == 'accepted' and not item.product_release.is_current %}<p class="submission-queue-table__reason">Approved for this historical revision. Approval does not carry over to another revision.</p>{% endif %}
                         {% if item.review_state == 'rejected' %}<br><a class="review-feedback-link" href="{% url 'submission_review' item.pk %}#correction-heading">Read feedback</a>{% endif %}
                         {% if item.publication_state != 'published' %}<p class="submission-queue-table__reason">{{ item.get_publication_state_display }}</p>
                         {% elif item.bulk_block_reason and item.review_state != 'accepted' and item.review_state != 'rejected' %}<p class="submission-queue-table__reason">{{ item.bulk_block_reason }}</p>{% endif %}
@@ -82,9 +84,9 @@
     </fieldset>
 </form>
     <nav class="review-pagination" aria-label="Submission pages">
-        {% if review_items.has_previous %}<a href="?state={{ selected_state }}&amp;product={{ selected_product|urlencode }}&amp;delivery={{ selected_delivery|urlencode }}&amp;page={{ review_items.previous_page_number }}">Previous</a>{% endif %}
+        {% if review_items.has_previous %}<a href="?state={{ selected_state }}&amp;product={{ selected_product|urlencode }}&amp;release={{ selected_release|urlencode }}&amp;delivery={{ selected_delivery|urlencode }}&amp;page={{ review_items.previous_page_number }}">Previous</a>{% endif %}
         <span>Page {{ review_items.number }} of {{ review_items.paginator.num_pages }}</span>
-        {% if review_items.has_next %}<a href="?state={{ selected_state }}&amp;product={{ selected_product|urlencode }}&amp;delivery={{ selected_delivery|urlencode }}&amp;page={{ review_items.next_page_number }}">Next</a>{% endif %}
+        {% if review_items.has_next %}<a href="?state={{ selected_state }}&amp;product={{ selected_product|urlencode }}&amp;release={{ selected_release|urlencode }}&amp;delivery={{ selected_delivery|urlencode }}&amp;page={{ review_items.next_page_number }}">Next</a>{% endif %}
     </nav>
 </section>
 {% endblock %}

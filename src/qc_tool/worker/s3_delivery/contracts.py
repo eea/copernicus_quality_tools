@@ -4,15 +4,12 @@ from pathlib import Path
 
 
 class S3DownloadResult:
-    """Describe a downloaded delivery without exposing credential state.
+    """Describe measured downloaded content without exposing credential state."""
 
-    This deliberately avoids newer dataclass features so the worker remains
-    importable on its current Python 3.8 runtime.
-    """
+    __slots__ = ("digest", "hash_files", "processing_dir", "original_zip_sha256")
 
-    __slots__ = ("digest", "hash_files", "processing_dir")
-
-    def __init__(self, *, digest, hash_files, processing_dir):
+    def __init__(self, *, digest, hash_files, processing_dir, original_zip_sha256=None):
         self.digest = digest
         self.hash_files = tuple(hash_files)
         self.processing_dir = Path(processing_dir)
+        self.original_zip_sha256 = original_zip_sha256

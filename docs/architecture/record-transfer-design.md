@@ -254,6 +254,23 @@ job files produce warnings. Runtime service logs, maintenance state, unrelated
 scratch data and private credential directories are excluded. A log that is itself
 part of a publication's immutable inventory remains part of that evidence.
 
+Job archive identities keep the established `work/job_<compact-uuid>/` prefix.
+Canonical runs retain separate `specification/`, `reports/` and `outputs/`
+subtrees plus exact `job.json` and `result.json` bytes. Validated producer
+provenance admits those subtrees, preventing an original specification named
+`job.json` or `result.json` from colliding with run metadata. New restores use
+the dashed-UUID directory for these runs; packages without producer provenance
+retain their legacy physical layout. A conflicting job UUID in the other layout
+is refused rather than merged or overwritten. Portable records-only references
+can describe missing/excluded files without claiming the context was packaged.
+
+Restore plans choose physical job destinations before publishing any file and
+reuse that choice after interruption, including when `job.json` has not yet
+been published. Recovery journals and retained database pins cover exact physical
+paths. Publications keep their original artifact key and signed manifest even
+when imported catalog integer identities are translated; canonical and legacy
+publication output roles share the publication owner's provenance validation.
+
 Additive imports preserve immutable specification versions and leave current
 specification activation and boundary generations unchanged. Existing
 storage files may be reused only when their exact bytes match. Different bytes,

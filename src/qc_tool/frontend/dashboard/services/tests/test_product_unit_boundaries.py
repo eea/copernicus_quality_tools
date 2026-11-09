@@ -95,6 +95,8 @@ class PublicationVersionTests(SimpleTestCase):
             username="owner", filename="unit.zip", is_s3=False,
             expected_input_digest=hashlib.sha256(self.input_bytes).hexdigest(),
             requested_at_iso="2026-01-01T00:00:00Z", already_existed=False,
+            product_id=4, product_ident="sample", release_revision=1,
+            definition_digest="d" * 64,
         )
 
     def write_publication(self, version):
@@ -130,8 +132,8 @@ class PublicationVersionTests(SimpleTestCase):
 
     def test_old_publication_recovery_keeps_original_bytes_checksum_and_path(self):
         current, payload, digest = self.write_publication(1)
-        old_parent = current.parent.with_name("aoi-3-007")
-        old_parent.mkdir()
+        old_parent = self.root / "release-2-2026" / "aoi-3-007"
+        old_parent.mkdir(parents=True)
         legacy = old_parent / current.name
         current.rename(legacy)
         for reserved in (self.reserved, replace(self.reserved, artifact_key=legacy.relative_to(self.root).as_posix())):

@@ -105,6 +105,16 @@ def receipt_from_existing(final_directory, reserved, *, submission_root):
         "storage": "s3" if reserved.is_s3 else "local",
         "requested_at": reserved.requested_at_iso,
     }
+    original = reserved.original_publication_identity
+    if original is not None:
+        expected_identity.update({
+            "delivery_id": original["delivery_id"],
+            "product_release_id": original["product_release_id"],
+            unit_keys[0]: original["product_unit_id"],
+            unit_keys[1]: original["product_unit_code"],
+            unit_keys[2]: original["verified_product_unit_code"],
+            "requested_at": original["requested_at"],
+        })
     if any(key in manifest for key in foreign_keys) or any(
         manifest.get(key) != value for key, value in expected_identity.items()
     ):

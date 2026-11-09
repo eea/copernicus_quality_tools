@@ -2,6 +2,8 @@
 
 from django.http import JsonResponse
 
+from qc_tool.common import QCException
+
 
 def _load_visible_job(
     request,
@@ -48,10 +50,13 @@ def job_result(
     if error_response is not None:
         return error_response
 
-    job_report = serialize_report(
-        compile_report(job_uuid, job.product_ident),
-        job,
-    )
+    try:
+        job_report = serialize_report(compile_report(job_uuid, job.product_ident), job)
+    except (OSError, ValueError, QCException):
+        return JsonResponse({
+            "status": "error",
+            "message": "The retained QC result or specification is unavailable or failed its integrity check.",
+        }, status=404)
     response_data = {
         "status": "ok",
         "message": "job status",

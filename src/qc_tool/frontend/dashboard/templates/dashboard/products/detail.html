@@ -61,7 +61,7 @@
 {% if detail_plans %}
 <section class="product-detail__section" aria-labelledby="delivery-plans-title">
     <div class="product-detail__section-heading">
-        <div><h2 id="delivery-plans-title">Delivery plan{% if release_count != 1 %}s{% endif %}</h2><p>Required product units and the QC specifications used to check deliveries.</p></div>
+        <div><h2 id="delivery-plans-title">Delivery plan{% if release_count != 1 %}s{% endif %}</h2><p>Current specification sets and their required product units. Each specification series has its own current revision.</p></div>
         {% if release_page.has_other_pages %}<span>{{ release_count }} plans</span>{% endif %}
     </div>
     {% for plan in detail_plans %}
@@ -80,16 +80,18 @@
 {% if specification_versions %}
 <details class="workspace-card product-detail__section product-detail__disclosure" id="specification-history"{% if specification_version_page.number > 1 %} open{% endif %}>
     <summary><span>Specification version history</span> <span class="product-detail__summary-note">{{ specification_version_page.paginator.count }} version{{ specification_version_page.paginator.count|pluralize }}</span></summary>
+    <p class="product-detail__history-note">Current specifications are selected by the delivery plan, not by upload date. A specification set revision can change its required units without changing the specification file. Earlier jobs and approved deliveries keep the exact version used.</p>
     <div class="product-detail__version-table-region" tabindex="0" role="region" aria-label="Specification versions">
         <table class="product-detail__version-table">
             <caption class="sr-only">Stored product specifications and their exact content fingerprints</caption>
-            <thead><tr><th scope="col">Stored on</th><th scope="col">Status</th><th scope="col">Specification</th><th scope="col">Content fingerprint</th></tr></thead>
+            <thead><tr><th scope="col">Stored on</th><th scope="col">Status</th><th scope="col">Specification</th><th scope="col">Specification series / revision</th><th scope="col">Content fingerprint</th></tr></thead>
             <tbody>
                 {% for version in specification_versions %}
                 <tr>
                     <td><time datetime="{{ version.imported_at|date:'c' }}">{{ version.imported_at|date:"j M Y, H:i T" }}</time></td>
-                    <td>{% if version.is_current %}<span class="product-detail__status">Current</span>{% else %}<span class="product-detail__muted">Retained</span>{% endif %}</td>
-                    <td><a href="{% url 'product_definition_json' version.ident %}?digest={{ version.digest }}" aria-label="View JSON specification stored {{ version.imported_at|date:'Y-m-d H:i T' }} with fingerprint {{ version.digest }}">View JSON</a></td>
+                    <td>{% if version.is_current %}<span class="product-detail__status">Used by a current plan</span>{% elif version.is_selected %}<span class="product-detail__muted">Selected for stopped product</span>{% else %}<span class="product-detail__muted">Retained history</span>{% endif %}</td>
+                    <td><code>{{ version.ident }}</code><br><a href="{% url 'product_definition_json' version.ident %}?digest={{ version.digest }}" aria-label="View JSON specification stored {{ version.imported_at|date:'Y-m-d H:i T' }} with fingerprint {{ version.digest }}">View JSON</a></td>
+                    <td>{% for series in version.series %}<div><code>{{ series.release_key }}</code> · revision {{ series.revision }}{% if series.is_current %} (current){% endif %}</div>{% empty %}<span class="product-detail__muted">No linked delivery plan</span>{% endfor %}</td>
                     <td><details class="product-detail__fingerprint"><summary><code>{{ version.digest|slice:":12" }}…</code></summary><p>SHA-256 <code>{{ version.digest }}</code></p></details></td>
                 </tr>
                 {% endfor %}

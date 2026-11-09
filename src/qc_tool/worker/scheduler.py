@@ -23,7 +23,7 @@ from urllib.request import build_opener
 import bottle
 
 from qc_tool.common import CONFIG
-from qc_tool.common import compose_job_stdout_filepath
+from qc_tool.jobs import create_job_paths, record_job_context
 from qc_tool.storage.layout import runtime_paths
 from qc_tool.common import auth_worker
 from qc_tool.common import get_worker_token
@@ -507,8 +507,15 @@ class JobController():
                 job_uuid,
                 self.job_args["product_ident"],
             )
-            stdout_filepath = compose_job_stdout_filepath(self.job_args["job_uuid"])
-            log.debug("The job has stdout and stderr redirected to %s.".format(stdout_filepath))
+            artifacts = create_job_paths(CONFIG["work_dir"], self.job_args["job_uuid"])
+            record_job_context(
+                artifacts, product_ident=self.job_args["product_ident"],
+                input_filename=self.job_args["filename"],
+                input_source="s3" if self.job_args.get("s3_host") is not None else "local",
+                status="queued",
+            )
+            stdout_filepath = artifacts.console_log_path
+            log.debug("The job has stdout and stderr redirected to %s.", stdout_filepath)
             with open(stdout_filepath, "a") as stdout_f:
                 stdout_f.write("\n\n")
                 stdout_f.write("The job {:s} has started at {:s}+00:00.\n".format(self.job_args["job_uuid"], datetime.utcnow().isoformat()))

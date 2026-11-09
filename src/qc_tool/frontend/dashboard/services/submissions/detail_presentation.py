@@ -2,9 +2,12 @@
 
 from pathlib import PurePosixPath
 
+from .approval_presentation import submission_approval
+from .status import submission_status
+
 
 def submission_detail_presentation(
-    submission, *, can_review, storage_available, files, conflict=None,
+    submission, *, can_review, storage_available, files, conflict=None, events=(),
 ):
     """Present loaded receipt data without changing review or download policy.
 
@@ -35,7 +38,9 @@ def submission_detail_presentation(
     return {
         "status": submission_status(
             submission, can_review=can_review, storage_available=storage_available,
+            events=events, conflict=conflict,
         ),
+        "approval": submission_approval(submission, events=events, conflict=conflict),
         "decision": {
             "can_decide": can_decide,
             "can_approve": bool(can_accept and not has_open_conflict),
@@ -47,69 +52,13 @@ def submission_detail_presentation(
     }
 
 
-def submission_status(submission, *, can_review=False, storage_available=False):
-    """Describe a loaded receipt without queries, actions or URL assumptions."""
-    publication = submission.publication_state
-    if publication != "published":
-        label, tone, message = {
-            "pending": (
-                "Preparing submission", "primary",
-                "The submitted delivery and QC evidence are waiting to be stored. "
-                "Review can begin once this completes.",
-            ),
-            "publishing": (
-                "Storing submission", "primary",
-                "The submitted delivery and QC evidence are being stored. "
-                "Review can begin once this completes.",
-            ),
-            "failed": (
-                "Submission failed", "danger",
-                "The delivery could not be stored for review. "
-                "A review decision cannot be recorded yet.",
-            ),
-        }.get(publication, (
-            "Submission unavailable", "warning",
-            "The submission is not available for review.",
-        ))
-        return {"value": publication, "label": label, "tone": tone, "message": message}
-
-    state = submission.review_state
-    if state == "accepted":
-        message = (
-            "This delivery is approved for its product unit in the current delivery plan."
-            if submission.product_release.is_current
-            else "This delivery was approved for an earlier delivery plan. "
-            "Its evidence and review decision remain available."
-        )
-        label, tone = "Approved", "success"
-    elif state == "rejected":
-        label, tone = "Rejected", "danger"
-        message = "This delivery was not accepted. Review the recorded feedback below."
-    elif state == "conflict":
-        label, tone = "Competing submissions", "warning"
-        message = (
-            "Several deliveries were submitted for this product unit. "
-            "A product manager must choose a delivery or request corrections."
-        )
-    elif state == "pending":
-        label, tone = "Awaiting review", "warning"
-        message = (
-            "Review the submitted delivery and QC evidence, then record your decision below."
-            if can_review and storage_available
-            else "A product manager must review this submission before it can be approved."
-        )
-    else:
-        label, tone = "Review unavailable", "warning"
-        message = "The review status is unavailable."
-    return {"value": state, "label": label, "tone": tone, "message": message}
-
-
 def _evidence(filename, files):
     retained_files = list(files)
     names = {item["name"] for item in retained_files}
     report_name = "{}_report.pdf".format(PurePosixPath(filename).stem)
-    if report_name not in names:
-        report_name = "report.pdf"
+    report_name = next((name for name in (
+        "reports/" + report_name, report_name, "reports/report.pdf", "report.pdf",
+    ) if name in names), "report.pdf")
     highlights = (
         ("input.d/{}".format(filename), "submitted ZIP", "package"),
         (report_name, "QC report", "file"),

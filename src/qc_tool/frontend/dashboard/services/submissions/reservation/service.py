@@ -108,8 +108,8 @@ def _existing_submission(delivery):
         DeliverySubmission.objects.select_for_update(of=("self",))
         .select_related(
             "delivery__user",
-            "job",
-            "product_release",
+            "job__qc_definition",
+            "product_release__product",
             "product_unit",
         )
         .filter(delivery=delivery)

@@ -15,6 +15,7 @@ from qc_tool.storage.layout import runtime_paths
 from qc_tool.worker.jobs import job_schema_name
 from qc_tool.worker.jobs import normalize_job_uuid
 from qc_tool.worker.scratch import ScratchLease
+from qc_tool.jobs import JobStorageError
 
 
 def create_connection_manager(job_uuid):
@@ -30,10 +31,16 @@ def create_jobdir_manager(job_uuid):
     job_uuid = normalize_job_uuid(job_uuid)
     job_dir = compose_job_dir(job_uuid)
     paths = runtime_paths(CONFIG)
+    artifacts = paths.job_paths(job_uuid, require_exists=True)
+    if not artifacts.legacy and artifacts.result_path.exists():
+        raise JobStorageError("A result already exists for this run identity.")
+    scratch = paths.job_scratch_dir(job_uuid)
+    if not artifacts.legacy and paths.scratch_dir is None:
+        scratch.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     jobdir_manager = JobdirManager(
         job_dir, CONFIG["leave_jobdir"],
-        scratch_dir=paths.job_scratch_dir(job_uuid) if paths.scratch_dir is not None else None,
-        job_uuid=job_uuid,
+        scratch_dir=scratch if paths.scratch_dir is not None or not artifacts.legacy else None,
+        job_uuid=job_uuid, job_paths=artifacts,
     )
     return jobdir_manager
 
@@ -116,7 +123,7 @@ class ConnectionManager():
 
 
 class JobdirManager():
-    def __init__(self, job_dir, leave_dir=False, *, scratch_dir=None, job_uuid=None):
+    def __init__(self, job_dir, leave_dir=False, *, scratch_dir=None, job_uuid=None, job_paths=None):
         self.job_dir = job_dir
         self.leave_dir = leave_dir
         self.tmp_dir = None
@@ -124,6 +131,7 @@ class JobdirManager():
         self.scratch_dir = scratch_dir
         self.job_uuid = job_uuid
         self.scratch_lease = None
+        self.job_paths = job_paths
 
     def __enter__(self):
         try:
@@ -142,8 +150,8 @@ class JobdirManager():
                 self.scratch_lease.close()
 
     def create_dirs(self):
-        output_dir = self.job_dir.joinpath(JOB_OUTPUT_DIRNAME)
-        output_dir.mkdir(parents=True)
+        output_dir = self.job_paths.output_dir if self.job_paths else self.job_dir.joinpath(JOB_OUTPUT_DIRNAME)
+        output_dir.mkdir(parents=True, exist_ok=self.job_paths is not None)
         self.output_dir = output_dir
         if self.scratch_dir is None:
             tmp_dir = self.job_dir.joinpath(JOB_TMP_DIRNAME)

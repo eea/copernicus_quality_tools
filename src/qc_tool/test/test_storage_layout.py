@@ -28,10 +28,10 @@ class StorageLayoutTests(TestCase):
             self.assertEqual(paths.logs_dir, Path("/var/log/qc-tool"))
             self.assertFalse(root.exists())
 
-    def test_canonical_layout_preserves_job_and_stdout_names(self):
+    def test_new_jobs_have_canonical_uuid_and_nested_console_log(self):
         paths = runtime_paths(layout_config({"QC_TOOL_DATA_ROOT": "/mnt/qc-tool/data"}))
-        self.assertEqual(paths.job_dir(JOB_UUID), paths.jobs_dir / ("job_" + COMPACT_UUID))
-        self.assertEqual(paths.job_stdout_path(JOB_UUID), paths.jobs_dir / ("job." + JOB_UUID + ".stdout"))
+        self.assertEqual(paths.job_dir(JOB_UUID), paths.jobs_dir / JOB_UUID)
+        self.assertEqual(paths.job_stdout_path(JOB_UUID), paths.jobs_dir / JOB_UUID / "logs/console.log")
         self.assertEqual(paths.job_scratch_dir(JOB_UUID), paths.scratch_dir / COMPACT_UUID)
         with self.assertRaises(ValueError):
             paths.job_dir("../outside")
@@ -62,15 +62,15 @@ class StorageLayoutTests(TestCase):
         self.assertEqual(paths.specifications_dir, Path("/legacy/work/product_definitions"))
         self.assertEqual(paths.transfer_dir, Path("/legacy/work/data-transfer"))
         self.assertIsNone(paths.scratch_dir)
-        self.assertEqual(paths.job_scratch_dir(JOB_UUID), paths.job_dir(JOB_UUID) / "tmp.d")
+        self.assertEqual(paths.job_scratch_dir(JOB_UUID), Path("/var/tmp/qc-tool/jobs") / COMPACT_UUID)
         config["work_dir"] = Path("/another/work")
         self.assertEqual(runtime_paths(config).maintenance_dir, Path("/another/work/maintenance"))
 
     def test_common_compatibility_helpers_use_the_supplied_config(self):
         with patch.dict(common.CONFIG, {"data_root": None, "work_dir": Path("/isolated/work")}, clear=True):
-            self.assertEqual(common.compose_job_dir(JOB_UUID), Path("/isolated/work/job_" + COMPACT_UUID))
+            self.assertEqual(common.compose_job_dir(JOB_UUID), Path("/isolated/work") / JOB_UUID)
             self.assertEqual(common.uploaded_definition_root(), Path("/isolated/work/product_definitions"))
-            self.assertEqual(common.compose_job_stdout_filepath(JOB_UUID), Path("/isolated/work/job." + JOB_UUID + ".stdout"))
+            self.assertEqual(common.compose_job_stdout_filepath(JOB_UUID), Path("/isolated/work") / JOB_UUID / "logs/console.log")
 
     def test_selecting_a_new_layout_does_not_discover_or_move_existing_files(self):
         with TemporaryDirectory() as temporary:

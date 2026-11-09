@@ -115,6 +115,7 @@ class S3WorkerDownloadTests(TestCase):
         result, factory = self.download(client)
 
         self.assertEqual(result.hash_files, ("product.shp", "product.dbf"))
+        self.assertIsNone(result.original_zip_sha256)
         self.assertEqual(result.processing_dir, self.root.joinpath("download"))
         self.assertEqual(
             self.root.joinpath("download", "product.shp").read_bytes(),
@@ -152,6 +153,7 @@ class S3WorkerDownloadTests(TestCase):
         result, _factory = self.download(client)
 
         self.assertEqual(result.hash_files, ("product.zip",))
+        self.assertEqual(result.original_zip_sha256, result.digest)
         self.assertFalse(self.root.joinpath("download", "product.zip").exists())
         self.assertEqual(
             result.processing_dir.joinpath("product", "data.txt").read_text(),

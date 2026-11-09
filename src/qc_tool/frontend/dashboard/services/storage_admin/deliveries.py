@@ -14,7 +14,7 @@ from django.db.models.functions import Cast
 from django.urls import reverse
 
 from qc_tool.frontend.dashboard.models import Delivery, DeliverySubmission
-from qc_tool.frontend.dashboard.services.submissions.detail_presentation import submission_status
+from qc_tool.frontend.dashboard.services.submissions.status import submission_status
 
 from . import files
 from .references import record_storage_links

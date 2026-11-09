@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 
 
-from contextlib import ExitStack
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 from unittest.mock import patch
 from uuid import UUID
 from uuid import uuid4
-
-from qc_tool.worker.manager import create_jobdir_manager
 
 
 class TestCommon(TestCase):
@@ -50,17 +47,16 @@ class TestProductDirs(TestCase):
         super().setUp()
         from qc_tool.common import CONFIG
         self.orig_product_dirs = CONFIG["product_dirs"]
-        job_uuid = str(uuid4())
-        with ExitStack() as stack:
-            self.jobdir_manager = stack.enter_context(create_jobdir_manager(job_uuid))
-            self.addCleanup(stack.pop_all().close)
+        temporary = TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.product_root = Path(temporary.name)
 
-        self.product_dir_1 = self.jobdir_manager.tmp_dir.joinpath("products_1")
+        self.product_dir_1 = self.product_root.joinpath("products_1")
         self.product_dir_1.mkdir()
         self.product_dir_1.joinpath("p1.json").write_text('{"description": "p1desc"}')
         self.product_dir_1.joinpath("pX.json").write_text('{"description": "pXdesc from 1"}')
 
-        self.product_dir_2 = self.jobdir_manager.tmp_dir.joinpath("products_2")
+        self.product_dir_2 = self.product_root.joinpath("products_2")
         self.product_dir_2.mkdir()
         self.product_dir_2.joinpath("p2.json").write_text('{"description": "p2desc"}')
         self.product_dir_2.joinpath("pX.json").write_text('{"description": "pXdesc from 2"}')
@@ -159,7 +155,7 @@ class TestCommonWithConfig(TestCase):
         job_uuid = UUID("045f9089-5921-4416-b689-6ba9e6c87f10")
         expected = Path(
             self.work_dir,
-            "job_045f908959214416b6896ba9e6c87f10",
+            "045f9089-5921-4416-b689-6ba9e6c87f10",
         )
 
         representations = (
@@ -198,17 +194,16 @@ class TestCommonWithConfig(TestCase):
 
         self.assertEqual(
             compose_job_stdout_filepath(job_uuid),
-            Path(self.work_dir, "job.{}.stdout".format(job_uuid)),
+            Path(self.work_dir, str(job_uuid), "logs/console.log"),
         )
 
     def test_store_load_job_result(self):
-        from qc_tool.common import compose_job_dir
+        from qc_tool.common import create_job_dir
         from qc_tool.common import load_job_result
         from qc_tool.common import store_job_result
 
         job_uuid = uuid4()
-        job_dir = compose_job_dir(job_uuid)
-        job_dir.mkdir(exist_ok=True)
+        create_job_dir(job_uuid)
         result = {"job_uuid": str(job_uuid)}
         store_job_result(result)
         self.assertDictEqual(result, load_job_result(job_uuid))

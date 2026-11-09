@@ -281,7 +281,9 @@ class DeliveryCorrectionTests(SubmissionWorkspaceFixtureMixin, TestCase):
             requested_by=self.owner, requested_by_username=self.owner.username,
             request_source="browser",
         )
-        job_root = self.jobs_root / str(job.job_uuid)
+        # Retain a genuine legacy fixture; canonical runs require job.json and
+        # their specification/reports/outputs roles instead of output.d.
+        job_root = self.jobs_root / ("job_" + job.job_uuid.hex)
         (job_root / "output.d").mkdir(parents=True)
         (job_root / "result.json").write_text(json.dumps({"status": "ok", "product_unit_code": self.product_unit.product_unit_code}), encoding="utf-8")
         (job_root / "output.d" / "report.txt").write_text("corrected and validated", encoding="utf-8")

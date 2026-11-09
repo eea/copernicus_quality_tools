@@ -58,7 +58,7 @@ def read_specification_upload(uploaded_file):
     payload = uploaded_file.read(MAX_DEFINITION_BYTES + 1)
     if len(payload) > MAX_DEFINITION_BYTES:
         raise CatalogError("definition_too_large", "The JSON file must be 1 MiB or smaller.")
-    definition = parse_definition_snapshot(ident, payload, source_path="upload:" + ident + ".json")
+    definition = parse_definition_snapshot(ident, payload, source_path="upload:" + name)
     steps = definition.document["steps"]
     if not steps:
         raise CatalogError("invalid_checks", "The specification must include at least one QC check.")
@@ -129,7 +129,11 @@ def add_product_specification(upload, *, actor):
                     store_definition(definition)
             # Until this atomic pointer is switched, new jobs check that the
             # runtime digest agrees with the committed upload release.
-            publish_specification(staged, directory, ident, definition.digest, upload.payload)
+            original_filename = definition.source_path.removeprefix("upload:")
+            publish_specification(
+                staged, directory, ident, definition.digest, upload.payload,
+                original_filename=original_filename,
+            )
     except OSError as exc:
         logger.exception("Product specification storage failed for %s", ident)
         raise CatalogError(

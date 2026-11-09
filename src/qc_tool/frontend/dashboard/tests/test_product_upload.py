@@ -311,7 +311,7 @@ class ProductSpecificationUploadTests(TestCase):
         self.assertEqual(definition.product_ident, "new_product")
         self.assertEqual(definition.document, json.loads(payload))
         self.assertEqual(definition.digest, hashlib.sha256(payload).hexdigest())
-        self.assertEqual(definition.source_path, "upload:new_product.json")
+        self.assertEqual(definition.source_path, "upload:NEW_Product.JSON")
         release = ProductRelease.objects.get()
         self.assertEqual(release.source_kind, ProductRelease.SourceKind.UPLOAD)
         self.assertEqual(release.coverage_state, ProductRelease.CoverageState.DRAFT)
@@ -325,7 +325,7 @@ class ProductSpecificationUploadTests(TestCase):
         target = self.version_path(payload)
         self.assertEqual(target.read_bytes(), payload)
         self.assertEqual(common.current_product_specification_state("new_product"), {
-            "active": True, "digest": definition.digest,
+            "active": True, "digest": definition.digest, "original_filename": "NEW_Product.JSON",
         })
         self.assertEqual(common.locate_product_definition("new_product"), target)
         self.assertEqual(common.load_product_definition("new_product")["steps"], self.document()["steps"])

@@ -413,6 +413,16 @@
   overflow-x: auto;
 }
 
+.product-detail__history-note {
+  margin: 0;
+  padding: 16px 24px 20px;
+  color: var(--qc-color-muted);
+}
+
+.product-detail__version-table .product-detail__status {
+  white-space: nowrap;
+}
+
 .product-detail__version-table {
   width: 100%;
   min-width: 650px;

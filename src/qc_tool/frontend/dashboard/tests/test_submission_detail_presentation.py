@@ -13,6 +13,7 @@ class SubmissionDetailPresentationTests(SimpleTestCase):
     def submission(self, *, publication="published", review="pending", active=True,
                    coverage="authoritative", current=True, filename="delivery.v2.zip"):
         return SimpleNamespace(
+            pk="original-submission",
             publication_state=publication,
             review_state=review,
             delivery=SimpleNamespace(filename=filename),
@@ -53,15 +54,32 @@ class SubmissionDetailPresentationTests(SimpleTestCase):
         )
         self.assertEqual(detail["status"]["label"], "Approved")
         self.assertEqual(detail["status"]["tone"], "success")
-        self.assertIn("current delivery plan", detail["status"]["message"])
+        self.assertIn("current revision for its series", detail["status"]["message"])
         for action in ("can_decide", "can_approve", "can_reject", "can_replace"):
             self.assertFalse(detail["decision"][action])
 
     def test_historical_approval_does_not_claim_current_product_completion(self):
         detail = self.presentation(self.submission(review="accepted", current=False))
         self.assertEqual(detail["status"]["label"], "Approved")
-        self.assertIn("earlier delivery plan", detail["status"]["message"])
-        self.assertNotIn("current delivery plan", detail["status"]["message"])
+        self.assertIn("historical specification-set revision", detail["status"]["message"])
+        self.assertNotIn("current revision for its series", detail["status"]["message"])
+
+    def test_replaced_approval_keeps_history_without_claiming_it_is_final(self):
+        detail = self.presentation(
+            self.submission(review="rejected"),
+            events=[SimpleNamespace(decision="approved"), SimpleNamespace(decision="declined")],
+            conflict=SimpleNamespace(state="resolved", selected_submission_id="replacement"),
+        )
+        self.assertEqual(detail["status"]["label"], "Replaced")
+        self.assertFalse(detail["approval"]["is_approved_selection"])
+        self.assertTrue(detail["approval"]["previously_approved"])
+        self.assertEqual(detail["approval"]["selected_submission_id"], "replacement")
+
+    def test_canonical_report_is_primary_and_its_original_name_stays_visible(self):
+        files = [self.file("reports/delivery.v2_report.pdf"), self.file("outputs/error.gpkg")]
+        detail = self.presentation(files=files)
+        self.assertEqual(detail["evidence"]["primary_files"][0]["name"], files[0]["name"])
+        self.assertEqual(detail["evidence"]["supporting_files"], [files[1]])
 
     def test_prepublication_state_takes_precedence_over_review_state(self):
         for publication, label, tone in (

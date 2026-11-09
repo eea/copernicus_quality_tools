@@ -24,10 +24,13 @@
 
 {% if submission.review_state == 'rejected' %}
 <section class="workspace-card submission-feedback" aria-labelledby="correction-heading">
-    <header class="workspace-card__header"><h2 id="correction-heading">Rejected · corrections requested</h2></header>
+    <header class="workspace-card__header"><h2 id="correction-heading">{% if detail.approval.previously_approved %}Previously approved delivery{% else %}Rejected · corrections requested{% endif %}</h2></header>
     <div class="workspace-card__body">
         {% include "dashboard/submissions/feedback.html" with feedback=review_feedback only %}
-        {% if correction %}
+        {% if detail.approval.previously_approved %}
+        <p class="submission-feedback__next">This delivery is no longer the approved selection for this product unit and specification-set revision. Its original files and earlier approval remain in the history below.</p>
+        {% if can_review and detail.approval.selected_submission_id %}<p><a href="{% url 'submission_review' detail.approval.selected_submission_id %}">View the selected replacement</a></p>{% endif %}
+        {% elif correction %}
         <div class="submission-feedback__next">
             <h3>Prepare your correction</h3>
             <ol>
@@ -123,7 +126,7 @@
     <header class="workspace-card__header">
         <div>
             <h2 id="submission-decision-heading">Record your decision</h2>
-            <p>{% if detail.decision.can_approve or detail.decision.can_replace %}Approval accepts this product unit for its delivery plan. Completing the product requires a separate manager action.{% else %}You can request corrections while approval is unavailable.{% endif %}</p>
+            <p>{% if detail.decision.can_approve or detail.decision.can_replace %}Approval selects this delivery for its exact product unit and specification-set revision. QC success and stored files alone do not approve a delivery. Completing the product requires a separate manager action.{% else %}You can request corrections while approval is unavailable.{% endif %}</p>
         </div>
     </header>
     <div class="workspace-card__body">

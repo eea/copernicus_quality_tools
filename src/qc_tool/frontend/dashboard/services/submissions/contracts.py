@@ -22,6 +22,11 @@ class ReservedSubmission:
     requested_at_iso: str
     already_existed: bool
     artifact_key: str = ""
+    product_id: int | None = None
+    product_ident: str = ""
+    release_revision: int | None = None
+    definition_digest: str = ""
+    original_publication_identity: dict | None = None
 
 
 @dataclass(frozen=True)

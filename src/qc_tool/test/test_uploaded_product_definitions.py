@@ -12,7 +12,6 @@ from qc_tool.common import CONFIG
 from qc_tool.common import INVALID_PRODUCT_DESCRIPTION
 from qc_tool.common import QCException
 from qc_tool.common import compile_job_report_data
-from qc_tool.common import compose_job_dir
 from qc_tool.common import copy_product_definition_to_job
 from qc_tool.common import current_product_specification_state
 from qc_tool.common import get_product_definitions
@@ -277,7 +276,8 @@ class JobProductSpecificationSnapshotTests(ProductDefinitionStorageFixture, Test
     def setUp(self):
         super().setUp()
         self.job_uuid = str(uuid4())
-        self.job_dir = compose_job_dir(self.job_uuid)
+        # These tests exercise retained pre-versioned snapshots specifically.
+        self.job_dir = CONFIG["work_dir"] / ("job_" + self.job_uuid.replace("-", ""))
         self.job_dir.mkdir(parents=True)
 
     def write_digest_snapshot(self, description="Historical recipe", payload=None):
@@ -336,7 +336,7 @@ class JobProductSpecificationSnapshotTests(ProductDefinitionStorageFixture, Test
         self.write_digest_snapshot("First recipe")
         self.write_digest_snapshot("Second recipe")
 
-        with self.assertRaisesRegex(QCException, "ambiguous"):
+        with self.assertRaisesRegex(QCException, "unavailable or invalid"):
             load_product_definition_from_job(self.job_uuid, "product")
 
     def test_multiple_case_variants_are_not_guessed(self):
@@ -345,7 +345,7 @@ class JobProductSpecificationSnapshotTests(ProductDefinitionStorageFixture, Test
             self.skipTest("Duplicate case variants require a case-sensitive filesystem")
         self.write_definition(self.job_dir, "product", "Lowercase recipe")
 
-        with self.assertRaisesRegex(QCException, "ambiguous"):
+        with self.assertRaisesRegex(QCException, "unavailable or invalid"):
             load_product_definition_from_job(self.job_uuid, "product")
 
     def test_invalid_named_snapshot_does_not_fall_back_to_digest_snapshot(self):
@@ -395,7 +395,7 @@ class JobProductSpecificationSnapshotTests(ProductDefinitionStorageFixture, Test
         self.write_definition(self.source, "product", "Today's recipe")
         (self.job_dir / "result.json").write_text('{"product_ident": "product", "steps": []}')
 
-        with self.assertRaisesRegex(QCException, "has not been found"):
+        with self.assertRaisesRegex(QCException, "unavailable or invalid"):
             load_product_definition_from_job(self.job_uuid, "product")
 
     def test_invalid_product_identifier_is_rejected(self):

@@ -28,7 +28,7 @@ copernicus_quality_tools/
 │   │   ├── urls.py           # Root URL composition
 │   │   └── wsgi.py           # Gunicorn/Django entrypoint
 │   ├── worker/               # Queue polling and job execution adapters
-│   ├── jobs/                 # Framework-independent job IDs and pull contracts
+│   ├── jobs/                 # Framework-independent IDs, versioned artifacts and provenance
 │   ├── boundaries/           # Shared boundary types, layout and pinned readers
 │   ├── storage/              # Runtime path ownership, mount guards, scratch retention
 │   ├── product_units.py      # Canonical product-unit identifiers and legacy adapters
@@ -163,6 +163,29 @@ frontend/dashboard/
 
 When a view grows, extract one logical use case into a focused service rather
 than creating another general helper module.
+
+## Retained job and publication storage
+
+Storage behavior is shared through the owning packages rather than repeated in
+workers, downloads and backup handlers:
+
+| Owner | Responsibility |
+| --- | --- |
+| `jobs/paths.py`, `layout.py` | Versioned job roles, canonical creation, legacy resolution and ambiguity refusal |
+| `jobs/context.py`, `context_schema.py` | Bounded atomic producer provenance and its explicit format contract |
+| `jobs/files.py`, `specifications.py` | Safe artifact IO and exact original specification snapshots |
+| `storage/layout.py` | Deployment-configured roots and access to the shared job paths |
+| `worker/provenance.py` | Record facts observed by the worker without changing QC-result semantics |
+| `database/transfers/job_artifacts.py`, `job_locations.py`, `job_contract.py` | Reuse job identities for archive inventory, placement and recovery |
+| `frontend/dashboard/services/catalog/version_identity.py` | Query-free series/revision labels shared by product and submission presentation |
+| `frontend/dashboard/services/products/specification_history.py` | Permission-scoped retained recipe versions and explicit selected revisions |
+| `frontend/dashboard/services/submissions/publication/` | Product/specification/unit hierarchy, byte copies, immutable manifests and retry integrity |
+| `frontend/dashboard/services/submissions/approval_presentation.py`, `status.py` | Explain current, historical and replaced decisions using existing review evidence |
+| `scripts/testing/artifacts.py` | Ask the verified worker's shared resolver for evidence roles without duplicating physical layout rules in the host verification runner |
+
+The [runtime storage tree](runtime-storage.md) describes physical directories,
+ownership, lifetimes and retained legacy layouts. These changes do not introduce
+a second database schema history or a filesystem migration inside Django.
 
 ## Application database package
 
