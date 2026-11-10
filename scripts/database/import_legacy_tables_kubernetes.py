@@ -29,7 +29,7 @@ REMOTE_DIR = "/tmp/qc_tool_legacy_import"
 # variables, which this script sets for them in the pod. An empty value keeps
 # the POSTGRES_* variable of the frontend pod (the application's own database).
 DB_CONFIG = {
-    "dbname": os.getenv("QC_DB_NAME", "qc_tool_staging6"),
+    "dbname": os.getenv("QC_DB_NAME", "qc_tool_staging7"),
     "user": os.getenv("QC_DB_USER", "qc_user"),
     "password": os.getenv("QC_DB_PASSWORD", "qc_password"),
     "host": os.getenv("QC_DB_HOST", ""),
@@ -49,6 +49,7 @@ STEPS = {
     "delivery-unit-codes": ("guess_legacy_delivery_unit_codes.py", []),
     "job-unit-codes": ("guess_legacy_job_unit_codes.py", []),
     "submissions": ("create_legacy_publication_submissions.py", []),
+    "submission-manifests": ("write_legacy_submission_manifests.py", []),
 }
 
 # Optional steps run only when named explicitly.
@@ -68,7 +69,8 @@ UPLOADS = {
 
 # Steps limited by --product-ident; the others always process everything.
 # Storage sources of the deliveries step are imported in full as well.
-PRODUCT_STEPS = ["deliveries", "jobs", "delivery-unit-codes", "job-unit-codes", "submissions"]
+PRODUCT_STEPS = ["deliveries", "jobs", "delivery-unit-codes", "job-unit-codes", "submissions",
+                 "submission-manifests"]
 
 
 def kubectl_exec(pod, shell_command, stdin=False):
@@ -290,6 +292,16 @@ def main():
                     pod, python_command("create_legacy_publication_submissions.py", *options)))
                 if result.returncode != 0:
                     raise SystemExit(f"Error: linking the submission folders failed with exit code {result.returncode}.")
+                if "submission-manifests" not in steps:
+                    # The page of a submission needs its manifest; write it for the folders just linked.
+                    options = (["--dry-run"] if args.dry_run else [])
+                    for ident in args.product_idents or []:
+                        options += ["--product-ident", ident]
+                    print("\n=== write submission manifests ===", flush=True)
+                    result = subprocess.run(kubectl_exec(
+                        pod, python_command("write_legacy_submission_manifests.py", *options)))
+                    if result.returncode != 0:
+                        raise SystemExit(f"Error: writing the submission manifests failed with exit code {result.returncode}.")
     finally:
         # The CSV files contain password hashes and storage credentials, and
         # the db config file the database password.
