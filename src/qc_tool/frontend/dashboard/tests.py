@@ -362,18 +362,21 @@ class JobAoiPersistenceTests(TestCase):
 
     @patch("qc_tool.frontend.dashboard.models.load_job_result")
     def test_terminal_status_persists_aoi_code(self, load_result):
-        load_result.return_value = {"aoi_code": "mt"}
-        job = self.create_job()
+        for aoi_code in ("mt", "gf", "mq"):
+            with self.subTest(aoi_code=aoi_code):
+                load_result.reset_mock()
+                load_result.return_value = {"aoi_code": aoi_code}
+                job = self.create_job()
 
-        job.update_status(JOB_OK)
+                job.update_status(JOB_OK)
 
-        job.refresh_from_db()
-        self.delivery.refresh_from_db()
-        self.assertEqual(JOB_OK, job.job_status)
-        self.assertEqual("mt", job.aoi_code)
-        self.assertEqual("mt", self.delivery.aoi_code)
-        self.assertIsNotNone(job.date_finished)
-        load_result.assert_called_once_with(str(job.job_uuid))
+                job.refresh_from_db()
+                self.delivery.refresh_from_db()
+                self.assertEqual(JOB_OK, job.job_status)
+                self.assertEqual(aoi_code, job.aoi_code)
+                self.assertEqual(aoi_code, self.delivery.aoi_code)
+                self.assertIsNotNone(job.date_finished)
+                load_result.assert_called_once_with(str(job.job_uuid))
 
     @patch("qc_tool.frontend.dashboard.models.load_job_result")
     def test_failed_status_also_persists_aoi_code(self, load_result):

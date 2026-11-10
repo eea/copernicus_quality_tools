@@ -18,6 +18,7 @@ from qc_tool.aoi import is_aoi_input_alias
 from qc_tool.aoi import mark_aoi_medium_not_applicable
 from qc_tool.aoi import normalize_aoi_code
 from qc_tool.aoi import product_uses_aoi
+from qc_tool.aoi import publish_aoi_code
 from qc_tool.aoi import validate_after_step
 from qc_tool.aoi import validate_spatial_aoi_codes
 from qc_tool.common import get_product_definitions
@@ -159,6 +160,18 @@ class TestAoiProductContracts(TestCase):
             plan["contracts"]["raster"]["checks"],
             plan["contracts"]["vector"]["checks"],
         )
+
+    def test_gap_skip_aoi_codes_propagate_to_raster_contract(self):
+        plan = build_aoi_validation_plan(
+            load_product_definition("clms_clcplus_ras_s2025_r10m")
+        )
+
+        contract = plan["contracts"]["raster"]
+        self.assertEqual("raster", contract["validator"])
+        for check in contract["checks"]:
+            self.assertEqual(
+                ("gf", "gp", "mq", "re", "yt"), check["skip_aoi_codes"]
+            )
 
     def test_partial_raster_layer_mapping_fails_closed(self):
         product_definition = {
@@ -346,6 +359,95 @@ class TestSpatialAoiContract(TestCase):
         self.assertEqual((), status.params["_aoi_validated_media"])
         self.assertEqual(
             ("vector",), status.params["_aoi_not_applicable_media"]
+        )
+
+    def test_product_exempted_aoi_marks_raster_medium_not_applicable(self):
+        from qc_tool.raster.aoi import validate_aoi
+
+        plan = build_aoi_validation_plan(
+            load_product_definition("clms_clcplus_ras_s2025_r10m")
+        )
+        contract = plan["contracts"]["raster"]
+        for aoi_code in ("GF", "MQ", "gp", "re", "yt"):
+            with self.subTest(aoi_code=aoi_code):
+                params = {"aoi_validation_plan": plan}
+                naming_status = CheckStatus()
+                publish_aoi_code(params, naming_status, aoi_code)
+                self.assertIsNone(naming_status.status_properties["aoi_code"])
+                params.update(naming_status.params)
+                status = CheckStatus()
+
+                with patch("qc_tool.raster.aoi.gdal.Open") as open_raster:
+                    result = validate_aoi(params, status, contract)
+
+                self.assertEqual(aoi_code.lower(), result)
+                self.assertEqual("ok", status.status)
+                self.assertEqual(aoi_code, status.params["aoi_code"])
+                self.assertEqual(
+                    aoi_code.lower(), status.status_properties["aoi_code"]
+                )
+                self.assertEqual((), status.params["_aoi_validated_media"])
+                self.assertEqual(
+                    ("raster",), status.params["_aoi_not_applicable_media"]
+                )
+                self.assertIn("not applicable", status.messages[0])
+                open_raster.assert_not_called()
+
+    def test_incomplete_boundary_exemption_does_not_publish_aoi(self):
+        skipped_check = {"skip_aoi_codes": ("gf",)}
+        for checks in ((), (skipped_check, {}), ({"skip_aoi_codes": ("mq",)},)):
+            with self.subTest(checks=checks):
+                params = {
+                    "aoi_code": "gf",
+                    "aoi_validation_plan": {
+                        "media": ("raster",),
+                        "contracts": {"raster": {"checks": checks}},
+                    },
+                }
+                status = CheckStatus()
+
+                mark_aoi_medium_not_applicable(params, status, medium="raster")
+
+                self.assertIsNone(status.status_properties["aoi_code"])
+
+    def test_product_exempted_aoi_marks_vector_medium_not_applicable(self):
+        from qc_tool.vector.aoi import validate_aoi
+
+        status = CheckStatus()
+        params = {
+            "aoi_code": "re",
+            "aoi_validation_plan": {"media": ("raster", "vector")},
+        }
+        contract = {
+            "validator": "vector",
+            "source_type": "raster",
+            "checks": (
+                {
+                    "source_type": "raster",
+                    "layers": ("raster",),
+                    "mask": "eea38uk",
+                    "skip_aoi_codes": ("gf", "gp", "mq", "re", "yt"),
+                },
+            ),
+        }
+        params["aoi_validation_plan"]["contracts"] = {
+            "raster": {"validator": "raster", "checks": contract["checks"]},
+            "vector": contract,
+        }
+        raster_status = CheckStatus()
+        validate_after_step("qc_tool.raster.naming", params, raster_status)
+        self.assertEqual("ok", raster_status.status)
+        self.assertIsNone(raster_status.status_properties["aoi_code"])
+        params.update(raster_status.params)
+
+        result = validate_aoi(params, status, contract)
+
+        self.assertEqual("re", result)
+        self.assertEqual("ok", status.status)
+        self.assertEqual("re", status.status_properties["aoi_code"])
+        self.assertEqual((), status.params["_aoi_validated_media"])
+        self.assertEqual(
+            ("raster", "vector"), status.params["_aoi_not_applicable_media"]
         )
 
     def test_multiple_spatial_codes_abort_and_clear_the_job_aoi(self):

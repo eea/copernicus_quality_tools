@@ -7,9 +7,11 @@ from psycopg2 import sql
 
 from qc_tool.aoi import aoi_codes_equivalent
 from qc_tool.aoi import aoi_input_aliases_equivalent
+from qc_tool.aoi import check_skips_aoi
 from qc_tool.aoi import invalidate_aoi_code
 from qc_tool.aoi import is_aoi_input_alias
 from qc_tool.aoi import mark_aoi_medium_not_applicable
+from qc_tool.aoi import normalize_aoi_code
 from qc_tool.aoi import validate_spatial_aoi_codes
 
 
@@ -228,6 +230,13 @@ def _detect_against_raster_mask(params, contract):
     from osgeo import osr
     from qc_tool.raster.aoi import iter_aoi_mask_geometries
 
+    applicable_checks = [
+        check for check in contract.get("checks", ())
+        if not check_skips_aoi(check, params["aoi_code"])
+    ]
+    if not applicable_checks:
+        return None
+    contract = dict(contract, checks=tuple(applicable_checks))
     mask_dataset = _contract_raster_mask(params, contract)
     spatial_reference = osr.SpatialReference()
     spatial_reference.ImportFromWkt(mask_dataset.GetProjectionRef())
@@ -384,6 +393,13 @@ def validate_aoi(params, status, contract):
             "Vector AOI validation could not be completed: {:s}.".format(str(exc)),
         )
         return None
+    if detected_codes is None:
+        status.info(
+            "Vector AOI validation is not applicable to AOI {:s}: the product "
+            "exempts it from boundary checks."
+            .format(normalize_aoi_code(params["aoi_code"]))
+        )
+        return mark_aoi_medium_not_applicable(params, status, medium="vector")
     return validate_spatial_aoi_codes(
         params, status, detected_codes, medium="vector"
     )

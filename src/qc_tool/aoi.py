@@ -432,13 +432,20 @@ def validate_spatial_aoi_codes(params, status, detected_codes, medium=None):
 def _publish_completed_aoi(
     params, status, claimed_code, validated_media, not_applicable_media
 ):
-    """Publish after every required medium is validated or not applicable."""
+    """Publish a validated or explicitly exempted AOI after all media finish."""
     required_media = _required_aoi_media(params)
     required_validated_media = validated_media.intersection(required_media)
+    exempt_media = set()
+    if required_media:
+        contracts = params["aoi_validation_plan"].get("contracts", {})
+        for medium in required_media.intersection(not_applicable_media):
+            checks = (contracts.get(medium) or {}).get("checks", ())
+            if checks and all(check_skips_aoi(check, claimed_code) for check in checks):
+                exempt_media.add(medium)
     validation_complete = (
         not required_media
         or (
-            bool(required_validated_media)
+            bool(required_validated_media or exempt_media)
             and required_media.issubset(
                 validated_media.union(not_applicable_media)
             )
@@ -453,7 +460,7 @@ def _publish_completed_aoi(
 
 
 def mark_aoi_medium_not_applicable(params, status, medium):
-    """Record that an empty medium has no geometry to validate for this AOI."""
+    """Record an empty or product-exempted medium without claiming validation."""
     claimed_code = params.get(AOI_CODE_KEY)
     if normalize_aoi_code(claimed_code) is None:
         return None
@@ -476,6 +483,14 @@ def mark_aoi_medium_not_applicable(params, status, medium):
         params, status, claimed_code, validated_media, not_applicable_media
     )
     return normalize_aoi_code(claimed_code)
+
+
+def check_skips_aoi(check, aoi_code):
+    """Return whether a contract check exempts this AOI from boundary checks."""
+    return any(
+        aoi_codes_equivalent(aoi_code, skip_code)
+        for skip_code in check.get("skip_aoi_codes", ())
+    )
 
 
 def product_aoi_media(product_definition):
@@ -525,6 +540,15 @@ def _configured_raster_contract(product_definition):
         check = {
             "source_type": source_type,
             "layers": tuple(parameters.get("layers", ())),
+            # AOIs the gap check exempts have no authoritative boundary in the
+            # mask, so spatial AOI validation must not demand one either.
+            "skip_aoi_codes": tuple(dict.fromkeys(
+                code for code in (
+                    normalize_aoi_code(skip_code)
+                    for skip_code in parameters.get("skip_aoi_codes", ())
+                )
+                if code is not None
+            )),
         }
         if source_type == "vector":
             check.update({"source": mask, "code_field": parameters.get("du_column_name")})

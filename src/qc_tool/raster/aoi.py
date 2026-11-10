@@ -11,8 +11,10 @@ from osgeo import osr
 
 from qc_tool.aoi import aoi_codes_equivalent
 from qc_tool.aoi import aoi_input_aliases_equivalent
+from qc_tool.aoi import check_skips_aoi
 from qc_tool.aoi import invalidate_aoi_code
 from qc_tool.aoi import is_aoi_input_alias
+from qc_tool.aoi import mark_aoi_medium_not_applicable
 from qc_tool.aoi import normalize_aoi_code
 from qc_tool.aoi import validate_spatial_aoi_codes
 from qc_tool.raster.helper import get_aoi_mask_filepath
@@ -268,10 +270,20 @@ def _layer_defs_for_check(params, check):
 
 
 def detect_spatial_aoi_codes(params, contract):
-    """Return the claimed code once for every raster that overlaps its boundary."""
+    """Return the claimed code once for every raster that overlaps its boundary.
+
+    Return ``None`` when every contract check exempts the claimed AOI, i.e.
+    the product declares that no authoritative boundary exists for it.
+    """
     claimed_code = params["aoi_code"]
+    applicable_checks = [
+        check for check in contract.get("checks", ())
+        if not check_skips_aoi(check, claimed_code)
+    ]
+    if not applicable_checks:
+        return None
     detected_codes = []
-    for check in contract.get("checks", ()):
+    for check in applicable_checks:
         layer_defs = _layer_defs_for_check(params, check)
         if not layer_defs:
             raise ValueError("no raster dataset layer is available for AOI validation")
@@ -328,6 +340,13 @@ def validate_aoi(params, status, contract):
             "Raster AOI validation could not be completed: {:s}.".format(str(exc)),
         )
         return None
+    if detected_codes is None:
+        status.info(
+            "Raster AOI validation is not applicable to AOI {:s}: the product "
+            "exempts it from boundary checks."
+            .format(normalize_aoi_code(params["aoi_code"]))
+        )
+        return mark_aoi_medium_not_applicable(params, status, medium="raster")
     return validate_spatial_aoi_codes(
         params, status, detected_codes, medium="raster"
     )
