@@ -23,7 +23,7 @@
           "map.pdf": "_map.pdf$",
           "delivery_report.pdf": "_delivery_report.pdf$"
         },
-        "excessive_layers_allowed": false,
+        "excessive_layers_allowed": true,
         "boundary_source": "boundary_ua.gpkg"
       }
     },
@@ -43,6 +43,7 @@
                      "perimeter": "real",
                      "area": "real"},
         "ignored": [
+          "pop2012",
           "shape_area",
           "shape_length",
           "geometry_bbox.xmax",
