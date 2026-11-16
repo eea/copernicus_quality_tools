@@ -1,0 +1,192 @@
+{
+  "description": "HRL Small Woody Features 2015, vector only",
+  "steps": [
+    {
+      "check_ident": "qc_tool.vector.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2015",
+        "formats": [
+          ".gdb",
+          ".gpkg",
+          ".shp",
+          ".fgb",
+          ".parquet"
+        ],
+        "layer_names": {
+          "vector": "^swf_2015_vec_(?P<country_code>[a-z]{2})_0?3035_0*(?P<aoi_code>[0-9]+)_"
+        },
+        "aoi_codes": ["1", "2", "3", "4", "5", "6", "7", "8", "9","10",
+                      "11", "12", "13", "14", "15", "16", "17", "18", "19","20",
+                      "21", "22", "23", "24", "25", "26", "27", "28", "29","30",
+                      "31", "32", "33", "34", "35", "36", "37", "38", "39","40",
+                      "41", "42", "43", "44", "45", "46", "47", "48", "49","50",
+                      "51", "52", "53", "54", "55", "56", "57", "58", "59","60",
+                      "61", "62", "63", "64", "65", "66", "67", "68", "69","70",
+                      "71", "72", "73", "74", "75", "76", "77", "78", "79","80",
+                      "81", "82", "83", "84", "85", "86", "87", "88", "89","90",
+                      "91", "92", "93", "94", "95", "96", "97", "98", "99","100",
+                      "101", "102", "103", "104", "105", "106", "107", "108", "109","110",
+                      "111", "112", "113", "114", "115", "116", "117", "118", "119","120",
+                      "121", "122", "123", "124", "125", "126", "127", "128", "129","130",
+                      "131", "132", "133", "134", "135", "136"],
+        "country_codes": ["al", "at", "ba", "be", "bg", "ch", "cy", "cz", "de", "dk", "ee",
+                          "es", "fi", "fo", "fr", "gb", "gr", "hr", "hu", "ie", "is", "it",
+                          "ks", "lt", "lv", "me", "mk", "nl", "no", "pl", "pt", "ro", "rs",
+                          "se", "si", "sk", "tr"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": ["vector"],
+        "required": {"code": "string",
+                     "area": "real",
+                     "class_name": "string"},
+        "ignored": [
+          "shape_area",
+          "shape_length",
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": ["vector"],
+        "epsg": 3035,
+        "auto_identify_epsg": true
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "column_defs": [["code", ["1", "2", "3"]]]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.singlepart",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.area",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "area_column_name": "area",
+        "unit": 1,
+        "tolerance": 0.001
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.compactness",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "code_column_name": "code",
+        "area_column_name": "area",
+        "linear_code": "1",
+        "patchy_code": "2",
+        "threshold": 0.75
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmu",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "complex_change": null,
+        "general_where": ["layer.area >= 200 OR layer.code <> '2'"],
+        "exception_where": ["FALSE"],
+        "warning_where": ["FALSE"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mxmu",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "area_column_name": "area",
+        "mxmu": 5000,
+        "error_where": "layer.code = '2'"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mmw",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "mmw": 10,
+        "general_where": "layer.code <> '2'",
+        "exception_where": "FALSE"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mxmw",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "mxmw": 30,
+        "warning_where": "layer.code = '1'"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.mml",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "mml": 50,
+        "warning_where": "layer.code = '1'"
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.neighbour",
+      "required": false,
+      "parameters": {
+        "layers": ["vector"],
+        "code_column_names": ["code"],
+        "exception_where": ["FALSE"],
+        "error_where": ["TRUE"]
+      }
+    }
+  ]
+}
