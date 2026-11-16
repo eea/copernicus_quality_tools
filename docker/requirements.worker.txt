@@ -1,6 +1,6 @@
 # Worker runtime on Ubuntu 24.04 / Python 3.12. Keep GDAL's NumPy build ABI
 # consistent with the runtime, and review these pins with the full QC suite.
-setuptools==83.0.0
+setuptools==84.1.0
 wheel==0.46.2
 numpy==1.26.4
 pypdf==6.21.1
