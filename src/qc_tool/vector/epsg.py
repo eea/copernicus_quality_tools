@@ -12,6 +12,10 @@ def run_check(params, status):
 
     from qc_tool.vector.helper import do_layers
 
+    aoi_code = params.get("aoi_code")
+    extra_epsg_codes = params.get("extra_epsg_codes", {})
+    expected_epsg = extra_epsg_codes.get(aoi_code, params["epsg"]) if aoi_code else params["epsg"]
+
     # Check if the current delivery is excluded from vector checks
     if "skip_vector_checks" in params:
         if params["skip_vector_checks"]:
@@ -48,7 +52,7 @@ def run_check(params, status):
                 except ValueError:
                     status.aborted("Layer {:s} has non integer epsg code {:s}".format(layer_def["src_layer_name"], authority_code))
                 else:
-                    if authority_code != params["epsg"]:
+                    if authority_code != expected_epsg:
                         status.aborted("Layer {:s} has illegal epsg code {:d}.".format(layer_def["src_layer_name"], authority_code))
                     else:
                         status.add_params({"detected_epsg": authority_code})
@@ -57,10 +61,10 @@ def run_check(params, status):
                 # There is a built-in function in GDAL 2.3 with matching logic.
                 is_detected = False
                 expected_srs = osr.SpatialReference()
-                expected_srs.ImportFromEPSG(params["epsg"])
+                expected_srs.ImportFromEPSG(expected_epsg)
                 if srs.IsSame(expected_srs):
                     # The auto-detected epsg is made available for other checks.
-                    status.add_params({"detected_epsg": params["epsg"]})
+                    status.add_params({"detected_epsg": expected_epsg})
                 else:
                     status.aborted("Layer {:s} does not have an epsg code and the epsg code can not be detected, srs: {:s}."
                                    .format(layer_def["src_layer_name"], srs.ExportToWkt()))
