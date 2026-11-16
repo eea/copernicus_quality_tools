@@ -93,6 +93,11 @@ def submit_delivery(
             ),
         )
     except SubmissionError as exc:
+        if exc.code == "submission_claim_lost":
+            result = _published_result(reserved.submission_uuid, idempotent=True)
+            if result is not None:
+                _verify_retained_publication(reserved, result, submission_root)
+                return result
         _record_failure(reserved, publication_token, exc)
         raise
 
