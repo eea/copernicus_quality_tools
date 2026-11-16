@@ -50,6 +50,8 @@ def main(products_dir) -> None:
     c = 0
     results = dict()
     for json_file in sorted(folder.glob("clms_*.json")):
+        if json_file.name.startswith("clms_vlcc") or json_file.name.startswith("clms_euhydro_net"):
+            continue
         c += 1
         try:
             with json_file.open("r", encoding="utf-8") as f:
@@ -107,6 +109,8 @@ def main(products_dir) -> None:
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-zA-Z_]+)', values_new["aoi_codes"])
             sample_product_name = sample_product_name.replace('(?P<aoi_code>gf|gp|mq|re|yt|e[0-9]{2}n[0-9]{2})', values_new["aoi_codes"])
             sample_product_name = sample_product_name.replace('(?P<aoi_code>[0-9a-z]{6})', values_new["aoi_codes"])
+
+            sample_product_name = sample_product_name.replace(r'(?P<aoi_code>[0-9a-zA-Z\-]+)', values_new["aoi_codes"])
 
         sample_product_name = sample_product_name.replace('(?P<du_name>[a-z]+)', "blacksea")
 
@@ -209,7 +213,15 @@ def main(products_dir) -> None:
             try:
                 parsed = parseo.parse_auto(sample_name, ignore_case=True)
                 parseo_family = parsed.match_family
-                print(prod, sample_name, "OK", parseo_family)
+                try:
+                    schema_info = parseo.parser.describe_schema(parseo_family, version=parsed.version)
+                    schema_id = schema_info.get("schema_id")
+                except Exception:
+                    schema_id = None
+                schema_version = parsed.version
+                product = parsed.fields.get("product")
+                variable = parsed.fields.get("variable")
+                print(prod, sample_name, "OK", f"{product}, {variable}, {schema_id}:{schema_version}")
                 passed_examples.append((prod, sample_name))
                 #parseo.parse()
             except Exception as e:
