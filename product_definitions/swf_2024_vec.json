@@ -1,8 +1,7 @@
 {
-  "description": "HRL Small Woody Features 2024, vector FlatGeobuf",
+  "description": "HRL Small Woody Features 2024, vector only",
   "steps": [
-  
-     {
+    {
       "check_ident": "qc_tool.vector.unzip",
       "required": true
     },
@@ -16,7 +15,7 @@
           ".gpkg",
           ".fgb",
           ".parquet"
-                ],
+        ],
         "layer_names": {
           "vector": "^clms_hrlslf_swf_s2024_vec_(?P<aoi_code>gf|gp|mq|re|yt|e[0-9]{2}n[0-9]{2})_(?P<epsg_code>[0-9]{5})_v[0-9]{2}_r[0-9]{2}"
         },
@@ -927,11 +926,15 @@
         ],
         "aoi_codes_excluded": [],
         "epsg_codes": [
-          "03035", "32740", "32738", "32622", "32620"
+          "03035",
+          "32740",
+          "32738",
+          "32622",
+          "32620"
         ]
       }
     },
-        {
+    {
       "check_ident": "qc_tool.vector.attribute",
       "required": true,
       "parameters": {
@@ -962,10 +965,17 @@
           "vector"
         ],
         "epsg": 3035,
-        "extra_epsg_codes": {"re": 32740, "yt": 32738, "gf": 32622, "gp": 32620, "mq": 32620},
+        "extra_epsg_codes": {
+          "re": 32740,
+          "yt": 32738,
+          "gf": 32622,
+          "gp": 32620,
+          "mq": 32620
+        },
         "auto_identify_epsg": true
       }
-    }, {
+    },
+    {
       "check_ident": "qc_tool.vector.import2pg",
       "required": true
     },
@@ -987,7 +997,10 @@
         ],
         "column_defs": [
           [
-            "code", ["1"]
+            "code",
+            [
+              "1"
+            ]
           ]
         ]
       }
@@ -1021,7 +1034,8 @@
         "unit": 1,
         "tolerance": 0.5
       }
-    }, {
+    },
+    {
       "check_ident": "qc_tool.vector.overlap",
       "required": false,
       "parameters": {
