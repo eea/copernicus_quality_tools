@@ -17,10 +17,11 @@ from qc_tool.frontend.dashboard.models import Delivery, DeliverySubmission, Job
 from qc_tool.frontend.dashboard.services.products import find_product_description
 from .access import require_upload_filename
 from ._resumable.assembly import _discard_stale_assembly, _write_assembly, _discard_published_chunks
-from ._resumable.chunks import is_chunk_stored, is_upload_complete, store_chunk
+from ._resumable.chunks import is_chunk_stored, is_upload_complete
 from ._resumable.errors import ResumableUploadError
 from ._resumable.filesystem import open_directory, read_flags, write_once_flags
 from ._resumable.paths import expected_chunk_paths
+from ._resumable.progress import extend_assembly
 from .corrections import require_correction_submission, verify_retained_correction_input
 
 
@@ -121,7 +122,7 @@ def probe_overwrite_chunk(descriptor, paths, *, user, directory, filename_direct
     return descriptor.chunk_number != descriptor.total_chunks and is_chunk_stored(paths.chunk_path)
 
 
-def receive_overwrite_chunk(descriptor, paths, *, user, uploaded_chunk, directory, filename_directory):
+def receive_overwrite_chunk(descriptor, paths, *, user, staged_chunk, directory, filename_directory):
     from .registration import _read_receipt, _registered_delivery, _write_receipt
     from .locking import require_available_filename, clear_overwrite_intent, mark_overwrite_intent
     require_available_filename(filename_directory, storage_key=descriptor.storage_key)
@@ -157,11 +158,11 @@ def receive_overwrite_chunk(descriptor, paths, *, user, uploaded_chunk, director
                     original.save(update_fields=("is_deleted",))
         if journal is None:
             original = _require_original(descriptor, paths, user)
-            if uploaded_chunk is not None:
-                store_chunk(uploaded_chunk, paths.chunk_path, expected_bytes=descriptor.current_chunk_size)
+            if staged_chunk is not None:
+                staged_chunk.publish()
             elif not is_upload_complete(descriptor, paths):
                 raise ResumableUploadError("upload_incomplete", "The staged replacement is incomplete. Resume the browser upload with its selected ZIP.", 409)
-            if not is_upload_complete(descriptor, paths):
+            if not extend_assembly(descriptor, expected_chunk_paths(descriptor, paths), directory):
                 return None
             submission = DeliverySubmission.objects.filter(delivery_id=original.pk).first()
             if submission is not None:

@@ -52,9 +52,11 @@ sequenceDiagram
 
 Resumable metadata is validated before filesystem use. Upload identifiers map
 to opaque storage keys, path components are confined, chunks have explicit
-limits, and assembly and registration share an upload lock. A chunk probe cannot
-report a completed upload until a live Delivery record exists. Fully staged
-uploads require a final POST to finish registration.
+limits, and assembly and registration share an upload lock. Chunks are appended
+to a private, synchronized assembly in order as they arrive, so the final chunk
+does not copy the whole ZIP. A chunk probe cannot report a completed upload
+until a live Delivery record exists. Fully staged uploads require a final POST
+to finish registration.
 
 Database creation occurs after the complete ZIP is published. An ownership link
 in private staging retains the published inode until registration succeeds, so

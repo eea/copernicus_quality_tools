@@ -26,7 +26,10 @@ test("delivery selection checks own filenames without uploading until Add", asyn
     const upload = await start(page);
     assert.equal(page.requests.length, 2, "Check again immediately before adding.");
     assert.equal(upload.uploadCalls, 1);
-    assert.equal(upload.options.maxChunkRetries, 0);
+    assert.equal(upload.options.maxChunkRetries, 5);
+    const chunks = [{opts: {}}, {opts: {}}];
+    upload.fire("chunkingComplete", {chunks});
+    assert.deepEqual(chunks.map(chunk => chunk.opts.maxChunkRetries), [undefined, 0], "Only the final chunk is never retried automatically.");
     assert.equal(upload.options.testChunks, true);
 });
 

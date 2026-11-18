@@ -10,13 +10,12 @@ import stat
 from .descriptor import ResumableUploadDescriptor
 from .errors import ResumableUploadError
 from .filesystem import COPY_CHUNK_SIZE
-from .filesystem import copy_regular_file_at
 from .filesystem import open_directory
 from .filesystem import read_flags
 from .filesystem import regular_file_exists_at
-from .filesystem import write_once_flags
 from .locks import DEFAULT_LOCK_TIMEOUT, upload_lock
 from .paths import ResumableUploadPaths, expected_chunk_paths
+from .progress import complete_assembly, discard_assembly_progress
 
 
 def assemble_chunks(
@@ -230,44 +229,9 @@ def _discard_stale_assembly(chunks_descriptor: int) -> None:
 
 
 def _write_assembly(descriptor, chunk_paths, chunks_descriptor: int) -> None:
-    try:
-        output_descriptor = os.open(
-            ".assembled",
-            write_once_flags(),
-            0o640,
-            dir_fd=chunks_descriptor,
-        )
-        total_written = 0
-        with os.fdopen(output_descriptor, "wb") as output:
-            for chunk_number, chunk_path in enumerate(chunk_paths, start=1):
-                expected_size = descriptor.expected_size_for_chunk(chunk_number)
-                chunk_written = copy_regular_file_at(
-                    chunks_descriptor,
-                    chunk_path.name,
-                    output,
-                    max_bytes=expected_size,
-                )
-                if chunk_written != expected_size:
-                    raise ResumableUploadError(
-                        "invalid_upload_chunk_size",
-                        "An upload chunk size differs from its declaration.",
-                    )
-                total_written += chunk_written
-            output.flush()
-            os.fsync(output.fileno())
-        if total_written != descriptor.total_size:
-            raise ResumableUploadError(
-                "invalid_upload_size",
-                "The uploaded data size differs from its declaration.",
-            )
-    except ResumableUploadError:
-        raise
-    except OSError as exc:
-        raise ResumableUploadError(
-            "upload_storage_error",
-            "The uploaded delivery could not be assembled.",
-            500,
-        ) from exc
+    # Chunk requests normally assembled every byte already; this only appends
+    # what is left, verifies the exact size and renames the durable file.
+    complete_assembly(descriptor, chunk_paths, chunks_descriptor, ".assembled")
 
 
 def _publish_assembly(paths, chunks_descriptor, target_directory) -> None:
@@ -307,6 +271,7 @@ def _best_effort_unlink(directory_descriptor: int, filename: str) -> None:
 
 
 def _discard_published_chunks(chunks_descriptor, chunk_paths) -> None:
+    discard_assembly_progress(chunks_descriptor)
     for chunk_path in chunk_paths:
         try:
             os.unlink(chunk_path.name, dir_fd=chunks_descriptor)

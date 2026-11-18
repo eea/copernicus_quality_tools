@@ -165,8 +165,9 @@ identities. Do not use blanket `chmod 777` or recursively change database-volume
 ownership. A read-only mount also prevents uploads even when directory mode
 bits appear writable.
 
-Check free bytes, free inodes and any storage quota. Chunk staging and the
-assembled ZIP can coexist, so allow space beyond the final delivery size. Also
+Check free bytes, free inodes and any storage quota. Chunks are retained beside
+the ZIP being assembled until registration succeeds, so allow about twice the
+delivery size while it uploads. Also
 check the frontend's multipart spool: `QC_TOOL_UPLOAD_TEMP_DIR` if configured,
 otherwise its operating-system temporary directory, normally `/tmp`. Replace
 `/tmp` in the checks above when using a custom spool path. Space available on

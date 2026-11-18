@@ -128,11 +128,26 @@ error. Permission/mount failures return actionable `503` responses; full storage
 or quota exhaustion returns `507`. Operator logs retain the failure context;
 responses do not expose server paths.
 
-The browser sets `maxChunkRetries: 0` and retains resumable chunk probes. Failed
-requests require **Retry upload**, which retains the same upload identity and
-server receipts. This prevents the library's default 100 immediate retries from
-amplifying a storage outage. A storage failure also stops the batch, leaving
-unstarted files and replacement choices available for explicit continuation.
+The browser retains resumable chunk probes. Non-final chunks are idempotent, so
+the browser retries a transient failure (network error, proxy `502`/`504`, or
+`503`) at most five times, five seconds apart. Validation, permission, conflict,
+`500` and storage-full (`507`) responses are permanent. The final chunk sets
+`maxChunkRetries: 0` through its chunk options because a missing acknowledgement
+can follow a committed delivery. Failed uploads require **Retry upload**, which
+retains the same upload identity and server receipts. Bounded, delayed retries
+replace the library's default 100 immediate retries, which would amplify a
+storage outage. A storage failure also stops the batch, leaving unstarted files
+and replacement choices available for explicit continuation.
+
+The server writes and synchronizes each chunk's data before it takes the upload
+locks. Under the locks it only links the chunk and appends every stored chunk
+that continues the assembled prefix to a private `.assembling` file. That file
+is synchronized before `.assembling.progress` records the appended chunk count,
+so bytes beyond the recorded count are discarded and appended again after a
+crash. The final chunk therefore only verifies the size, renames the assembly,
+publishes it and registers the delivery, even for multi-gigabyte ZIPs. The view
+identifies the filename once per request. Registration repeats that check inside
+its database transaction.
 
 `POST /deliveries/upload/check/` accepts JSON `{filenames: [...]}` with between
 1 and 100 plain ZIP filenames and a maximum request size of 64 KiB. Each result
