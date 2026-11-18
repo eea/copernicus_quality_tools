@@ -73,3 +73,18 @@ test("a real network failure stops without retry timers and manual Retry resumes
     assert.equal(page.queue.entries[0].state, "completed");
     assert.equal(page.queue.entries[0].url, "/deliveries/jobs/17/");
 });
+
+test("real transport retries only non-final chunks automatically, after a pause", async () => {
+    const page = queuePage("deliveries", {realResumable: true});
+    page.choose([new File([new Uint8Array(2 * 5 * 1024 * 1024 + 1)], "delivery.zip", {type: "application/zip"})]);
+    page.checked(); await tick();
+    page.click(page.queue.entries[0], "add");
+    page.checked();
+    await waitFor(() => page.transports[0]?.files?.[0]?.chunks?.length === 2);
+    await tick();
+    const chunks = page.transports[0].files[0].chunks;
+    assert.deepEqual(Array.from(chunks, chunk => chunk.getOpt("maxChunkRetries")), [5, 0]);
+    assert.equal(chunks[0].getOpt("chunkRetryInterval"), 5000);
+    assert.equal(chunks[0].getOpt("permanentErrors").includes(503), false, "Transient storage and proxy failures are retried.");
+    assert.equal(chunks[0].getOpt("permanentErrors").includes(507), true, "Full storage is never retried automatically.");
+});

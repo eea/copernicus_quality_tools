@@ -20,8 +20,11 @@ from qc_tool.frontend.dashboard.services.uploads import (
     remove_published_upload,
     store_chunk,
 )
+from qc_tool.frontend.dashboard.services.uploads._resumable.chunks import stage_chunk
 from qc_tool.frontend.dashboard.services.uploads._resumable.locks import upload_lock
+from qc_tool.frontend.dashboard.services.uploads._resumable.progress import extend_assembly
 from qc_tool.frontend.dashboard.services.uploads._resumable import paths as resumable_paths
+from qc_tool.frontend.dashboard.services.uploads._resumable import progress as resumable_progress
 
 
 class _UploadedChunk:
@@ -632,6 +635,121 @@ class ResumableStorageTests(TestCase):
 
         self.assertEqual(caught.exception.code, "unsafe_upload_cleanup")
         self.assertTrue(self.paths.target_path.is_symlink())
+        self.assertEqual(outside.read_bytes(), b"outside")
+
+
+class ChunkStagingTests(TestCase):
+    def setUp(self):
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary_directory.cleanup)
+        media_root = Path(self.temporary_directory.name) / "media"
+        media_root.mkdir()
+        self.paths = prepare_resumable_paths(_descriptor(), media_root=media_root, username="alice")
+
+    def test_staged_chunk_is_private_until_published_and_always_cleaned(self):
+        with stage_chunk(_UploadedChunk(b"abcd"), self.paths.chunk_path, expected_bytes=4) as staged:
+            self.assertFalse(self.paths.chunk_path.exists())
+            self.assertEqual(len(list(self.paths.chunks_dir.glob(".*.uploading"))), 1)
+            self.assertTrue(staged.publish())
+            self.assertFalse(staged.publish())
+        self.assertEqual(self.paths.chunk_path.read_bytes(), b"abcd")
+        self.assertEqual(list(self.paths.chunks_dir.glob(".*.uploading")), [])
+
+        self.paths.chunk_path.unlink()
+        with self.assertRaises(RuntimeError):
+            with stage_chunk(_UploadedChunk(b"abcd"), self.paths.chunk_path, expected_bytes=4):
+                raise RuntimeError("rejected before publication")
+        self.assertFalse(self.paths.chunk_path.exists())
+        self.assertEqual(list(self.paths.chunks_dir.glob(".*.uploading")), [])
+
+
+class IncrementalAssemblyTests(TestCase):
+    """Three chunks of 5, 5 and 7 bytes, matching the bundled client's layout."""
+
+    CHUNKS = (b"first", b"-2nd-", b"-third!")
+
+    def setUp(self):
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary_directory.cleanup)
+        media_root = Path(self.temporary_directory.name) / "media"
+        media_root.mkdir()
+        self.descriptor = _descriptor(chunk_number=3, current_chunk_size=7, total_chunks=3, total_size=17)
+        self.paths = prepare_resumable_paths(self.descriptor, media_root=media_root, username="alice")
+        self.chunk_paths = expected_chunk_paths(self.descriptor, self.paths)
+        self.assembling = self.paths.chunks_dir / ".assembling"
+        self.progress = self.paths.chunks_dir / ".assembling.progress"
+
+    def store(self, number):
+        data = self.CHUNKS[number - 1]
+        store_chunk(_UploadedChunk(data), self.chunk_paths[number - 1], expected_bytes=len(data))
+
+    def extend(self):
+        with upload_lock(self.paths.chunks_dir) as directory:
+            return extend_assembly(self.descriptor, self.chunk_paths, directory)
+
+    def test_appends_contiguous_chunks_as_they_arrive_in_any_order(self):
+        self.store(2)
+        self.assertFalse(self.extend())
+        self.assertEqual(self.assembling.read_bytes(), b"")
+        self.store(1)
+        self.assertFalse(self.extend())
+        self.assertEqual(self.assembling.read_bytes(), b"first-2nd-")
+        self.assertEqual(self.progress.read_bytes(), b"2")
+        self.store(3)
+        self.assertTrue(self.extend())
+        self.assertEqual(self.assembling.read_bytes(), b"first-2nd--third!")
+        self.assertEqual(self.progress.read_bytes(), b"3")
+
+    def test_final_assembly_does_not_copy_already_assembled_chunks(self):
+        for number in (1, 2, 3):
+            self.store(number)
+            self.extend()
+        with patch.object(resumable_progress, "copy_regular_file_at") as copy:
+            target = assemble_chunks(self.descriptor, self.paths)
+        copy.assert_not_called()
+        self.assertEqual(target.read_bytes(), b"first-2nd--third!")
+        self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o640)
+        for leftover in (self.assembling, self.progress, *self.chunk_paths):
+            self.assertFalse(leftover.exists())
+
+    def test_bytes_beyond_the_synchronized_count_are_rebuilt_from_chunks(self):
+        self.store(1)
+        self.extend()
+        with self.assembling.open("ab") as unsynchronized:
+            unsynchronized.write(b"garbage after a host crash")
+        self.store(2)
+        self.store(3)
+        self.assertEqual(assemble_chunks(self.descriptor, self.paths).read_bytes(), b"first-2nd--third!")
+
+    def test_missing_or_unreadable_progress_restarts_from_the_first_chunk(self):
+        for number in (1, 2, 3):
+            self.store(number)
+        for state in ("missing assembly", "invalid marker"):
+            with self.subTest(state=state):
+                self.extend()
+                if state == "missing assembly":
+                    self.assembling.unlink()
+                else:
+                    self.assembling.write_bytes(b"XXXXXXXXXX")
+                    self.progress.write_bytes(b"\0\0")
+                self.assertTrue(self.extend())
+                self.assertEqual(self.assembling.read_bytes(), b"first-2nd--third!")
+
+    def test_wrong_sized_chunk_is_rejected_before_it_is_counted(self):
+        self.chunk_paths[0].write_bytes(b"four")
+        with self.assertRaises(ResumableUploadError) as caught:
+            self.extend()
+        self.assertEqual(caught.exception.code, "invalid_upload_chunk_size")
+        self.assertFalse(self.progress.exists())
+
+    def test_never_follows_an_assembly_symlink(self):
+        outside = self.paths.user_root.parent / "outside.bin"
+        outside.write_bytes(b"outside")
+        self.assembling.symlink_to(outside)
+        self.store(1)
+        with self.assertRaises(ResumableUploadError) as caught:
+            self.extend()
+        self.assertEqual(caught.exception.code, "unsafe_upload_staging")
         self.assertEqual(outside.read_bytes(), b"outside")
 
 

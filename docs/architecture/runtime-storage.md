@@ -163,7 +163,7 @@ delivery organization scheme:
 
 | Location | Contents and ownership |
 | --- | --- |
-| `incoming/<username>/uploads/<opaque-upload-key>/` | Resumable `chunk-00000001.part` files, `.upload.lock`, assembly and registration receipts; coordinated by the upload service |
+| `incoming/<username>/uploads/<opaque-upload-key>/` | Resumable `chunk-00000001.part` files, `.upload.lock`, the in-progress `.assembling` file and its progress marker, and registration receipts; coordinated by the upload service |
 | `incoming/<username>/uploads/filename-<sha256>/` | Per-filename serialization and overwrite intent; never a final delivery |
 | `specifications/.upload.lock` | Serialize immutable version publication and activation metadata |
 | `boundaries/.boundary-package.lock`, `.boundary-current` | Boundary publication lock and selected generation |

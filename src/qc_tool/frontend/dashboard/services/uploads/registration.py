@@ -14,22 +14,23 @@ from ._resumable.assembly import (
     _best_effort_unlink, _discard_published_chunks, owned_publication,
     publish_for_registration,
 )
-from ._resumable.chunks import is_chunk_stored, is_upload_complete, store_chunk
+from ._resumable.chunks import is_chunk_stored, stage_chunk
 from ._resumable.errors import ResumableUploadError
 from ._resumable.filesystem import open_directory, read_flags, write_once_flags
 from ._resumable.locks import upload_lock
 from ._resumable.paths import expected_chunk_paths
+from ._resumable.progress import extend_assembly
 from .locking import delivery_filename_lock, require_available_filename
 from .access import require_upload_delivery, require_upload_filename
 
 
 def probe_registered_chunk(descriptor, paths, *, user):
-    """A final chunk is complete only after a live delivery was registered."""
+    """A final chunk is complete only after a live delivery was registered.
 
-    require_upload_filename(
-        AccountAccess.from_user(user), descriptor.filename,
-        overwrite_delivery_id=descriptor.overwrite_delivery_id,
-    )
+    The caller authorizes the filename with ``require_upload_filename`` for
+    each request before calling this or ``receive_registered_chunk``.
+    """
+
     if not paths.chunks_dir.exists():
         return False
     with delivery_filename_lock(paths.user_root, descriptor.filename) as filename_directory, upload_lock(paths.chunks_dir) as directory:
@@ -56,17 +57,22 @@ def probe_registered_chunk(descriptor, paths, *, user):
 
 
 def receive_registered_chunk(descriptor, paths, *, user, uploaded_chunk):
-    """Store, assemble and register once; retries recover any prior publication."""
+    """Store, assemble and register once; retries recover any prior publication.
 
-    require_upload_filename(
-        AccountAccess.from_user(user), descriptor.filename,
-        overwrite_delivery_id=descriptor.overwrite_delivery_id,
-    )
+    The chunk data is copied and synchronized before taking the locks, so
+    parallel chunk requests only serialize their cheap publication and append.
+    """
+
+    with stage_chunk(uploaded_chunk, paths.chunk_path, expected_bytes=descriptor.current_chunk_size) as staged:
+        return _receive_staged_chunk(descriptor, paths, user=user, staged=staged)
+
+
+def _receive_staged_chunk(descriptor, paths, *, user, staged):
     with delivery_filename_lock(paths.user_root, descriptor.filename) as filename_directory, upload_lock(paths.chunks_dir) as directory:
         require_available_filename(filename_directory, storage_key=descriptor.storage_key if descriptor.overwrite_delivery_id else None)
         if descriptor.overwrite_delivery_id is not None:
             from .overwrite import receive_overwrite_chunk
-            return receive_overwrite_chunk(descriptor, paths, user=user, uploaded_chunk=uploaded_chunk, directory=directory, filename_directory=filename_directory)
+            return receive_overwrite_chunk(descriptor, paths, user=user, staged_chunk=staged, directory=directory, filename_directory=filename_directory)
         receipt = _read_receipt(directory)
         if receipt is not None:
             registered = _registered_delivery(receipt, paths, user)
@@ -92,8 +98,8 @@ def receive_registered_chunk(descriptor, paths, *, user, uploaded_chunk):
                     or pending["delivery_id"] != active.pk):
                 raise _delivery_exists()
         if not owned:
-            store_chunk(uploaded_chunk, paths.chunk_path, expected_bytes=descriptor.current_chunk_size)
-            if not is_upload_complete(descriptor, paths):
+            staged.publish()
+            if not extend_assembly(descriptor, expected_chunk_paths(descriptor, paths), directory):
                 return None
         target = publish_for_registration(descriptor, paths, directory)
         try:

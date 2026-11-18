@@ -57,7 +57,7 @@ class Command(BaseCommand):
                     if not options["apply"]:
                         self.stdout.write("Inspection only. --apply publishes the recorded replacement and retains the original archive and QC history.")
                         return
-                    result = receive_overwrite_chunk(descriptor, paths, user=original.user, uploaded_chunk=None,
+                    result = receive_overwrite_chunk(descriptor, paths, user=original.user, staged_chunk=None,
                                                      directory=directory, filename_directory=filename_directory)
                     self.stdout.write(self.style.SUCCESS(f"Replacement delivery {result.pk} is registered. Run fresh quality checks."))
         except (ResumableUploadError, OSError) as exc:
