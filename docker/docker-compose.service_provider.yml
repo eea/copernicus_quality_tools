@@ -25,6 +25,7 @@ services:
       # Existing deployment overrides; absent values use application defaults.
       PRODUCT_DIRS:
       QC_TOOL_RESTORE_DATABASE:
+      QC_TOOL_AUTO_APPROVE_SUBMISSIONS:
       QC_TOOL_STORAGE_ROOTS:
       QC_TOOL_STORAGE_SFTP_HOST:
       QC_TOOL_STORAGE_SFTP_PORT:

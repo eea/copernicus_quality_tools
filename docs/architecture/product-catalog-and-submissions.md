@@ -261,12 +261,20 @@ required operational safeguards; see [retention](../../src/qc_tool/database/SCHE
 
 Publication and approval are independent. A successfully stored submission starts
 as **Awaiting review**, including submissions made by an administrator. Successful
-QC and safe storage do not approve a delivery automatically. The uploader can
+QC and safe storage do not approve a delivery automatically unless the global setting QC_TOOL_AUTO_APPROVE_SUBMISSIONS: yes is set. The uploader can
 follow the submission's status and feedback; an assigned product manager or an
 administrator reviews it from **Products → Submission review** at
 `/products/submissions`. The former `/submissions/` queue address redirects to
 this page and preserves filters. Individual submission receipts and retained
 file links keep their existing addresses.
+
+With `QC_TOOL_AUTO_APPROVE_SUBMISSIONS` enabled, publication finalization
+approves a newly stored submission in the same transaction only when no other
+published, non-declined submission exists for its product unit, the product is
+active and its delivery plan is authoritative. The retained
+`SubmissionReviewEvent` has no actor account and the username
+**QC Tool (automatic)**. Every other case, including a delivery competing with an
+existing approval, follows the manual review and conflict workflow below.
 
 The reviewer can approve a published candidate or decline it with a required
 reason. An archived product cannot receive new approvals. A declined delivery's
