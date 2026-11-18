@@ -89,9 +89,11 @@ Use `dashboard/shared/entity_summary.html` for a record's identity and a few
 useful facts, such as the delivery whose QC history is being viewed. Load
 `dashboard/css/ui/entity-summary.css` alongside the shared workspace styles.
 
+{% raw %}
 ```django
 {% include "dashboard/shared/entity_summary.html" with id="delivery-summary" summary=delivery_summary only %}
 ```
+{% endraw %}
 
 The summary has a `title`, a short `kind`, an optional `reference` and SVG
 `icon`, an optional `description` with `description_label` and authorized
@@ -124,9 +126,11 @@ the viewer's access scope and the selected catalog product.
 
 Include the shared toolbar with page-specific field partials:
 
+{% raw %}
 ```django
 {% include "dashboard/shared/tables/toolbar.html" with id="example-toolbar" table_id="tbl-example" search_id="example-search" search_label="Search examples" search_placeholder="Name or identifier" filters_template="dashboard/examples/table_filters.html" clear_id="example-clear" toggle_id="example-filter-toggle" panel_id="example-filter-panel" summary_id="example-filter-summary" %}
 ```
+{% endraw %}
 
 `id`, `table_id`, and the search ID and label identify the toolbar and its table.
 Each ID must be unique on the page. Additional options are:
