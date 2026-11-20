@@ -130,6 +130,7 @@ authorized release process, verify the actual pulled images in an isolated
 environment. Record both image digests, source revisions and supported
 architectures; tags alone can be moved.
 
+{% raw %}
 ```bash
 docker image inspect --format '{{json .RepoDigests}}' "$QC_RELEASE_FRONTEND_IMAGE"
 docker image inspect --format '{{json .RepoDigests}}' "$QC_RELEASE_WORKER_IMAGE"
@@ -139,6 +140,7 @@ docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.
 docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' \
   "$QC_RELEASE_FRONTEND_IMAGE" "$QC_RELEASE_WORKER_IMAGE"
 ```
+{% endraw %}
 
 Both version labels must match the release tag and both revision labels must
 match its reviewed commit. Record each image's own digest: the frontend and

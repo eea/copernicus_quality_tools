@@ -98,8 +98,23 @@ def submit_delivery(
             if result is not None:
                 _verify_retained_publication(reserved, result, submission_root)
                 return result
+            if _publication_in_progress(reserved.submission_uuid):
+                # A concurrent retry recovered the exposed directory and now
+                # owns the claim; it, not this request, finalizes publication.
+                raise SubmissionError(
+                    "submission_in_progress",
+                    "This delivery is already being published.",
+                    409,
+                ) from exc
         _record_failure(reserved, publication_token, exc)
         raise
+
+
+def _publication_in_progress(submission_uuid):
+    return DeliverySubmission.objects.filter(
+        pk=submission_uuid,
+        publication_state=DeliverySubmission.PublicationState.PUBLISHING,
+    ).exists()
 
 
 def _verify_retained_publication(reserved, result, submission_root):
