@@ -18,9 +18,10 @@
           ".parquet"
         ],
         "layer_names": {
-          "vector": "^swf_2015_vec_(?P<country_code>[a-z]{2})_0?(?P<epsg_code>[0-9]+)_0*(?P<aoi_code>[0-9]+)_"
+          "vector": "^swf_2015_vec_(?P<country_code>[a-z]{2})_(?P<epsg_code>[0-9]+)_0*(?P<aoi_code>[0-9]+)_"
         },
         "epsg_codes": [
+          "3035",
           "03035",
           "32740",
           "32738",
@@ -248,11 +249,11 @@
         ],
         "epsg": 3035,
         "extra_epsg_codes": {
-          "re": 32740,
-          "yt": 32738,
-          "gf": 32622,
-          "gp": 32620,
-          "mq": 32620
+          "137": 32622,
+          "138": 32620,
+          "139": 32620,
+          "140": 32740,
+          "141": 32738
         },
         "auto_identify_epsg": true
       }

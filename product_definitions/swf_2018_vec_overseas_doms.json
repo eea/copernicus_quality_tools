@@ -1,0 +1,153 @@
+{
+  "description": "HRL Small Woody Features 2018, vector only, overseas DOMs (GF, GP, MQ, RE, YT)",
+  "steps": [
+    {
+      "check_ident": "qc_tool.vector.unzip",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.naming",
+      "required": true,
+      "parameters": {
+        "reference_year": "2018",
+        "formats": [
+          ".gdb",
+          ".gpkg",
+          ".shp",
+          ".fgb",
+          ".parquet"
+        ],
+        "layer_names": {
+          "vector": "^(?P<aoi_code>gf|gp|mq|re|yt)_swf_2018_vec_(?P<epsg_code>[0-9]{5})$"
+        },
+        "aoi_codes": [
+          "gf",
+          "gp",
+          "mq",
+          "re",
+          "yt"
+        ],
+        "epsg_codes": [
+          "32620",
+          "32622",
+          "32740",
+          "32738"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.attribute",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "vector"
+        ],
+        "required": {
+          "code": "integer",
+          "class_name": "string"
+        },
+        "ignored": [
+          "fid",
+          "area",
+          "shape_area",
+          "shape_length",
+          "geometry_bbox.xmax",
+          "geometry_bbox.xmin",
+          "geometry_bbox.ymax",
+          "geometry_bbox.ymin"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.epsg",
+      "required": true,
+      "parameters": {
+        "layers": [
+          "vector"
+        ],
+        "epsg": 32620,
+        "extra_epsg_codes": {
+          "gf": 32622,
+          "re": 32740,
+          "yt": 32738
+        },
+        "auto_identify_epsg": true
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.import2pg",
+      "required": true
+    },
+    {
+      "check_ident": "qc_tool.vector.inspire",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "vector"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.enum",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "vector"
+        ],
+        "column_defs": [
+          [
+            "code",
+            [
+              "1"
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.singlepart",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "vector"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.geometry",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "vector"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.overlap",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "vector"
+        ]
+      }
+    },
+    {
+      "check_ident": "qc_tool.vector.neighbour",
+      "required": false,
+      "parameters": {
+        "layers": [
+          "vector"
+        ],
+        "code_column_names": [
+          "code"
+        ],
+        "exception_where": [
+          "FALSE"
+        ],
+        "error_where": [
+          "TRUE"
+        ]
+      }
+    }
+  ]
+}
