@@ -526,6 +526,42 @@ class SubmissionLifecycleTests(SubmissionFixtureMixin, TestCase):
             1,
         )
 
+    def test_claim_taken_by_concurrent_recovery_reports_in_progress(self):
+        from qc_tool.frontend.dashboard.services.submissions import lifecycle
+        from qc_tool.frontend.dashboard.services.submissions.state import (
+            claim_publication,
+        )
+
+        user, delivery, _job, job_root = self.create_candidate("race-owner")
+        real_finalize = lifecycle._finalize_publication
+
+        def finalize_after_concurrent_recovery(reserved, token, *args, **kwargs):
+            # Another request saw the renamed directory and recovered the claim
+            # before this request could finalize its own publication.
+            self.assertIsNotNone(
+                claim_publication(reserved.submission_uuid, allow_recovery=True)
+            )
+            return real_finalize(reserved, token, *args, **kwargs)
+
+        with patch.object(
+            lifecycle, "_finalize_publication",
+            side_effect=finalize_after_concurrent_recovery,
+        ):
+            with self.assertRaises(SubmissionError) as raised:
+                self.submit(user, delivery, job_root)
+
+        self.assertEqual(raised.exception.code, "submission_in_progress")
+        submission = DeliverySubmission.objects.get(delivery=delivery)
+        self.assertEqual(
+            submission.publication_state,
+            DeliverySubmission.PublicationState.PUBLISHING,
+        )
+        self.assertEqual(submission.failure_code, "")
+        self.assertEqual(
+            self.submit(user, delivery, job_root).publication_state,
+            DeliverySubmission.PublicationState.PUBLISHED,
+        )
+
     def test_retry_rejects_a_symlinked_existing_manifest(self):
         user, delivery, _job, job_root = self.create_candidate(
             "unsafe-recovery-owner"
