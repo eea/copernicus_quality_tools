@@ -342,6 +342,10 @@ QC_TOOL_BOUNDARY_PACKAGE_LIMITS = boundary_package_limits_from_environment(envir
 
 # Submission feature setting.
 SUBMISSION_ENABLED = CONFIG["submission_dir"] is not None
+# When enabled, a stored submission with no competing candidate for its product
+# unit is approved by "QC Tool (automatic)" if its product accepts approvals.
+# Competing submissions and inactive delivery plans still need manual review.
+QC_TOOL_AUTO_APPROVE_SUBMISSIONS = _environment_boolean("QC_TOOL_AUTO_APPROVE_SUBMISSIONS", False)
 
 # Logo display setting.
 SHOW_LOGO = CONFIG["show_logo"]

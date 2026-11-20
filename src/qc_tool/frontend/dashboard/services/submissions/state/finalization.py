@@ -6,7 +6,9 @@ from django.utils import timezone
 from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.models import DeliverySubmission
 from qc_tool.frontend.dashboard.models import ProductUnit
+from qc_tool.frontend.dashboard.services.catalog.sync.locks import lock_catalog_sync
 
+from ..auto_approval import approve_uncontested_submission
 from ..conflicts import reconcile_published_submission
 from ..errors import SubmissionError
 from .results import result_from_submission
@@ -17,6 +19,9 @@ from .results import submission_result
 def finalize_publication(reserved, token, receipt, *, idempotent):
     """Commit publication, delivery projection, and duplicate review state."""
 
+    # Review services lock the catalog before the product unit; auto-approval
+    # reads delivery-plan state, so finalization follows the same order.
+    lock_catalog_sync()
     # All delivery mutators acquire the Delivery row first.
     delivery = Delivery.objects.select_for_update().get(pk=reserved.delivery_id)
     # Review and publication serialize on the product unit before locking candidates.
@@ -34,6 +39,8 @@ def finalize_publication(reserved, token, receipt, *, idempotent):
     _apply_receipt(submission, receipt, published_at=published_at)
     _apply_delivery_projection(delivery, receipt, published_at=published_at)
     conflict_id = reconcile_published_submission(submission, published_at)
+    submission.refresh_from_db(fields=("review_state", "review_version"))
+    approve_uncontested_submission(submission, conflict_id=conflict_id)
     submission.refresh_from_db(fields=("review_state",))
     return submission_result(
         submission,

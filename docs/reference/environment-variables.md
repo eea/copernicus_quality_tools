@@ -246,6 +246,7 @@ value preserves the OS default; do not point it at a public media directory.
 | `WORKER_ALIVE_TIMEOUT` | `5` s | Worker status request timeout |
 | `CASE_INSENSITIVE_USERNAMES` | `no` | Enable the case-insensitive login backend |
 | `RESUMABLE_SIMULTANEOUS_UPLOADS` | `4` | Browser parallel upload chunks; allowed 1–32 |
+| `QC_TOOL_AUTO_APPROVE_SUBMISSIONS` | `no` | Approve a stored submission automatically when no other non-declined submission exists for its product unit and the product accepts approvals. The decision is recorded as **QC Tool (automatic)**. Competing submissions, archived products and inactive delivery plans still need a manager's review. |
 | `QC_TOOL_WEB_WORKERS` | `1` | Gunicorn processes; startup rejects other values until status refresh runs outside WSGI |
 | `QC_TOOL_WEB_TIMEOUT_SECONDS` | `120` | Gunicorn worker heartbeat timeout; the single `gthread` process has four request threads. This does not limit an individual upload's duration. |
 

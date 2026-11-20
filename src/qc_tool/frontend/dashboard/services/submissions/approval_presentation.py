@@ -2,7 +2,7 @@
 
 
 def submission_approval(submission, *, events=(), conflict=None):
-    """Read loaded review evidence; QC success never establishes approval."""
+    """Read loaded review evidence; QC success never establishes approval unless auto-approval is in effect."""
 
     approved = submission.publication_state == "published" and submission.review_state == "accepted"
     previously_approved = any(event.decision == "approved" for event in events)
