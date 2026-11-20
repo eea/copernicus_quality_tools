@@ -26,3 +26,18 @@ This will create four exported .csv files (auth_user.csv, dashboard_delivery.csv
 
 months 1 (can be changed to more months)
 auto-approve (submitted deliveries are set to "approved" where possible)
+
+5. After re-uploading and approving a new product plan (a new release revision), carry the
+legacy submissions and their approvals over to it:
+
+- KUBECONFIG=/c/Users/jkadlec/.kube/config_staging python import_legacy_tables_kubernetes.py reassociate --product-ident clc2024 --dry-run
+
+- KUBECONFIG=/c/Users/jkadlec/.kube/config_staging python import_legacy_tables_kubernetes.py reassociate --product-ident clc2024
+
+QC Tool itself keeps approvals on the plan revision they were reviewed for; this explicit
+step moves the legacy-imported submissions to the current release where their unit code is
+still expected, keeping their review states. Submissions of unit codes dropped from the
+plan, and accepted submissions whose unit already has another accepted submission, stay on
+the historical revision and are listed. Note that re-running the "submissions" step adds
+any unit codes of its submitted deliveries that the current plan is missing back to it
+(provenance "legacy-import"), so prefer the reassociate step after trimming a plan.

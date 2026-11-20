@@ -261,6 +261,134 @@ DELETE_SUPERSEDED_QUERY = """
 """
 
 
+# --reassociate: re-uploading a product plan creates a new current release
+# revision, and QC Tool deliberately keeps submissions and their reviews on the
+# revision they were reviewed for. Legacy submissions predate every revision,
+# so this explicit manual step carries them, approvals included, to the current
+# release wherever their unit code is still expected. Submissions of unit codes
+# dropped from the plan stay on their historical revision and are listed.
+#
+# At most one accepted submission may exist per unit, so an accepted one moves
+# only to an approved (authoritative) plan whose unit has no accepted
+# submission yet, and only the newest accepted one moves when several compete.
+#
+# Legacy submissions are recognized by their placeholder input digest: the
+# manifests step replaces the artifact digest by the real manifest digest,
+# while the input digest keeps the placeholder.
+REASSOCIATE_ACCEPTED_QUERY = """
+    WITH mover AS (
+        SELECT s.submission_uuid, cur.id AS release_id, cu.id AS unit_id,
+               cu.product_unit_code,
+               ROW_NUMBER() OVER (
+                   PARTITION BY cu.id
+                   ORDER BY s.published_at DESC NULLS LAST, s.requested_at DESC, s.submission_uuid
+               ) AS rn
+        FROM publication_submission s
+        JOIN catalog_release_revision old ON old.id = s.product_release_id AND NOT old.is_current
+        JOIN catalog_product p ON p.id = old.product_id
+        JOIN catalog_release_revision cur
+          ON cur.product_id = p.id AND cur.is_current AND cur.coverage_state = 'authoritative'
+        JOIN catalog_product_unit cu
+          ON cu.product_release_id = cur.id
+         AND lower(cu.product_unit_code) = lower(s.product_unit_code)
+        WHERE s.input_digest = %(digest)s
+          AND s.publication_state = 'published'
+          AND s.review_state = 'accepted'
+          AND NOT EXISTS (
+              SELECT 1 FROM publication_submission a
+              WHERE a.product_unit_id = cu.id
+                AND a.publication_state = 'published'
+                AND a.review_state = 'accepted'
+          )
+          AND (%(idents)s::text[] IS NULL OR lower(p.ident) = ANY(%(idents)s))
+    )
+    UPDATE publication_submission s
+    SET product_release_id = m.release_id,
+        product_unit_id = m.unit_id,
+        product_unit_code = m.product_unit_code
+    FROM mover m
+    WHERE s.submission_uuid = m.submission_uuid
+      AND m.rn = 1
+"""
+
+REASSOCIATE_OTHERS_QUERY = """
+    UPDATE publication_submission s
+    SET product_release_id = cur.id,
+        product_unit_id = cu.id,
+        product_unit_code = cu.product_unit_code
+    FROM catalog_release_revision old
+    JOIN catalog_product p ON p.id = old.product_id
+    JOIN catalog_release_revision cur ON cur.product_id = p.id AND cur.is_current
+    JOIN catalog_product_unit cu
+      ON cu.product_release_id = cur.id
+    WHERE old.id = s.product_release_id
+      AND NOT old.is_current
+      AND lower(cu.product_unit_code) = lower(s.product_unit_code)
+      AND s.input_digest = %(digest)s
+      AND NOT (s.publication_state = 'published' AND s.review_state = 'accepted')
+      AND (%(idents)s::text[] IS NULL OR lower(p.ident) = ANY(%(idents)s))
+"""
+
+# Legacy submissions that stay on a historical revision, with the reason.
+REASSOCIATE_LEFT_QUERY = """
+    SELECT lower(p.ident), lower(s.product_unit_code), s.review_state,
+           CASE WHEN cu.id IS NULL THEN 'unit not in the current plan'
+                ELSE 'accepted elsewhere on the current plan, or the plan is not approved'
+           END,
+           count(*)
+    FROM publication_submission s
+    JOIN catalog_release_revision old ON old.id = s.product_release_id AND NOT old.is_current
+    JOIN catalog_product p ON p.id = old.product_id
+    JOIN catalog_release_revision cur ON cur.product_id = p.id AND cur.is_current
+    LEFT JOIN catalog_product_unit cu
+      ON cu.product_release_id = cur.id
+     AND lower(cu.product_unit_code) = lower(s.product_unit_code)
+    WHERE s.input_digest = %(digest)s
+      AND (%(idents)s::text[] IS NULL OR lower(p.ident) = ANY(%(idents)s))
+    GROUP BY 1, 2, 3, 4
+    ORDER BY 1, 2, 3
+"""
+
+
+def reassociate_submissions(dry_run, product_idents=None):
+    """Move legacy submissions of superseded plan revisions to the current one.
+
+    Run after re-uploading and approving a product plan. Review states and
+    review events are kept; no submissions or units are created.
+    """
+    params = {"idents": product_idents, "digest": LEGACY_DIGEST}
+    conn = psycopg2.connect(**DB_CONFIG)
+    cursor = conn.cursor()
+    try:
+        print("Reassociating legacy submissions with the current product plans...")
+        cursor.execute(REASSOCIATE_ACCEPTED_QUERY, params)
+        print(f"Moved {cursor.rowcount} accepted submissions to the current release.")
+        cursor.execute(REASSOCIATE_OTHERS_QUERY, params)
+        print(f"Moved {cursor.rowcount} pending/rejected submissions to the current release.")
+        cursor.execute(CLEANUP_UNITS_QUERY, params)
+        print(f"Removed {cursor.rowcount} unused legacy-import units.")
+        cursor.execute(REASSOCIATE_LEFT_QUERY, params)
+        rows = cursor.fetchall()
+        if rows:
+            print("Submissions left on their historical revision:")
+            for ident, code, state, reason, count in rows:
+                print(f"  {ident} / {code} ({state}): {count} ({reason})")
+        cursor.execute(CURRENT_COVERAGE_QUERY)
+        print(f"Accepted product units on current releases: {cursor.fetchone()[0]}")
+        if dry_run:
+            conn.rollback()
+            print("Dry run, rolled back.")
+        else:
+            conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"Error reassociating submissions: {e}")
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+
+
 def populate_publication_submissions(dry_run, product_idents=None, auto_approve=False):
     params = {"idents": product_idents, "digest": LEGACY_DIGEST, "auto_approve": auto_approve}
     conn = psycopg2.connect(**DB_CONFIG)
@@ -379,9 +507,16 @@ if __name__ == "__main__":
     parser.add_argument("--link-folders", action="store_true",
                         help="Only replace the placeholder keys of the legacy submissions by their "
                              "<product>/<year>/<folder>.d in the submission directory; create nothing.")
+    parser.add_argument("--reassociate", action="store_true",
+                        help="Only move the legacy submissions of superseded plan revisions to the "
+                             "current release where their unit code is still expected, keeping their "
+                             "review states; create nothing. Run after re-uploading and approving a "
+                             "product plan.")
     args = parser.parse_args()
     idents = [ident.lower() for ident in args.product_idents] if args.product_idents else None
     if args.link_folders:
         link_submission_folders(args.dry_run, idents)
+    elif args.reassociate:
+        reassociate_submissions(args.dry_run, idents)
     else:
         populate_publication_submissions(args.dry_run, idents, args.auto_approve)

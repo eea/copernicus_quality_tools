@@ -49,11 +49,15 @@ STEPS = {
     "delivery-unit-codes": ("guess_legacy_delivery_unit_codes.py", []),
     "job-unit-codes": ("guess_legacy_job_unit_codes.py", []),
     "submissions": ("create_legacy_publication_submissions.py", []),
+    "reassociate": ("create_legacy_publication_submissions.py", []),
     "submission-manifests": ("write_legacy_submission_manifests.py", []),
 }
 
-# Optional steps run only when named explicitly.
-OPTIONAL_STEPS = ["permissions"]
+# Optional steps run only when named explicitly. The reassociate step moves the
+# legacy submissions, approvals included, from superseded plan revisions to the
+# current release where their unit code is still expected; run it after
+# re-uploading and approving a product plan.
+OPTIONAL_STEPS = ["permissions", "reassociate"]
 
 # Steps limited by --months (deliveries by upload date, jobs by creation date).
 MONTHS_STEPS = ["deliveries", "jobs"]
@@ -70,7 +74,7 @@ UPLOADS = {
 # Steps limited by --product-ident; the others always process everything.
 # Storage sources of the deliveries step are imported in full as well.
 PRODUCT_STEPS = ["deliveries", "jobs", "delivery-unit-codes", "job-unit-codes", "submissions",
-                 "submission-manifests"]
+                 "reassociate", "submission-manifests"]
 
 
 def kubectl_exec(pod, shell_command, stdin=False):
@@ -228,9 +232,11 @@ def main():
     unknown = [name for name in args.steps if name not in STEPS]
     if unknown:
         parser.error(f"unknown steps: {', '.join(unknown)}")
-    steps = args.steps or (
-        PRODUCT_STEPS if args.product_idents else [name for name in STEPS if name not in OPTIONAL_STEPS]
-    )
+    steps = args.steps or [
+        name
+        for name in (PRODUCT_STEPS if args.product_idents else STEPS)
+        if name not in OPTIONAL_STEPS
+    ]
     if args.only_upload:
         steps = []
 
@@ -267,6 +273,8 @@ def main():
             options = ["--dry-run"] if args.dry_run else []
             if step == "submissions":
                 options += ["--auto-approve", args.auto_approve]
+            if step == "reassociate":
+                options += ["--reassociate"]
             if step in PRODUCT_STEPS:
                 for ident in args.product_idents or []:
                     options += ["--product-ident", ident]

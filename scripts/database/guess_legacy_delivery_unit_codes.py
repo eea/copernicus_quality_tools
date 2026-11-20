@@ -66,6 +66,14 @@ LEADING_PART_REGEX = re.compile(r"^([a-z]{2}[0-9]{3}[a-z0-9]*)_", re.IGNORECASE)
 RECOMPUTE_PRODUCTS = {"clms_ua_bbh_s2021_r10m"}
 
 
+# (product ident, filename) of legacy deliveries whose filename carries no
+# unit hint at all, resolved manually from the legacy records. Lower-cased.
+MANUAL_UNIT_CODES = {
+    ("clc2024", "upload_qctool.zip"): "nl",
+    **{("clc2024", f"upload_qctool_v{n}.zip"): "nl" for n in range(1, 9)},
+}
+
+
 def guess_leading_part(filename):
     match = LEADING_PART_REGEX.match(Path(filename).name.strip())
     return match.group(1).lower() if match else None
@@ -99,6 +107,24 @@ class Definition:
                     value = groups.get(group)
                     if value and value.lower() in self.codes:
                         return self.codes[value.lower()]
+        # Some archives carry just the unit code next to fixed parts
+        # (e.g. CLMS_HRLSLF_WVCL_S2021_E70N23.zip) while every regex targets
+        # the longer inner dataset name. Fall back to the run of filename
+        # parts forming a declared unit code, longest first so combined codes
+        # like cz_sk beat their members, trailing parts preferred.
+        tokens = [t for t in re.split(r"[^0-9a-z]+", stem.lower()) if t]
+        for size in range(len(tokens), 0, -1):
+            for start in range(len(tokens) - size, -1, -1):
+                candidate = "_".join(tokens[start:start + size])
+                if candidate in self.codes:
+                    return self.codes[candidate]
+        # Last resort for repeated deliveries counted in the unit part,
+        # e.g. clc2024_bg2.zip -> bg: drop trailing digits of a token. Only
+        # prefixes starting with a letter, so numeric codes stay untouched.
+        for token in reversed(tokens):
+            stripped = re.fullmatch(r"([a-z][0-9a-z]*?)[0-9]+", token)
+            if stripped and stripped.group(1) in self.codes:
+                return self.codes[stripped.group(1)]
         return None
 
 
@@ -140,6 +166,10 @@ def guess_delivery_unit_codes(definitions_dirs, dry_run, product_idents=None):
         no_definition = set()
         for delivery_id, product_ident, filename, current_code in rows:
             key = (product_ident or "").lower()
+            manual_code = MANUAL_UNIT_CODES.get((key, filename.strip().lower()))
+            if manual_code is not None:
+                updates.append((delivery_id, manual_code))
+                continue
             if key in LEADING_PART_PRODUCTS:
                 code = guess_leading_part(filename)
                 if code is not None:
