@@ -100,9 +100,11 @@
                 chunkSize: 5 * 1024 * 1024,
                 simultaneousUploads: Number(root.dataset.simultaneousUploads) || 1,
                 testChunks: true, throttleProgressCallbacks: 1,
-                // A missing acknowledgement can follow a committed delivery.
-                // Stop on failure; explicit Retry recovers the same receipt.
-                maxChunkRetries: 0,
+                // Non-final chunks are idempotent. Retry transient network,
+                // proxy and storage failures a few times with a pause, so one
+                // brief failure cannot end a large upload or amplify an outage.
+                maxChunkRetries: 5, chunkRetryInterval: 5000,
+                permanentErrors: [400, 401, 403, 404, 409, 413, 415, 500, 501, 507],
                 generateUniqueIdentifier: function() { return entry.meta.uploadIdentifier; }
             });
             function update() {
@@ -129,6 +131,13 @@
                 }
             };
             if (!resumable.support) { fail(new Error("This browser cannot upload delivery files.")); return; }
+            resumable.on("chunkingComplete", function(file) {
+                // A missing final acknowledgement can follow a committed
+                // delivery. Stop on that failure; explicit Retry recovers the
+                // same receipt. Chunk options override the upload options.
+                var chunks = file && file.chunks;
+                if (chunks && chunks.length) chunks[chunks.length - 1].opts.maxChunkRetries = 0;
+            });
             resumable.on("fileAdded", function() { if (!settled) resumable.upload(); });
             resumable.on("fileProgress", function(file) { if (!settled) { percent = Math.max(0, Math.min(100, Math.floor(file.progress() * 100))); update(); } });
             resumable.on("fileSuccess", function(_file, message) {

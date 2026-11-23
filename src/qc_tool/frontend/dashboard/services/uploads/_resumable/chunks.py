@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from hashlib import sha256
 from pathlib import Path
 from secrets import token_hex
 import os
+from typing import Iterator
 
 from .descriptor import MAX_CHUNK_BYTES, ResumableUploadDescriptor
 from .errors import ResumableUploadError
@@ -24,6 +26,76 @@ def store_chunk(
     max_chunk_bytes: int = MAX_CHUNK_BYTES,
 ) -> bool:
     """Atomically store a chunk; identical retries are idempotent."""
+
+    with stage_chunk(
+        uploaded_file,
+        destination,
+        expected_bytes=expected_bytes,
+        max_chunk_bytes=max_chunk_bytes,
+    ) as staged:
+        return staged.publish()
+
+
+class StagedChunk:
+    """A durable private chunk copy that is published under the upload lock."""
+
+    def __init__(self, directory, temporary_name, destination, byte_count, digest, max_chunk_bytes):
+        self._directory = directory
+        self._temporary_name = temporary_name
+        self._destination = destination
+        self._byte_count = byte_count
+        self._digest = digest
+        self._max_chunk_bytes = max_chunk_bytes
+
+    def publish(self) -> bool:
+        """Link the chunk into place; return False for an identical duplicate."""
+
+        try:
+            # The link exposes complete, durable contents atomically. Losing
+            # the link itself in a host crash only makes the probe request it.
+            os.link(
+                self._temporary_name,
+                self._destination.name,
+                src_dir_fd=self._directory,
+                dst_dir_fd=self._directory,
+                follow_symlinks=False,
+            )
+            return True
+        except FileExistsError:
+            existing_size, existing_digest = hash_regular_file_at(
+                self._directory,
+                self._destination.name,
+                max_bytes=self._max_chunk_bytes,
+            )
+            if existing_size == self._byte_count and existing_digest == self._digest:
+                return False
+            raise ResumableUploadError(
+                "duplicate_chunk_conflict",
+                "This upload chunk was already stored with different content.",
+                409,
+            )
+        except OSError as exc:
+            raise ResumableUploadError(
+                "upload_storage_error",
+                "The upload chunk could not be stored.",
+                500,
+            ) from exc
+
+
+@contextmanager
+def stage_chunk(
+    uploaded_file,
+    destination: Path,
+    *,
+    expected_bytes: int | None = None,
+    max_chunk_bytes: int = MAX_CHUNK_BYTES,
+) -> Iterator[StagedChunk]:
+    """Durably write a private chunk copy without holding an upload lock.
+
+    Concurrent chunk requests copy and synchronize their data in parallel; only
+    the cheap publication link needs the caller's lock. The private copy is
+    always removed when the context exits.
+    """
 
     if uploaded_file is None:
         raise ResumableUploadError(
@@ -72,40 +144,14 @@ def store_chunk(
             output.flush()
             os.fsync(output.fileno())
 
-        try:
-            os.link(
-                temporary_name,
-                destination.name,
-                src_dir_fd=directory_descriptor,
-                dst_dir_fd=directory_descriptor,
-                follow_symlinks=False,
-            )
-            try:
-                os.fsync(directory_descriptor)
-            except OSError:
-                # Some filesystems do not support directory fsync. The chunk
-                # is already atomically visible and can be probed/retried.
-                pass
-            return True
-        except FileExistsError:
-            existing_size, existing_digest = hash_regular_file_at(
-                directory_descriptor,
-                destination.name,
-                max_bytes=max_chunk_bytes,
-            )
-            if existing_size == byte_count and existing_digest == digest.digest():
-                return False
-            raise ResumableUploadError(
-                "duplicate_chunk_conflict",
-                "This upload chunk was already stored with different content.",
-                409,
-            )
-        except OSError as exc:
-            raise ResumableUploadError(
-                "upload_storage_error",
-                "The upload chunk could not be stored.",
-                500,
-            ) from exc
+        yield StagedChunk(
+            directory_descriptor,
+            temporary_name,
+            destination,
+            byte_count,
+            digest.digest(),
+            max_chunk_bytes,
+        )
     finally:
         try:
             os.unlink(temporary_name, dir_fd=directory_descriptor)

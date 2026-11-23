@@ -21,6 +21,9 @@ from qc_tool.frontend.dashboard.models import Delivery
 from qc_tool.frontend.dashboard.tests.catalog_fixtures import managed_definition
 from qc_tool.frontend.dashboard.services.tests.test_resumable_uploads import _descriptor, _parameters
 from qc_tool.frontend.dashboard.services.uploads import prepare_resumable_paths, store_chunk
+from qc_tool.frontend.dashboard.services.products import identify_delivery
+from qc_tool.frontend.dashboard.services.uploads._resumable.filesystem import copy_regular_file_at
+from qc_tool.frontend.dashboard.services.uploads.locking import delivery_filename_lock as filename_lock
 from qc_tool.frontend.dashboard.services.uploads.registration import receive_registered_chunk
 
 
@@ -348,6 +351,59 @@ class ResumableRegistrationTests(UploadRegistrationFixture, TestCase):
         self.assertTrue(self.paths.target_path.is_symlink())
         self.assertEqual(outside.read_bytes(), b"abcd")
         self.assertFalse(Delivery.objects.exists())
+
+
+class ResumableChunkThroughputTests(UploadRegistrationFixture, TestCase):
+    """Per-chunk work stays small and the final chunk does not copy the ZIP."""
+
+    def setUp(self):
+        super().setUp()
+        self.final = _parameters(chunk_number=3, chunk_size=5, current_chunk_size=7, total_chunks=3, total_size=17)
+        self.chunks = {1: b"first", 2: b"-2nd-", 3: b"-third!"}
+        self.paths = prepare_resumable_paths(
+            _descriptor(chunk_number=3, chunk_size=5, current_chunk_size=7, total_chunks=3, total_size=17),
+            media_root=self.media_root, username=self.user.username,
+        )
+
+    def post(self, number):
+        data = self.chunks[number]
+        return self.client.post(self.url, {
+            **self.final, "resumableChunkNumber": str(number), "resumableCurrentChunkSize": str(len(data)),
+            "file": SimpleUploadedFile("chunk", data),
+        })
+
+    def test_chunks_are_assembled_as_they_arrive_and_final_chunk_only_publishes(self):
+        self.assertIsNone(self.post(2).json()["delivery_id"])
+        self.assertIsNone(self.post(1).json()["delivery_id"])
+        self.assertEqual((self.paths.chunks_dir / ".assembling").read_bytes(), b"first-2nd-")
+        with patch("qc_tool.frontend.dashboard.services.uploads._resumable.progress.copy_regular_file_at",
+                   wraps=copy_regular_file_at) as copy:
+            final = self.post(3)
+        self.assertEqual(final.status_code, 200, final.content)
+        self.assertEqual(copy.call_count, 1)
+        self.assertEqual(final.json()["delivery_id"], Delivery.objects.get().pk)
+        self.assertEqual(self.paths.target_path.read_bytes(), b"first-2nd--third!")
+        self.assertEqual(sorted(path.name for path in self.paths.chunks_dir.iterdir()), [".registered", ".upload.lock"])
+
+    def test_filename_is_identified_once_per_chunk_request(self):
+        for request in (lambda: self.client.get(self.url, {**self.final, "resumableChunkNumber": "1",
+                                                           "resumableCurrentChunkSize": "5"}),
+                        lambda: self.post(1)):
+            with self.subTest(request=request), patch(
+                    "qc_tool.frontend.dashboard.services.uploads.access.identify_delivery",
+                    wraps=identify_delivery) as identify:
+                self.assertIn(request().status_code, (200, 404))
+            self.assertEqual(identify.call_count, 1)
+
+    def test_chunk_data_is_staged_before_the_upload_locks_are_taken(self):
+        def locked(*args, **kwargs):
+            self.assertEqual(len(list(self.paths.chunks_dir.glob(".chunk-*.uploading"))), 1)
+            return filename_lock(*args, **kwargs)
+        with patch("qc_tool.frontend.dashboard.services.uploads.registration.delivery_filename_lock",
+                   side_effect=locked) as lock:
+            self.assertEqual(self.post(1).status_code, 200)
+        lock.assert_called_once()
+        self.assertEqual(list(self.paths.chunks_dir.glob(".chunk-*.uploading")), [])
 
 
 class ResumableRegistrationConcurrencyTests(UploadRegistrationFixture, TransactionTestCase):
