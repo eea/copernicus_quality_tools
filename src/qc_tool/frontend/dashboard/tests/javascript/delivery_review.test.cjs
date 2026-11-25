@@ -150,8 +150,33 @@ test("QC links sit with status while the next action stays focused", () => {
     assert.equal(actions.querySelector('.delivery-row-action--primary').textContent, 'Submit for review');
     assert.equal(actions.querySelector('.delivery-job-link'), null);
     const failed = {...row, delivery_status: 'failed', last_job_status: 'failed'};
-    assert.equal(window.statusFormatter(null, failed).querySelector('.delivery-qc-link'), null);
+    assert.equal(window.statusFormatter(null, failed).querySelector('.delivery-qc-link').getAttribute('href'), row.job_result_url);
     assert.equal(window.actionsFormatter(null, failed).querySelector('.delivery-job-link').getAttribute('href'), row.job_result_url);
+});
+
+test("QC status links remain available across outcomes and require a server destination", () => {
+    const {window} = page();
+    const states = [
+        ['running', 'waiting'], ['running', 'running'], ['passed', 'ok'],
+        ['failed', 'partial'], ['failed', 'failed'], ['failed', 'error'],
+        ['failed', 'worker timeout'], ['failed', 'worker lost'], ['failed', 'file_not_found'],
+        ['submitted', 'ok'], ['accepted', 'ok'], ['needs_correction', 'ok'],
+    ];
+    for (const [deliveryStatus, jobStatus] of states) {
+        const row = {...rejected, delivery_status: deliveryStatus, last_job_status: jobStatus};
+        const link = window.statusFormatter(null, row).querySelector('.delivery-qc-link');
+        const label = deliveryStatus === 'running' ? 'QC progress' : 'QC result';
+        assert.ok(link, `${deliveryStatus}: ${jobStatus}`);
+        assert.equal(link.getAttribute('href'), row.job_result_url);
+        assert.equal(link.textContent, label);
+        assert.equal(link.getAttribute('aria-label'), `${label} for ${row.filename}`);
+        for (const destination of [null, undefined, '']) {
+            const unavailable = {...row, job_result_url: destination};
+            assert.equal(window.statusFormatter(null, unavailable).querySelector('.delivery-qc-link'), null);
+            assert.equal(window.actionsFormatter(null, unavailable).querySelector('.delivery-job-link'), null);
+        }
+    }
+    assert.equal(window.statusFormatter(null, {delivery_status: 'not_validated'}).querySelector('.delivery-qc-link'), null);
 });
 
 test("review updates reach empty attention views and respect selection, focus and visibility", () => {

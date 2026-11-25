@@ -151,7 +151,8 @@
             $feedback.appendTo($status);
         }
         var $links = $("<div>", {"class": "delivery-status-block__links"});
-        if (row.job_result_url && row.delivery_status !== "failed") {
+        // Result access follows the server-supplied destination, regardless of QC outcome.
+        if (row.job_result_url) {
             var resultLabel = row.delivery_status === "running" ? "QC progress" : "QC result";
             var $result = $("<a>", {"class": "delivery-qc-link", href: String(row.job_result_url),
                 "aria-label": resultLabel + " for " + String(row.filename || "delivery")});

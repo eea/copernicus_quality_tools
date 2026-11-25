@@ -26,7 +26,8 @@ QC recipe identifier: one recipe can serve several catalog products.
 Use medium emphasis for filenames, normal text for product links and dates,
 and muted metadata. Render lifecycle status as text as well as color, and only
 show verified product unit after successful QC. Keep QC result/progress and history links
-beside status; a failed delivery's result is its primary next action instead.
+beside status whenever the server supplies their destinations, including after QC
+fails. A failed delivery's result is also its primary next action.
 Promote one non-destructive workflow action, keep supporting actions quiet,
 and keep Delete last. Running deliveries need no action button; their progress
 is available with status. Submitted and accepted deliveries retain a quiet
