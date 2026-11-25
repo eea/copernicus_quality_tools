@@ -230,10 +230,10 @@ class DeliveryListPresentationTests(TestCase):
             [(field, label) for field, label, _attributes in data_headers],
             [
                 ("filename", "Delivery"),
+                ("type", "Source"),
                 ("product_description", "Product"),
                 ("date_uploaded", "Uploaded"),
                 ("size_bytes", "Size"),
-                ("type", "Source"),
                 ("username", "Owner"),
                 ("id", "ID"),
                 ("last_job_status", "Status"),
@@ -242,10 +242,10 @@ class DeliveryListPresentationTests(TestCase):
         )
         formatters = (
             "deliveryFormatter",
+            "sourceFormatter",
             "productFormatter",
             "uploadedFormatter",
             "sizeFormatter",
-            "sourceFormatter",
             "ownerFormatter",
             "idFormatter",
             "statusFormatter",
@@ -268,7 +268,14 @@ class DeliveryListPresentationTests(TestCase):
                     self.assertIn('data-switchable="false"', attributes)
                 else:
                     self.assertNotIn('data-switchable="false"', attributes)
-        for field in ("size_bytes", "type", "username", "id"):
+        for field in (
+            "filename", "type", "product_description", "date_uploaded",
+            "last_job_status", "actions",
+        ):
+            with self.subTest(visible_field=field):
+                self.assertNotIn('data-visible="false"', by_field[field])
+        self.assertIn('data-sortable="true"', by_field["type"])
+        for field in ("size_bytes", "username", "id"):
             with self.subTest(hidden_field=field):
                 self.assertIn('data-visible="false"', by_field[field])
 

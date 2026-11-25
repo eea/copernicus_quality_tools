@@ -16,8 +16,12 @@ presentation and mutations:
 | `index.js`         | Declarative feature startup only                                                          |
 
 Delivery, Status, and Next action are always-visible workflow columns.
-Product/product unit and Uploaded are shown initially; Size, Source, Owner, and ID
-are available from the Columns control. The filename is the primary link to
+Source, Product/product unit and Uploaded are shown initially; Size, Owner, and ID
+are available from the Columns control. Source sits beside the delivery name and
+distinguishes **ZIP upload** (`local`) from **S3 registration** (`s3`) with compact
+text badges. Missing or unknown sources display **Not available**. Source remains
+sortable and can be hidden through the shared Columns control.
+The filename is the primary link to
 the delivery's QC history, with file size as secondary metadata. Product names
 use the authorized catalog URL supplied by the JSON endpoint, which resolves
 the selected submission or QC run's product. Never build a product URL from a

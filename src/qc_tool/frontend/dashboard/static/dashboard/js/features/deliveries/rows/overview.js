@@ -90,11 +90,11 @@
     }
 
     function sourceFormatter(value, row) {
-        var source = String((row || {}).type || value || "").toLowerCase();
-        var label = source === "s3" ? "S3" : source === "local" ? "Local" : "Not available";
+        var source = String((row || {}).type || value || "").trim().toLowerCase();
+        var label = source === "s3" ? "S3 registration" : source === "local" ? "ZIP upload" : "";
         return html($("<span>", {
-            "class": "delivery-source" + (source ? "" : " delivery-value--empty"),
-            text: label
+            "class": "delivery-source" + (label ? "" : " delivery-value--empty"),
+            text: label || "Not available"
         }));
     }
 
