@@ -1,0 +1,21 @@
+/* Native Django controls share the light Admin theme on every model form. */
+.qc-admin .selector-chosen-title,
+.qc-admin .selector-chosen .list-footer-display {
+    background: var(--qc-admin-blue-soft);
+    color: var(--body-fg);
+}
+
+.qc-admin .selector-chosen-title label {
+    color: inherit;
+}
+
+.qc-admin .selector-chosen .list-footer-display__clear {
+    color: var(--link-fg);
+}
+
+/* Django's active date/time links assume a dark header background. */
+.qc-admin .calendar td a:active,
+.qc-admin .timelist a:active {
+    background: var(--button-hover-bg);
+    color: var(--button-fg);
+}

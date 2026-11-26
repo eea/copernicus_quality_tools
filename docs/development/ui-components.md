@@ -23,6 +23,7 @@ Paths below are relative to `src/qc_tool/frontend/`.
 | Accounts form fields and non-field errors | `accounts/templates/accounts/includes/` |
 | Bulk product selection widget and its assets | `accounts/templates/accounts/widgets/`, `accounts/static/accounts/{js,css}/admin/` |
 | Admin shell and feature frames | `templates/admin/base_site.html`, `dashboard/templates/admin/*_base.html` |
+| Native Django Admin widget colors | `dashboard/static/dashboard/css/admin/widgets.css`, loaded by the shared Admin shell |
 | Admin-only reusable fragments | `dashboard/templates/admin/includes/`, with transfer fragments under `transfers/` |
 | Announcement read state and unavailable-state handling | `dashboard/services/configuration/presentation.py` |
 | Announcement rendering and notice styles shared with maintenance | `dashboard/templates/dashboard/shared/announcements/`, `dashboard/static/dashboard/css/ui/notice.css` |
